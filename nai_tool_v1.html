@@ -1,1081 +1,1242 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <title>NAI 生圖工具</title>
-    <style>
-        :root {
-            --bg-primary: #111827;
-            --bg-secondary: #1f2937;
-            --bg-card: #374151;
-            --accent: #7c3aed;
-            --accent-hover: #6d28d9;
-            --accent-light: rgba(124,58,237,0.15);
-            --text-primary: #f3f4f6;
-            --text-secondary: #9ca3af;
-            --border: #374151;
-            --border-focus: #7c3aed;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --error: #ef4444;
-            --info: #3b82f6;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans TC', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            min-height: 100vh;
-            font-size: 14px;
-        }
-
-        /* ===== LOGIN ===== */
-        #login-screen {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .login-card {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 40px;
-            width: 100%;
-            max-width: 420px;
-        }
-
-        .login-title {
-            font-size: 1.6rem;
-            font-weight: 700;
-            margin-bottom: 6px;
-        }
-
-        .login-subtitle {
-            color: var(--text-secondary);
-            margin-bottom: 28px;
-            font-size: 0.875rem;
-            line-height: 1.5;
-        }
-
-        #login-error {
-            color: var(--error);
-            font-size: 0.85rem;
-            margin-top: 10px;
-            display: none;
-        }
-
-        /* ===== COMMON FORM ===== */
-        label {
-            display: block;
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-
-        input[type="text"], input[type="password"],
-        input[type="number"], textarea, select {
-            width: 100%;
-            background: var(--bg-primary);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            color: var(--text-primary);
-            padding: 9px 12px;
-            font-size: 0.875rem;
-            outline: none;
-            transition: border-color 0.15s;
-            font-family: inherit;
-        }
-
-        input:focus, textarea:focus, select:focus {
-            border-color: var(--border-focus);
-        }
-
-        textarea { resize: vertical; line-height: 1.5; }
-
-        select option { background: var(--bg-secondary); }
-
-        input[type="number"] { -moz-appearance: textfield; }
-        input[type="number"]::-webkit-inner-spin-button,
-        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
-
-        .form-group { margin-bottom: 12px; }
-        .form-group:last-child { margin-bottom: 0; }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 12px;
-        }
-
-        .form-row:last-child { margin-bottom: 0; }
-
-        /* ===== BUTTONS ===== */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 9px 18px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            font-size: 0.875rem;
-            font-weight: 600;
-            transition: all 0.15s;
-            white-space: nowrap;
-            font-family: inherit;
-        }
-
-        .btn-primary {
-            background: var(--accent);
-            color: white;
-        }
-        .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
-        .btn-primary:disabled { background: #4b5563; cursor: not-allowed; color: #9ca3af; }
-
-        .btn-secondary {
-            background: var(--bg-card);
-            color: var(--text-primary);
-            border: 1px solid var(--border);
-        }
-        .btn-secondary:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-light); }
-
-        .btn-full { width: 100%; }
-
-        .btn-generate {
-            padding: 13px;
-            font-size: 1rem;
-            letter-spacing: 0.03em;
-        }
-
-        /* ===== CHECKBOX ===== */
-        .checkbox-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin: 10px 0;
-        }
-
-        .checkbox-row input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            accent-color: var(--accent);
-            cursor: pointer;
-        }
-
-        .checkbox-row label {
-            margin-bottom: 0;
-            cursor: pointer;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
-
-        /* ===== APP LAYOUT ===== */
-        #app { display: none; flex-direction: column; min-height: 100vh; }
-
-        /* Navbar */
-        .navbar {
-            background: var(--bg-secondary);
-            border-bottom: 1px solid var(--border);
-            padding: 10px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            gap: 12px;
-        }
-
-        .navbar-brand {
-            font-size: 1rem;
-            font-weight: 700;
-            white-space: nowrap;
-        }
-
-        .navbar-right {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-
-        .anlas-info {
-            text-align: right;
-            line-height: 1.3;
-        }
-
-        .anlas-balance {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
-
-        .anlas-balance b { color: var(--warning); }
-
-        .anlas-cost {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-
-        .anlas-cost b { color: var(--accent); }
-
-        .btn-logout {
-            padding: 5px 12px;
-            font-size: 0.78rem;
-        }
-
-        /* Main layout */
-        .main-content {
-            display: flex;
-            flex: 1;
-        }
-
-        /* Left panel */
-        .left-panel {
-            width: 360px;
-            min-width: 360px;
-            background: var(--bg-secondary);
-            border-right: 1px solid var(--border);
-            overflow-y: auto;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        /* Right panel */
-        .right-panel {
-            flex: 1;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            overflow-y: auto;
-            gap: 16px;
-        }
-
-        /* Form card */
-        .form-card {
-            background: var(--bg-primary);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 14px;
-        }
-
-        .card-title {
-            font-size: 0.72rem;
-            font-weight: 700;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            margin-bottom: 12px;
-        }
-
-        /* Resolution note */
-        .res-note {
-            font-size: 0.75rem;
-            margin-top: 4px;
-        }
-        .res-note.free { color: var(--success); }
-        .res-note.cost { color: var(--warning); }
-
-        /* Seed row */
-        .seed-row { display: flex; gap: 6px; align-items: flex-end; }
-        .seed-row input { flex: 1; }
-        .seed-row .btn { padding: 9px 12px; font-size: 1rem; }
-
-        /* Collapsible */
-        .collapsible-toggle {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .collapsible-toggle .card-title { margin-bottom: 0; }
-
-        .toggle-arrow {
-            color: var(--text-secondary);
-            font-size: 0.7rem;
-            transition: transform 0.2s;
-        }
-
-        .toggle-arrow.open { transform: rotate(0deg); }
-        .toggle-arrow.closed { transform: rotate(-90deg); }
-
-        .collapsible-body {
-            overflow: hidden;
-            transition: max-height 0.25s ease, opacity 0.25s ease;
-        }
-
-        .collapsible-body.open { max-height: 1000px; opacity: 1; margin-top: 12px; }
-        .collapsible-body.closed { max-height: 0; opacity: 0; }
-
-        /* Result area */
-        .result-area {
-            width: 100%;
-            max-width: 560px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 14px;
-        }
-
-        .result-placeholder {
-            width: 100%;
-            aspect-ratio: 5/7;
-            max-height: 65vh;
-            background: var(--bg-secondary);
-            border: 2px dashed var(--border);
-            border-radius: 12px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-secondary);
-            gap: 10px;
-        }
-
-        .result-placeholder svg { opacity: 0.25; }
-        .result-placeholder span { font-size: 0.85rem; }
-
-        #result-image {
-            display: none;
-            width: 100%;
-            max-height: 75vh;
-            object-fit: contain;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-        }
-
-        .result-actions {
-            display: none;
-            gap: 10px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        /* Status bar */
-        .status-bar {
-            width: 100%;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 9px 14px;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            text-align: center;
-            display: none;
-        }
-
-        /* Spinner */
-        .spinner {
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255,255,255,0.25);
-            border-top-color: white;
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-            display: inline-block;
-            vertical-align: middle;
-        }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* Toast */
-        #toast-container {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            pointer-events: none;
-        }
-
-        .toast {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 10px 14px;
-            font-size: 0.85rem;
-            max-width: 300px;
-            animation: toastIn 0.25s ease;
-            transition: opacity 0.3s;
-        }
-
-        .toast.success { border-color: var(--success); color: var(--success); }
-        .toast.error   { border-color: var(--error);   color: var(--error); }
-        .toast.info    { border-color: var(--info);    color: var(--info); }
-        .toast.warning { border-color: var(--warning); color: var(--warning); }
-
-        @keyframes toastIn {
-            from { transform: translateX(30px); opacity: 0; }
-            to   { transform: translateX(0);    opacity: 1; }
-        }
-
-        /* ===== MOBILE ===== */
-        @media (max-width: 768px) {
-            .main-content { flex-direction: column; }
-
-            .left-panel {
-                width: 100%;
-                min-width: unset;
-                border-right: none;
-                border-bottom: 1px solid var(--border);
-            }
-
-            .right-panel { padding: 16px; }
-
-            .navbar { padding: 10px 14px; }
-
-            .anlas-info { display: none; }
-
-            .anlas-mobile {
-                font-size: 0.78rem;
-                color: var(--text-secondary);
-            }
-
-            .anlas-mobile b { color: var(--warning); }
-        }
-
-        @media (min-width: 769px) {
-            .anlas-mobile { display: none; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>NAI 生圖工具</title>
+  <style>
+    :root {
+      --bg:       #111827;
+      --bg2:      #1f2937;
+      --bg3:      #374151;
+      --accent:   #7c3aed;
+      --accent-h: #6d28d9;
+      --accent-l: rgba(124,58,237,.15);
+      --txt:      #f3f4f6;
+      --txt2:     #9ca3af;
+      --border:   #374151;
+      --ok:       #10b981;
+      --warn:     #f59e0b;
+      --err:      #ef4444;
+      --info:     #3b82f6;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans TC',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;font-size:14px;}
+
+    /* ── LOGIN ── */
+    #login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+    .login-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:40px;width:100%;max-width:420px;}
+    .login-title{font-size:1.6rem;font-weight:700;margin-bottom:6px;}
+    .login-sub{color:var(--txt2);margin-bottom:28px;font-size:.875rem;line-height:1.5;}
+    #login-err{color:var(--err);font-size:.85rem;margin-top:10px;display:none;}
+
+    /* ── FORM ── */
+    label{display:block;font-size:.8rem;color:var(--txt2);margin-bottom:5px;font-weight:500;}
+    input[type=text],input[type=password],input[type=number],textarea,select{
+      width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;
+      color:var(--txt);padding:9px 12px;font-size:.875rem;outline:none;transition:border-color .15s;font-family:inherit;}
+    input:focus,textarea:focus,select:focus{border-color:var(--accent);}
+    textarea{resize:vertical;line-height:1.5;}
+    select option{background:var(--bg2);}
+    input[type=number]{-moz-appearance:textfield;}
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;}
+    .fg{margin-bottom:12px;} .fg:last-child{margin-bottom:0;}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+    .row2:last-child{margin-bottom:0;}
+    .cb-row{display:flex;align-items:center;gap:8px;margin:10px 0;}
+    .cb-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;}
+    .cb-row label{margin-bottom:0;cursor:pointer;font-size:.85rem;color:var(--txt2);}
+
+    /* ── BUTTONS ── */
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 18px;
+      border-radius:8px;border:none;cursor:pointer;font-size:.875rem;font-weight:600;transition:all .15s;
+      white-space:nowrap;font-family:inherit;}
+    .btn-p{background:var(--accent);color:#fff;}
+    .btn-p:hover:not(:disabled){background:var(--accent-h);}
+    .btn-p:disabled{background:#4b5563;cursor:not-allowed;color:var(--txt2);}
+    .btn-s{background:var(--bg3);color:var(--txt);border:1px solid var(--border);}
+    .btn-s:hover:not(:disabled){border-color:var(--accent);background:var(--accent-l);}
+    .btn-d{background:rgba(239,68,68,.15);color:var(--err);border:1px solid rgba(239,68,68,.3);}
+    .btn-d:hover{background:rgba(239,68,68,.25);}
+    .btn-full{width:100%;}
+    .btn-gen{padding:13px;font-size:1rem;letter-spacing:.03em;}
+    .btn-icon{padding:6px 10px;font-size:1rem;}
+
+    /* ── APP ── */
+    #app{display:none;flex-direction:column;min-height:100vh;}
+
+    /* Navbar */
+    .navbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 16px;
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      position:sticky;top:0;z-index:100;height:48px;}
+    .nav-brand{font-size:1rem;font-weight:700;white-space:nowrap;}
+    .nav-tabs{display:flex;gap:2px;}
+    .nav-tab{background:none;border:none;color:var(--txt2);cursor:pointer;
+      padding:6px 14px;border-radius:6px;font-size:.875rem;font-family:inherit;font-weight:500;
+      transition:all .15s;}
+    .nav-tab.active{background:var(--accent-l);color:var(--accent);}
+    .nav-tab:hover:not(.active){background:var(--bg3);}
+    .nav-right{display:flex;align-items:center;gap:12px;}
+    .anlas-info{text-align:right;line-height:1.3;}
+    .anlas-bal{font-size:.78rem;color:var(--txt2);} .anlas-bal b{color:var(--warn);}
+    .anlas-cost{font-size:.72rem;color:var(--txt2);} .anlas-cost b{color:var(--accent);}
+    .btn-out{padding:5px 12px;font-size:.78rem;}
+
+    /* Pages */
+    .page{display:none;flex:1;}
+    .page.active{display:flex;flex-direction:column;}
+    #page-generate.active{flex-direction:row;}
+
+    /* ── GENERATE PAGE ── */
+    .left-panel{width:360px;min-width:360px;background:var(--bg2);border-right:1px solid var(--border);
+      overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px;}
+    .right-panel{flex:1;padding:20px;display:flex;flex-direction:column;align-items:center;
+      justify-content:flex-start;overflow-y:auto;gap:14px;}
+    .card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;}
+    .card-title{font-size:.72rem;font-weight:700;color:var(--txt2);text-transform:uppercase;
+      letter-spacing:.06em;margin-bottom:12px;}
+    .res-note{font-size:.75rem;margin-top:4px;}
+    .res-free{color:var(--ok);} .res-cost{color:var(--warn);}
+
+    /* Seed row */
+    .seed-row{display:flex;gap:6px;align-items:flex-end;}
+    .seed-row input{flex:1;}
+    .seed-toggle{padding:8px 10px;font-size:.85rem;border-radius:8px;border:1px solid var(--border);
+      background:var(--bg);color:var(--txt2);cursor:pointer;transition:all .15s;white-space:nowrap;}
+    .seed-toggle.active{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
+
+    /* Collapsible */
+    .coll-hd{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;}
+    .coll-hd .card-title{margin-bottom:0;}
+    .coll-arrow{color:var(--txt2);font-size:.7rem;transition:transform .2s;}
+    .coll-arrow.open{transform:rotate(0);}
+    .coll-arrow.closed{transform:rotate(-90deg);}
+    .coll-body{overflow:hidden;transition:max-height .25s ease,opacity .25s ease;}
+    .coll-body.open{max-height:1000px;opacity:1;margin-top:12px;}
+    .coll-body.closed{max-height:0;opacity:0;}
+
+    /* Tag chip input */
+    .tag-chip-wrap{background:var(--bg);border:1px solid var(--border);border-radius:8px;
+      padding:6px 8px;display:flex;flex-wrap:wrap;gap:4px;cursor:text;min-height:38px;
+      transition:border-color .15s;}
+    .tag-chip-wrap:focus-within{border-color:var(--accent);}
+    .tag-chip{background:var(--accent-l);border:1px solid var(--accent);color:var(--accent);
+      border-radius:20px;padding:2px 8px 2px 10px;font-size:.78rem;display:inline-flex;
+      align-items:center;gap:4px;}
+    .tag-chip-x{background:none;border:none;color:var(--accent);cursor:pointer;
+      padding:0 2px;font-size:1rem;line-height:1;}
+    .tag-text-in{background:none;border:none;outline:none;color:var(--txt);
+      font-size:.875rem;flex:1;min-width:80px;padding:2px 4px;font-family:inherit;}
+    .tag-dropdown{background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+      margin-top:4px;overflow:hidden;display:none;z-index:50;}
+    .tag-dd-item{padding:8px 12px;cursor:pointer;font-size:.875rem;transition:background .1s;}
+    .tag-dd-item:hover{background:var(--accent-l);}
+    .tag-dd-new{color:var(--accent);}
+
+    /* Result area */
+    .result-area{width:100%;max-width:540px;display:flex;flex-direction:column;align-items:center;gap:14px;}
+    .result-placeholder{width:100%;aspect-ratio:5/7;max-height:65vh;background:var(--bg2);
+      border:2px dashed var(--border);border-radius:12px;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;color:var(--txt2);gap:10px;}
+    .result-placeholder svg{opacity:.25;}
+    .result-placeholder span{font-size:.85rem;}
+    #result-img{display:none;width:100%;max-height:75vh;object-fit:contain;
+      border-radius:12px;border:1px solid var(--border);}
+    .result-actions{display:none;gap:10px;flex-wrap:wrap;justify-content:center;}
+    .status-bar{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;
+      padding:9px 14px;font-size:.85rem;color:var(--txt2);text-align:center;display:none;}
+
+    /* ── GALLERY PAGE ── */
+    #page-gallery{overflow-y:auto;}
+    .gallery-toolbar{background:var(--bg2);border-bottom:1px solid var(--border);
+      padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+      position:sticky;top:0;z-index:50;}
+    .gallery-search{background:var(--bg);border:1px solid var(--border);border-radius:8px;
+      color:var(--txt);padding:7px 12px;font-size:.875rem;outline:none;width:200px;font-family:inherit;}
+    .gallery-search:focus{border-color:var(--accent);}
+    .tag-filter-list{display:flex;gap:6px;flex-wrap:wrap;flex:1;}
+    .tag-filter-chip{background:var(--bg3);border:1px solid var(--border);color:var(--txt2);
+      border-radius:20px;padding:3px 10px;font-size:.78rem;cursor:pointer;transition:all .15s;}
+    .tag-filter-chip.active{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
+    .gallery-grid{padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
+    .gallery-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:60px 20px;color:var(--txt2);gap:12px;font-size:.9rem;}
+    .gallery-empty svg{opacity:.2;}
+
+    /* Gallery card */
+    .gcard{background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+      overflow:hidden;cursor:pointer;transition:border-color .15s,transform .15s;position:relative;}
+    .gcard:hover{border-color:var(--accent);transform:translateY(-2px);}
+    .gcard.selected{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent);}
+    .gcard-img{width:100%;aspect-ratio:5/7;object-fit:cover;display:block;background:var(--bg3);}
+    .gcard-footer{padding:8px;}
+    .gcard-tags{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:4px;}
+    .gcard-tag{background:var(--accent-l);color:var(--accent);border-radius:10px;
+      padding:1px 7px;font-size:.7rem;}
+    .gcard-time{font-size:.72rem;color:var(--txt2);}
+    .gcard-check{position:absolute;top:6px;left:6px;width:22px;height:22px;
+      background:var(--accent);border-radius:50%;display:none;align-items:center;
+      justify-content:center;font-size:.75rem;color:#fff;}
+    .gcard.selected .gcard-check{display:flex;}
+
+    /* Gallery actions bar */
+    .gallery-actions{display:none;background:var(--accent-l);border-bottom:1px solid var(--accent);
+      padding:8px 16px;align-items:center;gap:10px;flex-wrap:wrap;}
+    .gallery-actions.visible{display:flex;}
+    .gallery-sel-count{font-size:.85rem;color:var(--accent);font-weight:600;}
+
+    /* ── MODAL ── */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);
+      z-index:200;align-items:center;justify-content:center;padding:16px;}
+    .modal-overlay.open{display:flex;}
+    .modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;
+      width:100%;max-width:900px;max-height:95vh;display:flex;overflow:hidden;}
+    .modal-img-side{flex:1;background:var(--bg);display:flex;align-items:center;justify-content:center;
+      padding:16px;min-width:0;}
+    .modal-img-side img{max-width:100%;max-height:80vh;object-fit:contain;border-radius:8px;}
+    .modal-info{width:300px;min-width:300px;padding:20px;overflow-y:auto;display:flex;
+      flex-direction:column;gap:14px;border-left:1px solid var(--border);}
+    .modal-close{position:absolute;top:12px;right:12px;background:var(--bg3);border:none;
+      color:var(--txt);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1.2rem;
+      display:flex;align-items:center;justify-content:center;}
+    .modal-section-title{font-size:.72rem;font-weight:700;color:var(--txt2);text-transform:uppercase;
+      letter-spacing:.06em;margin-bottom:6px;}
+    .modal-prompt-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;
+      padding:10px;font-size:.8rem;line-height:1.5;color:var(--txt);word-break:break-word;
+      max-height:120px;overflow-y:auto;}
+    .meta-grid{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:.8rem;}
+    .meta-key{color:var(--txt2);}
+    .meta-val{color:var(--txt);word-break:break-all;}
+    .modal-tag-wrap{display:flex;flex-wrap:wrap;gap:4px;}
+    .modal-tag{background:var(--accent-l);color:var(--accent);border-radius:20px;
+      padding:3px 10px;font-size:.78rem;cursor:pointer;border:1px solid var(--accent);}
+    .modal-actions{display:flex;flex-direction:column;gap:8px;margin-top:auto;}
+
+    /* ── SPINNER & TOAST ── */
+    .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;
+      border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    #toast-wrap{position:fixed;bottom:20px;right:20px;z-index:9999;
+      display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+    .toast{background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+      padding:10px 14px;font-size:.85rem;max-width:300px;animation:tIn .25s ease;transition:opacity .3s;}
+    .toast.ok{border-color:var(--ok);color:var(--ok);}
+    .toast.err{border-color:var(--err);color:var(--err);}
+    .toast.info{border-color:var(--info);color:var(--info);}
+    .toast.warn{border-color:var(--warn);color:var(--warn);}
+    @keyframes tIn{from{transform:translateX(30px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+    /* ── MOBILE ── */
+    @media(max-width:768px){
+      #page-generate.active{flex-direction:column;}
+      .left-panel{width:100%;min-width:unset;border-right:none;border-bottom:1px solid var(--border);}
+      .right-panel{padding:14px;}
+      .modal-box{flex-direction:column;}
+      .modal-info{width:100%;min-width:unset;border-left:none;border-top:1px solid var(--border);}
+      .anlas-info{display:none;}
+      .gallery-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));}
+      .gallery-search{width:100%;}
+    }
+  </style>
 </head>
 <body>
 
-<!-- ===== LOGIN ===== -->
+<!-- ═══════════ LOGIN ═══════════ -->
 <div id="login-screen">
-    <div class="login-card">
-        <div class="login-title">🎨 NAI 生圖工具</div>
-        <div class="login-subtitle">
-            輸入你的 NovelAI Access Token 開始使用。<br>
-            Token 只存在你的裝置上，不會傳給任何第三方。
-        </div>
-
-        <div class="form-group">
-            <label>Access Token</label>
-            <input type="password" id="token-input" placeholder="輸入 token...">
-        </div>
-
-        <div class="checkbox-row">
-            <input type="checkbox" id="remember-token" checked>
-            <label for="remember-token">記住 Token（存在此裝置，下次自動登入）</label>
-        </div>
-
-        <div style="margin-top: 20px;">
-            <button class="btn btn-primary btn-full" id="login-btn" onclick="login()">登入</button>
-        </div>
-
-        <div id="login-error"></div>
+  <div class="login-card">
+    <div class="login-title">🎨 NAI 生圖工具</div>
+    <div class="login-sub">輸入 NovelAI Access Token 開始使用。<br>Token 只存在你的裝置上。</div>
+    <div class="fg">
+      <label>Access Token</label>
+      <input type="password" id="tok-in" placeholder="輸入 token...">
     </div>
+    <div class="cb-row">
+      <input type="checkbox" id="rem-tok" checked>
+      <label for="rem-tok">記住 Token（下次自動登入）</label>
+    </div>
+    <div style="margin-top:20px;">
+      <button class="btn btn-p btn-full" id="login-btn" onclick="login()">登入</button>
+    </div>
+    <div id="login-err"></div>
+  </div>
 </div>
 
-
-<!-- ===== MAIN APP ===== -->
+<!-- ═══════════ APP ═══════════ -->
 <div id="app">
 
-    <!-- Navbar -->
-    <nav class="navbar">
-        <div class="navbar-brand">🎨 NAI 生圖工具</div>
-        <div class="anlas-mobile">ANLAS：<b id="anlas-mobile-val">---</b></div>
-        <div class="navbar-right">
-            <div class="anlas-info">
-                <div class="anlas-balance">ANLAS 餘額：<b id="anlas-balance">---</b></div>
-                <div class="anlas-cost" id="last-cost-row" style="display:none;">
-                    上次扣點：<b id="last-cost-val">0</b> 點
-                </div>
-            </div>
-            <button class="btn btn-secondary btn-logout" onclick="logout()">登出</button>
-        </div>
-    </nav>
-
-    <!-- Main -->
-    <div class="main-content">
-
-        <!-- Left: Parameters -->
-        <div class="left-panel">
-
-            <!-- 模型 & 解析度 -->
-            <div class="form-card">
-                <div class="card-title">模型與解析度</div>
-
-                <div class="form-group">
-                    <label>模型 Model</label>
-                    <select id="model">
-                        <option value="nai-diffusion-4-5-full">NAI Diffusion V4.5 Full（最新）</option>
-                        <option value="nai-diffusion-4-5">NAI Diffusion V4.5</option>
-                        <option value="nai-diffusion-4">NAI Diffusion V4</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>解析度 Resolution</label>
-                    <select id="resolution" onchange="updateResNote()">
-                        <optgroup label="✓ 免費（Opus 方案）">
-                            <option value="832x1216" selected>832×1216（直向）</option>
-                            <option value="1216x832">1216×832（橫向）</option>
-                            <option value="1024x1024">1024×1024（正方形）</option>
-                        </optgroup>
-                        <optgroup label="⚡ 消耗 ANLAS">
-                            <option value="1024x1536">1024×1536（大直向）</option>
-                            <option value="1536x1024">1536×1024（大橫向）</option>
-                            <option value="1472x1472">1472×1472（大正方形）</option>
-                            <option value="1536x640">1536×640（壁紙橫向）</option>
-                            <option value="2048x1024">2048×1024（壁紙寬）</option>
-                        </optgroup>
-                    </select>
-                    <div class="res-note free" id="res-note">✓ 免費（Opus 方案）</div>
-                </div>
-            </div>
-
-            <!-- Prompt -->
-            <div class="form-card">
-                <div class="card-title">Prompt</div>
-
-                <div class="form-group">
-                    <label>正向 Prompt</label>
-                    <textarea id="prompt" rows="5" placeholder="1girl, blue eyes, long hair, masterpiece..."></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label>負向 Prompt（Undesired Content）</label>
-                    <textarea id="neg-prompt" rows="3" placeholder="lowres, bad anatomy, worst quality..."></textarea>
-                </div>
-            </div>
-
-            <!-- 進階參數（手機預設收起） -->
-            <div class="form-card">
-                <div class="collapsible-toggle" onclick="toggleAdvanced()">
-                    <div class="card-title">進階參數</div>
-                    <span class="toggle-arrow" id="adv-arrow">▼</span>
-                </div>
-                <div class="collapsible-body" id="adv-body">
-
-                    <div class="form-row">
-                        <div>
-                            <label>Steps</label>
-                            <input type="number" id="steps" value="28" min="1" max="50">
-                        </div>
-                        <div>
-                            <label>CFG Scale</label>
-                            <input type="number" id="cfg-scale" value="5" min="1" max="10" step="0.5">
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div>
-                            <label>CFG Rescale</label>
-                            <input type="number" id="cfg-rescale" value="0" min="0" max="1" step="0.01">
-                        </div>
-                        <div>
-                            <label>Sampler</label>
-                            <select id="sampler">
-                                <option value="k_euler_ancestral">Euler Ancestral</option>
-                                <option value="k_euler">Euler</option>
-                                <option value="k_dpmpp_2s_ancestral">DPM++ 2S Ancestral</option>
-                                <option value="k_dpmpp_2m_sde">DPM++ 2M SDE</option>
-                                <option value="k_dpmpp_sde">DPM++ SDE</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Noise Schedule</label>
-                        <select id="noise-schedule">
-                            <option value="native">Native</option>
-                            <option value="karras">Karras</option>
-                            <option value="exponential">Exponential</option>
-                            <option value="polyexponential">Polyexponential</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Seed（-1 = 隨機）</label>
-                        <div class="seed-row">
-                            <input type="number" id="seed" value="-1">
-                            <button class="btn btn-secondary" onclick="randomSeed()" title="隨機 Seed">🎲</button>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-
-            <!-- 生圖 -->
-            <button class="btn btn-primary btn-full btn-generate" id="generate-btn" onclick="generateImage()">
-                生圖
-            </button>
-
-        </div>
-
-        <!-- Right: Result -->
-        <div class="right-panel">
-            <div class="result-area">
-
-                <div id="result-placeholder" class="result-placeholder">
-                    <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
-                        <rect x="3" y="3" width="18" height="18" rx="2.5"/>
-                        <circle cx="8.5" cy="8.5" r="1.5"/>
-                        <polyline points="21 15 16 10 5 21"/>
-                    </svg>
-                    <span>生成的圖片會顯示在這裡</span>
-                </div>
-
-                <img id="result-image" alt="生成結果">
-
-                <div id="status-bar" class="status-bar"></div>
-
-                <div id="result-actions" class="result-actions">
-                    <button class="btn btn-primary" onclick="downloadImage()">⬇ 下載圖片</button>
-                    <button class="btn btn-secondary" onclick="copyPrompt()">📋 複製 Prompt</button>
-                </div>
-
-            </div>
-        </div>
-
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-brand">🎨 NAI 生圖工具</div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" id="tab-gen" onclick="showPage('generate')">生圖</button>
+      <button class="nav-tab" id="tab-gal" onclick="showPage('gallery')">圖庫 <span id="gal-count" style="font-size:.72rem;opacity:.7;"></span></button>
     </div>
+    <div class="nav-right">
+      <div class="anlas-info">
+        <div class="anlas-bal">ANLAS：<b id="anlas-val">---</b></div>
+        <div class="anlas-cost" id="cost-row" style="display:none;">上次扣：<b id="cost-val">0</b> 點</div>
+      </div>
+      <button class="btn btn-s btn-out" onclick="logout()">登出</button>
+    </div>
+  </nav>
+
+  <!-- ── GENERATE PAGE ── -->
+  <div id="page-generate" class="page active">
+    <div class="left-panel">
+
+      <!-- 模型 & 解析度 -->
+      <div class="card">
+        <div class="card-title">模型與解析度</div>
+        <div class="fg">
+          <label>模型 Model</label>
+          <select id="model">
+            <option value="nai-diffusion-4-5-full">NAI Diffusion V4.5 Full（最新）</option>
+            <option value="nai-diffusion-4-5">NAI Diffusion V4.5</option>
+            <option value="nai-diffusion-4">NAI Diffusion V4</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>解析度 Resolution</label>
+          <select id="res" onchange="updateResNote()">
+            <optgroup label="✓ 免費（Opus 方案）">
+              <option value="832x1216" selected>832×1216（直向）</option>
+              <option value="1216x832">1216×832（橫向）</option>
+              <option value="1024x1024">1024×1024（正方形）</option>
+            </optgroup>
+            <optgroup label="⚡ 消耗 ANLAS">
+              <option value="1024x1536">1024×1536（大直向）</option>
+              <option value="1536x1024">1536×1024（大橫向）</option>
+              <option value="1472x1472">1472×1472（大正方形）</option>
+              <option value="1536x640">1536×640（壁紙橫）</option>
+              <option value="2048x1024">2048×1024（壁紙寬）</option>
+            </optgroup>
+          </select>
+          <div id="res-note" class="res-note res-free">✓ 免費（Opus 方案）</div>
+        </div>
+      </div>
+
+      <!-- Prompt -->
+      <div class="card">
+        <div class="card-title">Prompt</div>
+        <div class="fg">
+          <label>正向 Prompt</label>
+          <textarea id="prompt" rows="5" placeholder="1girl, blue eyes, long hair..."></textarea>
+        </div>
+        <div class="fg">
+          <label>負向 Prompt（Undesired Content）</label>
+          <textarea id="neg-prompt" rows="3" placeholder="lowres, bad anatomy..."></textarea>
+        </div>
+      </div>
+
+      <!-- 圖庫 Tag -->
+      <div class="card">
+        <div class="card-title">生圖 Tag（套用到本次生圖）</div>
+        <div class="tag-chip-wrap" id="tag-chip-wrap" onclick="document.getElementById('tag-text-in').focus()">
+          <div id="tag-chips-display"></div>
+          <input type="text" id="tag-text-in" class="tag-text-in" placeholder="輸入 tag 後按 Enter...">
+        </div>
+        <div class="tag-dropdown" id="tag-dd"></div>
+      </div>
+
+      <!-- 進階參數 -->
+      <div class="card">
+        <div class="coll-hd" onclick="toggleAdv()">
+          <div class="card-title">進階參數</div>
+          <span class="coll-arrow" id="adv-arrow">▼</span>
+        </div>
+        <div class="coll-body" id="adv-body">
+          <div class="row2">
+            <div><label>Steps</label><input type="number" id="steps" value="28" min="1" max="50"></div>
+            <div><label>CFG Scale</label><input type="number" id="cfg" value="5" min="1" max="10" step=".5"></div>
+          </div>
+          <div class="row2">
+            <div><label>CFG Rescale</label><input type="number" id="cfg-r" value="0" min="0" max="1" step=".01"></div>
+            <div><label>Sampler</label>
+              <select id="sampler">
+                <option value="k_euler_ancestral">Euler Ancestral</option>
+                <option value="k_euler">Euler</option>
+                <option value="k_dpmpp_2s_ancestral">DPM++ 2S Ancestral</option>
+                <option value="k_dpmpp_2m_sde">DPM++ 2M SDE</option>
+                <option value="k_dpmpp_sde">DPM++ SDE</option>
+              </select>
+            </div>
+          </div>
+          <div class="fg">
+            <label>Noise Schedule</label>
+            <select id="noise-sch">
+              <option value="native">Native</option>
+              <option value="karras">Karras</option>
+              <option value="exponential">Exponential</option>
+              <option value="polyexponential">Polyexponential</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>Seed</label>
+            <div class="seed-row">
+              <input type="number" id="seed" value="-1">
+              <button class="seed-toggle active" id="seed-toggle" onclick="toggleSeedMode()" title="開啟後每次隨機生圖">🔀 隨機</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-p btn-full btn-gen" id="gen-btn" onclick="generate()">生圖</button>
+    </div>
+
+    <!-- Right: result -->
+    <div class="right-panel">
+      <div class="result-area">
+        <div id="result-ph" class="result-placeholder">
+          <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+            <rect x="3" y="3" width="18" height="18" rx="2.5"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+          <span>生成的圖片會顯示在這裡</span>
+        </div>
+        <img id="result-img" alt="生成結果">
+        <div id="status-bar" class="status-bar"></div>
+        <div id="result-actions" class="result-actions">
+          <button class="btn btn-p" onclick="downloadCurrent()">⬇ 下載圖片</button>
+          <button class="btn btn-s" onclick="copyCurrentPrompt()">📋 複製 Prompt</button>
+          <button class="btn btn-s" onclick="showPage('gallery')">📁 查看圖庫</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── GALLERY PAGE ── -->
+  <div id="page-gallery" class="page">
+    <!-- Toolbar -->
+    <div class="gallery-toolbar">
+      <input type="search" class="gallery-search" id="gal-search" placeholder="搜尋 prompt..." oninput="filterGallery()">
+      <div class="tag-filter-list" id="tag-filter-list"></div>
+      <button class="btn btn-s" onclick="toggleSelectMode()" id="sel-mode-btn">多選</button>
+    </div>
+
+    <!-- Selection actions bar -->
+    <div class="gallery-actions" id="gal-actions">
+      <span class="gallery-sel-count" id="sel-count">已選 0 張</span>
+      <button class="btn btn-s" onclick="downloadSelected()">⬇ 打包下載</button>
+      <button class="btn btn-d" onclick="deleteSelected()">🗑 刪除選取</button>
+      <button class="btn btn-s" onclick="clearSelection()">取消選取</button>
+    </div>
+
+    <!-- Grid -->
+    <div class="gallery-grid" id="gal-grid"></div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- ── IMAGE MODAL ── -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+  <div class="modal-box" onclick="e=>e.stopPropagation()">
+    <div class="modal-img-side">
+      <img id="modal-img" alt="">
+    </div>
+    <div class="modal-info" id="modal-info">
+      <!-- filled by JS -->
+    </div>
+  </div>
 </div>
 
-<div id="toast-container"></div>
+<div id="toast-wrap"></div>
 
-<!-- JSZip for extracting NAI ZIP response -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<!-- msgpack fallback -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/msgpack-lite/0.1.26/msgpack.min.js"></script>
-
 <script>
 'use strict';
 
-// ===========================
+// ═══════════════════════════════════════════
 // STATE
-// ===========================
+// ═══════════════════════════════════════════
 let apiToken = '';
 let anlasBalance = null;
 let lastBlob = null;
-let lastPromptText = '';
+let lastAB = null;       // ArrayBuffer of last generated image
+let lastPrompt = '';
 let isGenerating = false;
-const FREE_RES = new Set(['832x1216', '1216x832', '1024x1024']);
+let seedRandom = true;
 
-// ===========================
+// Tag input state
+let currentTags = [];
+let allKnownTags = [];
+
+// Gallery state
+let galleryData = [];       // all images from DB
+let filteredData = [];      // after filter/search
+let activeTagFilters = new Set();
+let selectMode = false;
+let selectedIds = new Set();
+
+// Modal state
+let modalImageId = null;
+
+const FREE_RES = new Set(['832x1216','1216x832','1024x1024']);
+
+// ═══════════════════════════════════════════
 // INIT
-// ===========================
-window.addEventListener('DOMContentLoaded', () => {
-    const saved = localStorage.getItem('nai_token');
-    if (saved) {
-        apiToken = saved;
-        showApp();
-    }
+// ═══════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', async () => {
+  const saved = localStorage.getItem('nai_token');
+  if (saved) { apiToken = saved; showApp(); }
 
-    // Advanced panel: open on desktop, closed on mobile
-    const isMobile = window.innerWidth <= 768;
-    setAdvanced(!isMobile);
+  const isMob = window.innerWidth <= 768;
+  setAdv(!isMob);
+  setSeedMode(true);
 
-    // Enter key to login
-    document.getElementById('token-input').addEventListener('keydown', e => {
-        if (e.key === 'Enter') login();
-    });
+  // tag input events
+  const tagIn = document.getElementById('tag-text-in');
+  tagIn.addEventListener('input', onTagInput);
+  tagIn.addEventListener('keydown', onTagKeydown);
+  tagIn.addEventListener('blur', () => setTimeout(() => document.getElementById('tag-dd').style.display='none', 150));
+
+  // modal keyboard
+  document.addEventListener('keydown', e => { if (e.key==='Escape') closeModal(); });
+
+  // login enter
+  document.getElementById('tok-in').addEventListener('keydown', e => { if(e.key==='Enter') login(); });
 });
 
-// ===========================
+// ═══════════════════════════════════════════
+// DATABASE (IndexedDB)
+// ═══════════════════════════════════════════
+let _db = null;
+async function getDB() {
+  if (_db) return _db;
+  _db = await new Promise((res, rej) => {
+    const r = indexedDB.open('nai_tool', 2);
+    r.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('images')) {
+        const s = db.createObjectStore('images', { keyPath:'id', autoIncrement:true });
+        s.createIndex('by_time','timestamp');
+        s.createIndex('by_tag','tags',{multiEntry:true});
+      }
+      if (!db.objectStoreNames.contains('tags')) {
+        db.createObjectStore('tags', { keyPath:'name' });
+      }
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror   = () => rej(r.error);
+  });
+  return _db;
+}
+
+function dbOp(db, store, mode, fn) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, mode);
+    const req = fn(tx.objectStore(store));
+    req.onsuccess = () => res(req.result);
+    req.onerror   = () => rej(req.error);
+  });
+}
+
+async function dbSaveImage(arrayBuffer, metadata, tags) {
+  const db = await getDB();
+  return dbOp(db,'images','readwrite', s => s.add({
+    timestamp: Date.now(),
+    data: arrayBuffer,
+    metadata,
+    tags: tags || []
+  }));
+}
+
+async function dbGetAll() {
+  const db = await getDB();
+  const all = await dbOp(db,'images','readonly', s => s.getAll());
+  return all.reverse();
+}
+
+async function dbDelete(id) {
+  const db = await getDB();
+  return dbOp(db,'images','readwrite', s => s.delete(id));
+}
+
+async function dbUpdateTags(id, tags) {
+  const db = await getDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('images','readwrite');
+    const store = tx.objectStore('images');
+    const r = store.get(id);
+    r.onsuccess = () => {
+      const item = r.result;
+      item.tags = tags;
+      const r2 = store.put(item);
+      r2.onsuccess = () => res();
+      r2.onerror = () => rej(r2.error);
+    };
+    r.onerror = () => rej(r.error);
+  });
+}
+
+async function dbSaveTag(name) {
+  const db = await getDB();
+  const existing = await new Promise(res => {
+    const r = db.transaction('tags','readonly').objectStore('tags').get(name);
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => res(null);
+  });
+  return dbOp(db,'tags','readwrite', s => s.put({
+    name, count: (existing?.count||0)+1, lastUsed: Date.now()
+  }));
+}
+
+async function dbGetTags() {
+  const db = await getDB();
+  const tags = await dbOp(db,'tags','readonly', s => s.getAll());
+  return tags.sort((a,b) => b.count - a.count);
+}
+
+// ═══════════════════════════════════════════
+// PNG METADATA EXTRACTION
+// ═══════════════════════════════════════════
+function extractPNGMeta(arrayBuffer) {
+  const bytes = new Uint8Array(arrayBuffer);
+  if (bytes[0] !== 0x89 || bytes[1] !== 0x50) return {};
+  const dec = new TextDecoder('latin1');
+  let offset = 8;
+  const raw = {};
+  while (offset + 12 <= bytes.length) {
+    const len = ((bytes[offset]<<24)|(bytes[offset+1]<<16)|(bytes[offset+2]<<8)|bytes[offset+3])>>>0;
+    const type = dec.decode(bytes.slice(offset+4, offset+8));
+    if (type === 'IEND') break;
+    if (type === 'tEXt' && len > 0) {
+      const data = bytes.slice(offset+8, offset+8+len);
+      const ni = data.indexOf(0);
+      if (ni !== -1) {
+        const key = dec.decode(data.slice(0, ni));
+        const val = dec.decode(data.slice(ni+1));
+        if (key==='Comment') { try { raw.comment = JSON.parse(val); } catch { raw.commentRaw = val; } }
+        else if (key==='Description') raw.description = val;
+        else if (key==='Source') raw.source = val;
+      }
+    }
+    offset += 12 + len;
+  }
+  const c = raw.comment || {};
+  return {
+    prompt:       raw.description || c.prompt || '',
+    negPrompt:    c.uc || '',
+    seed:         c.seed ?? '',
+    model:        c.model || raw.source || '',
+    steps:        c.steps ?? '',
+    scale:        c.scale ?? '',
+    cfgRescale:   c.cfg_rescale ?? '',
+    sampler:      c.sampler || '',
+    noiseSchedule:c.noise_schedule || '',
+    width:        c.width ?? '',
+    height:       c.height ?? '',
+  };
+}
+
+// ═══════════════════════════════════════════
 // LOGIN / LOGOUT
-// ===========================
+// ═══════════════════════════════════════════
 async function login() {
-    const raw = document.getElementById('token-input').value.trim();
-    if (!raw) { showLoginErr('請輸入 Token'); return; }
-
-    // 移除使用者不小心帶上的 "Bearer " 前綴
-    apiToken = raw.replace(/^Bearer\s+/i, '');
-
-    // 簡單檢查格式（NAI token 是很長的 JWT 字串）
-    if (apiToken.length < 20) {
-        showLoginErr('Token 格式不正確，請確認是否複製完整');
-        return;
-    }
-
-    if (document.getElementById('remember-token').checked) {
-        localStorage.setItem('nai_token', apiToken);
-    }
-
-    showApp();
-
-    // 背景靜默查詢 ANLAS（失敗不影響使用）
-    fetchAnlasSilent();
+  const raw = document.getElementById('tok-in').value.trim();
+  if (!raw) { showLoginErr('請輸入 Token'); return; }
+  apiToken = raw.replace(/^Bearer\s+/i,'');
+  if (apiToken.length < 20) { showLoginErr('Token 格式不正確'); return; }
+  if (document.getElementById('rem-tok').checked) localStorage.setItem('nai_token', apiToken);
+  showApp();
+  fetchAnlasSilent();
 }
 
 function logout() {
-    localStorage.removeItem('nai_token');
-    apiToken = ''; anlasBalance = null; lastBlob = null;
-    document.getElementById('app').style.display = 'none';
-    document.getElementById('login-screen').style.display = 'flex';
-    document.getElementById('token-input').value = '';
-    document.getElementById('login-error').style.display = 'none';
+  localStorage.removeItem('nai_token');
+  apiToken = ''; anlasBalance = null; lastBlob = null; lastAB = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('tok-in').value = '';
+  document.getElementById('login-err').style.display = 'none';
 }
 
-function showApp() {
-    document.getElementById('login-screen').style.display = 'none';
-    const app = document.getElementById('app');
-    app.style.display = 'flex';
+async function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  allKnownTags = await dbGetTags();
+  await loadGallery();
 }
 
 function showLoginErr(msg) {
-    const el = document.getElementById('login-error');
-    el.textContent = msg;
-    el.style.display = 'block';
+  const el = document.getElementById('login-err');
+  el.textContent = msg; el.style.display = 'block';
 }
 
-// ===========================
+// ═══════════════════════════════════════════
 // ANLAS
-// ===========================
+// ═══════════════════════════════════════════
 async function fetchAnlas() {
-    const res = await fetch('https://api.novelai.net/user/subscription', {
-        headers: { 'Authorization': `Bearer ${apiToken}` },
-        signal: AbortSignal.timeout(10000)
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-    const data = await res.json();
-    const fixed = data.trainingStepsLeft?.fixedTrainingStepsLeft || 0;
-    const purchased = data.trainingStepsLeft?.purchasedTrainingSteps || 0;
-    anlasBalance = fixed + purchased;
-
-    const formatted = anlasBalance.toLocaleString();
-    document.getElementById('anlas-balance').textContent = formatted;
-    document.getElementById('anlas-mobile-val').textContent = formatted;
-
-    return anlasBalance;
+  const r = await fetch('https://api.novelai.net/user/subscription',{
+    headers:{'Authorization':`Bearer ${apiToken}`},signal:AbortSignal.timeout(10000)});
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const d = await r.json();
+  anlasBalance = (d.trainingStepsLeft?.fixedTrainingStepsLeft||0)+(d.trainingStepsLeft?.purchasedTrainingSteps||0);
+  const f = anlasBalance.toLocaleString();
+  document.getElementById('anlas-val').textContent = f;
+  return anlasBalance;
 }
-
-// 靜默查詢 ANLAS，失敗顯示 N/A，不中斷主流程
 async function fetchAnlasSilent() {
-    try {
-        await fetchAnlas();
-    } catch(e) {
-        // CORS 或其他原因失敗，顯示 N/A
-        document.getElementById('anlas-balance').textContent = 'N/A';
-        document.getElementById('anlas-mobile-val').textContent = 'N/A';
-    }
+  try { await fetchAnlas(); }
+  catch { document.getElementById('anlas-val').textContent = 'N/A'; }
 }
-
 function showCost(cost) {
-    if (cost <= 0) return;
-    document.getElementById('last-cost-val').textContent = cost;
-    document.getElementById('last-cost-row').style.display = 'block';
+  if (cost <= 0) return;
+  document.getElementById('cost-val').textContent = cost;
+  document.getElementById('cost-row').style.display = 'block';
 }
 
-// ===========================
+// ═══════════════════════════════════════════
 // UI HELPERS
-// ===========================
+// ═══════════════════════════════════════════
 function updateResNote() {
-    const val = document.getElementById('resolution').value;
-    const note = document.getElementById('res-note');
-    if (FREE_RES.has(val)) {
-        note.textContent = '✓ 免費（Opus 方案）';
-        note.className = 'res-note free';
-    } else {
-        note.textContent = '⚡ 消耗 ANLAS';
-        note.className = 'res-note cost';
-    }
+  const v = document.getElementById('res').value;
+  const n = document.getElementById('res-note');
+  if (FREE_RES.has(v)) { n.textContent='✓ 免費（Opus 方案）'; n.className='res-note res-free'; }
+  else { n.textContent='⚡ 消耗 ANLAS'; n.className='res-note res-cost'; }
 }
 
 let advOpen = true;
-function setAdvanced(open) {
-    advOpen = open;
-    const body = document.getElementById('adv-body');
-    const arrow = document.getElementById('adv-arrow');
-    body.className = 'collapsible-body ' + (open ? 'open' : 'closed');
-    arrow.className = 'toggle-arrow ' + (open ? 'open' : 'closed');
+function setAdv(open) {
+  advOpen = open;
+  document.getElementById('adv-body').className = 'coll-body ' + (open?'open':'closed');
+  document.getElementById('adv-arrow').className = 'coll-arrow ' + (open?'open':'closed');
 }
+function toggleAdv() { setAdv(!advOpen); }
 
-function toggleAdvanced() { setAdvanced(!advOpen); }
-
-function randomSeed() {
-    document.getElementById('seed').value = Math.floor(Math.random() * 9999999999);
+function setSeedMode(random) {
+  seedRandom = random;
+  const btn = document.getElementById('seed-toggle');
+  const inp = document.getElementById('seed');
+  if (random) {
+    btn.className = 'seed-toggle active'; btn.textContent = '🔀 隨機';
+    inp.value = '-1'; inp.disabled = true;
+  } else {
+    btn.className = 'seed-toggle'; btn.textContent = '🔒 固定';
+    inp.disabled = false;
+  }
 }
+function toggleSeedMode() { setSeedMode(!seedRandom); }
 
 function showStatus(msg) {
-    const bar = document.getElementById('status-bar');
-    bar.textContent = msg;
-    bar.style.display = 'block';
+  const b = document.getElementById('status-bar'); b.textContent=msg; b.style.display='block';
+}
+function hideStatus() { document.getElementById('status-bar').style.display='none'; }
+
+function setGenerating(on) {
+  isGenerating = on;
+  const btn = document.getElementById('gen-btn');
+  btn.disabled = on;
+  btn.innerHTML = on ? '<span class="spinner"></span> 生成中...' : '生圖';
 }
 
-function hideStatus() {
-    document.getElementById('status-bar').style.display = 'none';
+function showPage(page) {
+  document.getElementById('page-generate').classList.remove('active');
+  document.getElementById('page-gallery').classList.remove('active');
+  document.getElementById('tab-gen').classList.remove('active');
+  document.getElementById('tab-gal').classList.remove('active');
+  if (page === 'generate') {
+    document.getElementById('page-generate').classList.add('active');
+    document.getElementById('tab-gen').classList.add('active');
+  } else {
+    document.getElementById('page-gallery').classList.add('active');
+    document.getElementById('tab-gal').classList.add('active');
+    renderGallery();
+  }
 }
 
-function setGenerating(active) {
-    isGenerating = active;
-    const btn = document.getElementById('generate-btn');
-    btn.disabled = active;
-    btn.innerHTML = active ? '<span class="spinner"></span> 生成中...' : '生圖';
+// ═══════════════════════════════════════════
+// TAG INPUT
+// ═══════════════════════════════════════════
+function onTagInput(e) {
+  const val = e.target.value.trim();
+  if (!val) { document.getElementById('tag-dd').style.display='none'; return; }
+  const matches = allKnownTags.filter(t =>
+    t.name.toLowerCase().includes(val.toLowerCase()) && !currentTags.includes(t.name)
+  ).slice(0, 8);
+  renderTagDD(matches, val);
 }
 
-// ===========================
+function onTagKeydown(e) {
+  if (e.key==='Enter' || e.key===',') {
+    e.preventDefault();
+    const val = e.target.value.trim().replace(/,$/,'');
+    if (val) addTag(val);
+    e.target.value = '';
+    document.getElementById('tag-dd').style.display='none';
+  } else if (e.key==='Backspace' && !e.target.value && currentTags.length) {
+    removeTag(currentTags[currentTags.length-1]);
+  }
+}
+
+function addTag(name) {
+  name = name.trim();
+  if (!name || currentTags.includes(name)) return;
+  currentTags.push(name);
+  dbSaveTag(name);
+  if (!allKnownTags.find(t=>t.name===name)) allKnownTags.unshift({name,count:1});
+  renderTagChips();
+}
+
+function removeTag(name) {
+  currentTags = currentTags.filter(t=>t!==name);
+  renderTagChips();
+}
+
+function renderTagChips() {
+  document.getElementById('tag-chips-display').innerHTML =
+    currentTags.map(t=>`<span class="tag-chip">${esc(t)}<button class="tag-chip-x" onclick="removeTag('${esc(t)}')">×</button></span>`).join('');
+}
+
+function renderTagDD(matches, input) {
+  const dd = document.getElementById('tag-dd');
+  if (!matches.length && !input) { dd.style.display='none'; return; }
+  const items = matches.map(t =>
+    `<div class="tag-dd-item" onmousedown="addTag('${esc(t.name)}');document.getElementById('tag-text-in').value='';document.getElementById('tag-dd').style.display='none'">${esc(t.name)} <small style="color:var(--txt2)">×${t.count}</small></div>`
+  );
+  if (!matches.find(t=>t.name===input)) {
+    items.push(`<div class="tag-dd-item tag-dd-new" onmousedown="addTag('${esc(input)}');document.getElementById('tag-text-in').value='';document.getElementById('tag-dd').style.display='none'">＋ 新增「${esc(input)}」</div>`);
+  }
+  dd.innerHTML = items.join('');
+  dd.style.display = 'block';
+}
+
+// ═══════════════════════════════════════════
 // GENERATE
-// ===========================
-async function generateImage() {
-    if (isGenerating) return;
+// ═══════════════════════════════════════════
+async function generate() {
+  if (isGenerating) return;
+  const prompt = document.getElementById('prompt').value.trim();
+  if (!prompt) { toast('請輸入正向 Prompt','err'); return; }
 
-    const prompt = document.getElementById('prompt').value.trim();
-    if (!prompt) { toast('請輸入正向 Prompt', 'error'); return; }
+  setGenerating(true);
+  lastPrompt = prompt;
 
-    setGenerating(true);
-    lastPromptText = prompt;
+  const negPrompt = document.getElementById('neg-prompt').value.trim();
+  const [width, height] = document.getElementById('res').value.split('x').map(Number);
+  const model   = document.getElementById('model').value;
+  const steps   = parseInt(document.getElementById('steps').value)||28;
+  const scale   = parseFloat(document.getElementById('cfg').value)||5;
+  const cfgR    = parseFloat(document.getElementById('cfg-r').value)||0;
+  const sampler = document.getElementById('sampler').value;
+  const noiseSch= document.getElementById('noise-sch').value;
+  let seed = seedRandom ? Math.floor(Math.random()*9999999999) : (parseInt(document.getElementById('seed').value)||Math.floor(Math.random()*9999999999));
 
-    const negPrompt = document.getElementById('neg-prompt').value.trim();
-    const [width, height] = document.getElementById('resolution').value.split('x').map(Number);
-    const model = document.getElementById('model').value;
-    const steps = parseInt(document.getElementById('steps').value) || 28;
-    const scale = parseFloat(document.getElementById('cfg-scale').value) || 5;
-    const cfgRescale = parseFloat(document.getElementById('cfg-rescale').value) || 0;
-    const sampler = document.getElementById('sampler').value;
-    const noiseSchedule = document.getElementById('noise-schedule').value;
-    let seed = parseInt(document.getElementById('seed').value);
-    if (isNaN(seed) || seed < 0) seed = Math.floor(Math.random() * 9999999999);
+  const isV4 = model.startsWith('nai-diffusion-4');
+  const params = {
+    width, height, scale, sampler, steps,
+    n_samples:1, ucPreset:0, qualityToggle:true,
+    dynamic_thresholding:false, controlnet_strength:1,
+    legacy:false, add_original_image:false,
+    cfg_rescale:cfgR, noise_schedule:noiseSch,
+    legacy_v3_extend:false, seed, negative_prompt:negPrompt
+  };
+  if (isV4) {
+    params.v4_prompt = { caption:{ base_caption:prompt, char_captions:[] }, use_coords:false, use_order:false };
+    params.v4_negative_prompt = { caption:{ base_caption:negPrompt, char_captions:[] }, use_coords:false, use_order:false };
+  } else {
+    params.sm = false; params.sm_dyn = false;
+  }
 
-    const isV4 = model.startsWith('nai-diffusion-4');
+  const body = { input:prompt, model, action:'generate', parameters:params };
+  const beforeAnlas = anlasBalance;
 
-    const parameters = {
-        width, height, scale,
-        sampler, steps,
-        n_samples: 1,
-        ucPreset: 0,
-        qualityToggle: true,
-        dynamic_thresholding: false,
-        controlnet_strength: 1,
-        legacy: false,
-        add_original_image: false,
-        cfg_rescale: cfgRescale,
-        noise_schedule: noiseSchedule,
-        legacy_v3_extend: false,
-        seed,
-        negative_prompt: negPrompt
-    };
+  const TIMEOUT = 120000, MAX_RETRY = 2;
+  let resp = null;
 
-    // V4/V4.5 需要額外的 v4_prompt 欄位
-    if (isV4) {
-        parameters.v4_prompt = {
-            caption: {
-                base_caption: prompt,
-                char_captions: []
-            },
-            use_coords: false,
-            use_order: false
-        };
-        parameters.v4_negative_prompt = {
-            caption: {
-                base_caption: negPrompt,
-                char_captions: []
-            },
-            use_coords: false,
-            use_order: false
-        };
-    } else {
-        // V3 用 sm/sm_dyn
-        parameters.sm = false;
-        parameters.sm_dyn = false;
-    }
-
-    const body = {
-        input: prompt,
-        model: model,
-        action: 'generate',
-        parameters
-    };
-
-    // Record ANLAS before
-    const beforeAnlas = anlasBalance;
-
-    // Fetch with retry
-    const TIMEOUT_MS = 120000;
-    const MAX_RETRY = 2;
-    let resp = null;
-
-    for (let attempt = 0; attempt <= MAX_RETRY; attempt++) {
-        const ctrl = new AbortController();
-        const tid = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
-
-        try {
-            showStatus(attempt > 0 ? `重試中（第 ${attempt} 次）...` : '正在生成，請稍候...');
-
-            resp = await fetch('https://image.novelai.net/ai/generate-image', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiToken}`,
-                    'Accept': 'application/x-msgpack'
-                },
-                body: JSON.stringify(body),
-                signal: ctrl.signal
-            });
-
-            clearTimeout(tid);
-
-            // Retry on rate limit or server error
-            if ((resp.status === 429 || (resp.status >= 500 && resp.status <= 599)) && attempt < MAX_RETRY) {
-                const wait = resp.status === 429 ? 3000 * (attempt + 1) : 1500 * (attempt + 1);
-                const label = resp.status === 429 ? '請求過於頻繁' : `伺服器錯誤 ${resp.status}`;
-                toast(`${label}，${Math.ceil(wait/1000)} 秒後重試`, 'warning');
-                await sleep(wait);
-                continue;
-            }
-
-            break;
-
-        } catch(e) {
-            clearTimeout(tid);
-            if (attempt < MAX_RETRY) {
-                toast('網路錯誤，重試中...', 'warning');
-                await sleep(1500 * (attempt + 1));
-                continue;
-            }
-            const isTimeout = e.name === 'AbortError';
-            toast(isTimeout ? '請求逾時（120秒）' : '網路錯誤：' + e.message, 'error');
-            setGenerating(false);
-            hideStatus();
-            return;
-        }
-    }
-
-    if (!resp || !resp.ok) {
-        toast(`生圖失敗：HTTP ${resp?.status || '未知'}`, 'error');
-        setGenerating(false);
-        hideStatus();
-        return;
-    }
-
-    // Decode response (NAI 回傳 ZIP 格式)
+  for (let attempt = 0; attempt <= MAX_RETRY; attempt++) {
+    const ctrl = new AbortController();
+    const tid = setTimeout(()=>ctrl.abort(), TIMEOUT);
     try {
-        showStatus('處理圖片中...');
-        const buf = await resp.arrayBuffer();
-        const bytes = new Uint8Array(buf);
-
-        let blob = null;
-
-        // 方法1: ZIP 格式（NAI 標準回應）
-        if (bytes[0] === 0x50 && bytes[1] === 0x4b) {
-            const zip = await JSZip.loadAsync(buf);
-            const files = Object.keys(zip.files);
-            const pngFile = files.find(f => f.endsWith('.png')) || files[0];
-            if (pngFile) {
-                const pngBytes = await zip.files[pngFile].async('uint8array');
-                blob = new Blob([pngBytes], { type: 'image/png' });
-            }
-        }
-
-        // 方法2: 直接是 PNG
-        if (!blob && bytes[0] === 0x89 && bytes[1] === 0x50) {
-            blob = new Blob([bytes], { type: 'image/png' });
-        }
-
-        // 方法3: msgpack
-        if (!blob) {
-            try {
-                const decoded = msgpack.decode(bytes);
-                const imgData = decoded?.output?.[0] ?? decoded?.images?.[0] ?? decoded?.image;
-                if (imgData) {
-                    if (typeof imgData === 'string') {
-                        const binStr = atob(imgData);
-                        const arr = new Uint8Array(binStr.length);
-                        for (let i = 0; i < binStr.length; i++) arr[i] = binStr.charCodeAt(i);
-                        blob = new Blob([arr], { type: 'image/png' });
-                    } else {
-                        blob = new Blob([imgData], { type: 'image/png' });
-                    }
-                }
-            } catch(e) { /* ignore */ }
-        }
-
-        if (!blob) throw new Error('無法解析圖片格式（大小: ' + bytes.length + ' bytes）');
-
-        lastBlob = blob;
-
-        const url = URL.createObjectURL(blob);
-
-        // Show result
-        document.getElementById('result-placeholder').style.display = 'none';
-        const img = document.getElementById('result-image');
-        img.src = url;
-        img.style.display = 'block';
-        document.getElementById('result-actions').style.display = 'flex';
-
-        // Update seed shown
-        document.getElementById('seed').value = seed;
-
-        // Calc cost（靜默，失敗不影響）
-        try {
-            const afterAnlas = await fetchAnlas();
-            if (beforeAnlas !== null && beforeAnlas !== anlasBalance) {
-                showCost(beforeAnlas - afterAnlas);
-            }
-        } catch(_) {}
-
-        toast('生圖完成！', 'success');
-
+      showStatus(attempt>0 ? `重試中（第 ${attempt} 次）...` : '生成中，請稍候...');
+      resp = await fetch('https://image.novelai.net/ai/generate-image',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiToken}`,'Accept':'application/x-msgpack'},
+        body:JSON.stringify(body), signal:ctrl.signal
+      });
+      clearTimeout(tid);
+      if ((resp.status===429||(resp.status>=500&&resp.status<=599)) && attempt<MAX_RETRY) {
+        const wait = resp.status===429 ? 3000*(attempt+1) : 1500*(attempt+1);
+        toast(`${resp.status===429?'請求過於頻繁':'伺服器錯誤'}，${Math.ceil(wait/1000)}秒後重試`,'warn');
+        await sleep(wait); continue;
+      }
+      break;
     } catch(e) {
-        toast('解析圖片失敗：' + e.message, 'error');
+      clearTimeout(tid);
+      if (attempt<MAX_RETRY) { toast('網路錯誤，重試中...','warn'); await sleep(1500*(attempt+1)); continue; }
+      toast(e.name==='AbortError'?'請求逾時（120秒）':'網路錯誤：'+e.message,'err');
+      setGenerating(false); hideStatus(); return;
     }
+  }
 
-    setGenerating(false);
-    hideStatus();
-}
+  if (!resp||!resp.ok) {
+    toast(`生圖失敗：HTTP ${resp?.status||'?'}`,'err');
+    setGenerating(false); hideStatus(); return;
+  }
 
-// ===========================
-// DOWNLOAD
-// ===========================
-function downloadImage() {
-    if (!lastBlob) return;
+  try {
+    showStatus('處理圖片中...');
+    const buf = await resp.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let ab = null;
+
+    // ZIP format (standard NAI response)
+    if (bytes[0]===0x50 && bytes[1]===0x4b) {
+      const zip = await JSZip.loadAsync(buf);
+      const files = Object.keys(zip.files);
+      const pngFile = files.find(f=>f.endsWith('.png'))||files[0];
+      if (pngFile) ab = (await zip.files[pngFile].async('arraybuffer'));
+    }
+    // Direct PNG
+    if (!ab && bytes[0]===0x89 && bytes[1]===0x50) ab = buf;
+
+    if (!ab) throw new Error('無法解析圖片（大小: '+bytes.length+' bytes）');
+
+    // Display
+    lastAB = ab;
+    lastBlob = new Blob([ab],{type:'image/png'});
     const url = URL.createObjectURL(lastBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    const ts = new Date().toISOString().slice(0,19).replace(/[T:]/g, '-');
-    const seed = document.getElementById('seed').value;
-    a.download = `nai_${ts}_seed${seed}.png`;
-    a.click();
-    URL.revokeObjectURL(url);
+    document.getElementById('result-ph').style.display = 'none';
+    document.getElementById('result-img').src = url;
+    document.getElementById('result-img').style.display = 'block';
+    document.getElementById('result-actions').style.display = 'flex';
+
+    // Update seed display if fixed mode
+    if (!seedRandom) document.getElementById('seed').value = seed;
+
+    // Extract metadata & save to gallery
+    const meta = extractPNGMeta(ab);
+    // Ensure we have the correct params even if PNG meta is incomplete
+    if (!meta.seed) meta.seed = seed;
+    if (!meta.model) meta.model = model;
+    if (!meta.prompt) meta.prompt = prompt;
+    if (!meta.negPrompt) meta.negPrompt = negPrompt;
+
+    const id = await dbSaveImage(ab, meta, [...currentTags]);
+    galleryData.unshift({ id, timestamp:Date.now(), data:ab, metadata:meta, tags:[...currentTags] });
+    updateGalCount();
+
+    toast('生圖完成，已存入圖庫','ok');
+
+    // Calc cost
+    try {
+      const after = await fetchAnlas();
+      if (beforeAnlas !== null) showCost(beforeAnlas - after);
+    } catch(_) {}
+
+  } catch(e) {
+    toast('處理圖片失敗：'+e.message,'err');
+  }
+  setGenerating(false); hideStatus();
 }
 
-// ===========================
-// COPY PROMPT
-// ===========================
-function copyPrompt() {
-    if (!lastPromptText) return;
-    navigator.clipboard.writeText(lastPromptText)
-        .then(() => toast('Prompt 已複製', 'success'))
-        .catch(() => toast('複製失敗，請手動複製', 'error'));
+// ═══════════════════════════════════════════
+// GALLERY
+// ═══════════════════════════════════════════
+async function loadGallery() {
+  galleryData = await dbGetAll();
+  updateGalCount();
+  buildTagFilterList();
 }
 
-// ===========================
+function updateGalCount() {
+  document.getElementById('gal-count').textContent = galleryData.length ? `(${galleryData.length})` : '';
+}
+
+function buildTagFilterList() {
+  const tagCount = {};
+  galleryData.forEach(img => (img.tags||[]).forEach(t => tagCount[t] = (tagCount[t]||0)+1));
+  const sorted = Object.entries(tagCount).sort((a,b)=>b[1]-a[1]);
+  const list = document.getElementById('tag-filter-list');
+  list.innerHTML = sorted.map(([t,c]) =>
+    `<span class="tag-filter-chip ${activeTagFilters.has(t)?'active':''}" onclick="toggleTagFilter('${esc(t)}')">${esc(t)} <small>${c}</small></span>`
+  ).join('');
+}
+
+function toggleTagFilter(tag) {
+  if (activeTagFilters.has(tag)) activeTagFilters.delete(tag);
+  else activeTagFilters.add(tag);
+  buildTagFilterList();
+  filterGallery();
+}
+
+function filterGallery() {
+  const q = (document.getElementById('gal-search').value||'').toLowerCase();
+  filteredData = galleryData.filter(img => {
+    const meta = img.metadata || {};
+    const matchSearch = !q ||
+      (meta.prompt||'').toLowerCase().includes(q) ||
+      (img.tags||[]).some(t => t.toLowerCase().includes(q));
+    const matchTags = activeTagFilters.size === 0 ||
+      [...activeTagFilters].every(t => (img.tags||[]).includes(t));
+    return matchSearch && matchTags;
+  });
+  renderGallery();
+}
+
+function renderGallery() {
+  filterGallery_noRender();
+  const grid = document.getElementById('gal-grid');
+  if (!filteredData.length) {
+    grid.innerHTML = `<div class="gallery-empty" style="grid-column:1/-1;">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <rect x="3" y="3" width="18" height="18" rx="2.5"/>
+        <circle cx="8.5" cy="8.5" r="1.5"/>
+        <polyline points="21 15 16 10 5 21"/>
+      </svg>
+      <span>${galleryData.length ? '沒有符合條件的圖片' : '圖庫是空的，生完圖會自動存入這裡'}</span>
+    </div>`;
+    return;
+  }
+  grid.innerHTML = filteredData.map(img => {
+    const url = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
+    const tags = (img.tags||[]).map(t=>`<span class="gcard-tag">${esc(t)}</span>`).join('');
+    const time = new Date(img.timestamp).toLocaleDateString('zh-TW',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    const sel = selectedIds.has(img.id) ? 'selected' : '';
+    return `<div class="gcard ${sel}" data-id="${img.id}" onclick="onCardClick(event,${img.id},'${url}')">
+      <div class="gcard-check">✓</div>
+      <img class="gcard-img" src="${url}" loading="lazy" alt="">
+      <div class="gcard-footer">
+        <div class="gcard-tags">${tags}</div>
+        <div class="gcard-time">${time}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterGallery_noRender() {
+  const q = (document.getElementById('gal-search').value||'').toLowerCase();
+  filteredData = galleryData.filter(img => {
+    const meta = img.metadata || {};
+    const matchSearch = !q ||
+      (meta.prompt||'').toLowerCase().includes(q) ||
+      (img.tags||[]).some(t => t.toLowerCase().includes(q));
+    const matchTags = activeTagFilters.size===0 ||
+      [...activeTagFilters].every(t=>(img.tags||[]).includes(t));
+    return matchSearch && matchTags;
+  });
+}
+
+function onCardClick(e, id, url) {
+  if (selectMode) { toggleSelect(id); return; }
+  openModal(id, url);
+}
+
+// Select mode
+function toggleSelectMode() {
+  selectMode = !selectMode;
+  selectedIds.clear();
+  document.getElementById('sel-mode-btn').textContent = selectMode ? '結束多選' : '多選';
+  document.getElementById('gal-actions').classList.toggle('visible', selectMode);
+  document.getElementById('sel-count').textContent = '已選 0 張';
+  renderGallery();
+}
+
+function toggleSelect(id) {
+  if (selectedIds.has(id)) selectedIds.delete(id);
+  else selectedIds.add(id);
+  document.getElementById('sel-count').textContent = `已選 ${selectedIds.size} 張`;
+  const card = document.querySelector(`[data-id="${id}"]`);
+  if (card) card.classList.toggle('selected', selectedIds.has(id));
+}
+
+function clearSelection() {
+  selectedIds.clear();
+  selectMode = false;
+  document.getElementById('sel-mode-btn').textContent = '多選';
+  document.getElementById('gal-actions').classList.remove('visible');
+  renderGallery();
+}
+
+async function downloadSelected() {
+  if (!selectedIds.size) { toast('請先選擇圖片','warn'); return; }
+  const zip = new JSZip();
+  const items = galleryData.filter(img => selectedIds.has(img.id));
+  items.forEach((img, i) => {
+    const ts = new Date(img.timestamp).toISOString().slice(0,19).replace(/[T:]/g,'-');
+    const seed = img.metadata?.seed || i;
+    zip.file(`nai_${ts}_seed${seed}.png`, img.data);
+  });
+  const blob = await zip.generateAsync({type:'blob'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `nai_gallery_${items.length}張.zip`; a.click();
+  URL.revokeObjectURL(url);
+  toast(`已打包 ${items.length} 張圖片`,'ok');
+}
+
+async function deleteSelected() {
+  if (!selectedIds.size) return;
+  if (!confirm(`確定要刪除 ${selectedIds.size} 張圖片？`)) return;
+  for (const id of selectedIds) await dbDelete(id);
+  galleryData = galleryData.filter(img => !selectedIds.has(img.id));
+  selectedIds.clear();
+  selectMode = false;
+  document.getElementById('sel-mode-btn').textContent = '多選';
+  document.getElementById('gal-actions').classList.remove('visible');
+  updateGalCount();
+  buildTagFilterList();
+  filterGallery();
+  toast('已刪除','ok');
+}
+
+// ═══════════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════════
+function openModal(id, url) {
+  const img = galleryData.find(i=>i.id===id);
+  if (!img) return;
+  modalImageId = id;
+
+  document.getElementById('modal-img').src = url;
+  const meta = img.metadata || {};
+  const tags = (img.tags||[]);
+  const time = new Date(img.timestamp).toLocaleString('zh-TW');
+
+  document.getElementById('modal-info').innerHTML = `
+    <div>
+      <div class="modal-section-title">Prompt</div>
+      <div class="modal-prompt-box">${esc(meta.prompt||'—')}</div>
+      <button class="btn btn-s" style="margin-top:6px;width:100%;font-size:.8rem;" onclick="navigator.clipboard.writeText(${JSON.stringify(meta.prompt||'')}).then(()=>toast('已複製','ok'))">📋 複製 Prompt</button>
+    </div>
+    <div>
+      <div class="modal-section-title">負向 Prompt</div>
+      <div class="modal-prompt-box" style="max-height:80px;">${esc(meta.negPrompt||'—')}</div>
+      <button class="btn btn-s" style="margin-top:6px;width:100%;font-size:.8rem;" onclick="navigator.clipboard.writeText(${JSON.stringify(meta.negPrompt||'')}).then(()=>toast('已複製','ok'))">📋 複製</button>
+    </div>
+    <div>
+      <div class="modal-section-title">參數</div>
+      <div class="meta-grid">
+        <span class="meta-key">Seed</span><span class="meta-val">${meta.seed??'—'}</span>
+        <span class="meta-key">Model</span><span class="meta-val">${esc(meta.model||'—')}</span>
+        <span class="meta-key">Size</span><span class="meta-val">${meta.width||'?'}×${meta.height||'?'}</span>
+        <span class="meta-key">Steps</span><span class="meta-val">${meta.steps??'—'}</span>
+        <span class="meta-key">CFG</span><span class="meta-val">${meta.scale??'—'}</span>
+        <span class="meta-key">Sampler</span><span class="meta-val">${esc(meta.sampler||'—')}</span>
+        <span class="meta-key">時間</span><span class="meta-val">${time}</span>
+      </div>
+    </div>
+    <div>
+      <div class="modal-section-title">Tags</div>
+      <div class="modal-tag-wrap" id="modal-tags">
+        ${tags.map(t=>`<span class="modal-tag" onclick="removeModalTag('${esc(t)}')" title="點擊移除">${esc(t)} ×</span>`).join('')}
+        <button class="btn btn-s btn-icon" onclick="addModalTag()" title="新增 tag" style="font-size:.75rem;padding:3px 8px;">＋</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-s btn-full" onclick="fillFromModal()">↩ 填入生圖介面</button>
+      <button class="btn btn-p btn-full" onclick="downloadModal()">⬇ 下載圖片</button>
+      <button class="btn btn-d btn-full" onclick="deleteModal()">🗑 刪除</button>
+    </div>
+  `;
+
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e && e.target !== document.getElementById('modal')) return;
+  document.getElementById('modal').classList.remove('open');
+  modalImageId = null;
+}
+
+function addModalTag() {
+  const t = prompt('輸入新 tag：');
+  if (!t) return;
+  const img = galleryData.find(i=>i.id===modalImageId);
+  if (!img) return;
+  if (!img.tags.includes(t)) {
+    img.tags.push(t);
+    dbUpdateTags(modalImageId, img.tags);
+    dbSaveTag(t);
+    if (!allKnownTags.find(x=>x.name===t)) allKnownTags.unshift({name:t,count:1});
+    openModal(modalImageId, document.getElementById('modal-img').src);
+    buildTagFilterList();
+  }
+}
+
+function removeModalTag(tag) {
+  const img = galleryData.find(i=>i.id===modalImageId);
+  if (!img) return;
+  img.tags = img.tags.filter(t=>t!==tag);
+  dbUpdateTags(modalImageId, img.tags);
+  openModal(modalImageId, document.getElementById('modal-img').src);
+  buildTagFilterList();
+}
+
+function fillFromModal() {
+  const img = galleryData.find(i=>i.id===modalImageId);
+  if (!img) return;
+  const meta = img.metadata || {};
+  if (meta.prompt) document.getElementById('prompt').value = meta.prompt;
+  if (meta.negPrompt) document.getElementById('neg-prompt').value = meta.negPrompt;
+  if (meta.steps) document.getElementById('steps').value = meta.steps;
+  if (meta.scale) document.getElementById('cfg').value = meta.scale;
+  if (meta.cfgRescale !== undefined) document.getElementById('cfg-r').value = meta.cfgRescale;
+  if (meta.sampler) document.getElementById('sampler').value = meta.sampler;
+  if (meta.noiseSchedule) document.getElementById('noise-sch').value = meta.noiseSchedule;
+  if (meta.seed) { setSeedMode(false); document.getElementById('seed').value = meta.seed; }
+  document.getElementById('modal').classList.remove('open');
+  showPage('generate');
+  toast('已填入生圖介面','ok');
+}
+
+function downloadModal() {
+  const img = galleryData.find(i=>i.id===modalImageId);
+  if (!img) return;
+  const url = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
+  const a = document.createElement('a');
+  const ts = new Date(img.timestamp).toISOString().slice(0,19).replace(/[T:]/g,'-');
+  a.href = url; a.download = `nai_${ts}_seed${img.metadata?.seed||0}.png`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function deleteModal() {
+  if (!confirm('確定要刪除這張圖片？')) return;
+  await dbDelete(modalImageId);
+  galleryData = galleryData.filter(i=>i.id!==modalImageId);
+  document.getElementById('modal').classList.remove('open');
+  updateGalCount();
+  buildTagFilterList();
+  filterGallery();
+  toast('已刪除','ok');
+}
+
+// ═══════════════════════════════════════════
+// CURRENT IMAGE ACTIONS
+// ═══════════════════════════════════════════
+function downloadCurrent() {
+  if (!lastBlob) return;
+  const url = URL.createObjectURL(lastBlob);
+  const a = document.createElement('a');
+  const ts = new Date().toISOString().slice(0,19).replace(/[T:]/g,'-');
+  const seed = document.getElementById('seed').value;
+  a.href = url; a.download = `nai_${ts}_seed${seed}.png`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function copyCurrentPrompt() {
+  if (!lastPrompt) return;
+  navigator.clipboard.writeText(lastPrompt)
+    .then(()=>toast('Prompt 已複製','ok'))
+    .catch(()=>toast('複製失敗','err'));
+}
+
+// ═══════════════════════════════════════════
 // TOAST
-// ===========================
-function toast(msg, type = 'info') {
-    const container = document.getElementById('toast-container');
-    const el = document.createElement('div');
-    el.className = `toast ${type}`;
-    el.textContent = msg;
-    container.appendChild(el);
-    setTimeout(() => {
-        el.style.opacity = '0';
-        setTimeout(() => el.remove(), 300);
-    }, 3500);
+// ═══════════════════════════════════════════
+function toast(msg, type='info') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`; el.textContent = msg;
+  document.getElementById('toast-wrap').appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; setTimeout(()=>el.remove(), 300); }, 3500);
 }
 
-// ===========================
+// ═══════════════════════════════════════════
 // UTILS
-// ===========================
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
+// ═══════════════════════════════════════════
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
 </script>
 </body>
 </html>
