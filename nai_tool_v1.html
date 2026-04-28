@@ -448,7 +448,6 @@
         <div class="coll-body closed" id="vibe-body">
           <div id="vibe-list" style="margin-top:8px;"></div>
           <div style="display:flex;gap:6px;margin-top:6px;">
-            <button class="btn btn-s" style="flex:1;" onclick="addVibeImage()">＋ 新增圖片</button>
             <button class="btn btn-s" style="flex:1;" onclick="openVibePicker()">📚 從 Vibe 庫選取</button>
           </div>
         </div>
@@ -783,11 +782,30 @@ async function dbSaveTag(name) {
 }
 
 // ── Vibe Library DB ──
-async function dbSaveVibe(name, base64, thumbUrl, isPreEncoded) {
+async function dbSaveVibe(name, base64, thumbUrl, isPreEncoded, infoExtracted, strength, model) {
   const db = await getDB();
   return dbOp(db,'vibe_library','readwrite', s => s.add({
-    name, base64, thumbUrl, isPreEncoded: !!isPreEncoded, timestamp: Date.now()
+    name, base64, thumbUrl, isPreEncoded: !!isPreEncoded,
+    infoExtracted: infoExtracted ?? 1.0,
+    strength: strength ?? 0.6,
+    model: model || '',
+    timestamp: Date.now()
   }));
+}
+async function dbUpdateVibe(id, fields) {
+  const db = await getDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('vibe_library','readwrite');
+    const store = tx.objectStore('vibe_library');
+    const r = store.get(id);
+    r.onsuccess = () => {
+      const item = Object.assign(r.result, fields);
+      const r2 = store.put(item);
+      r2.onsuccess = () => res();
+      r2.onerror = () => rej(r2.error);
+    };
+    r.onerror = () => rej(r.error);
+  });
 }
 async function dbGetVibes() {
   const db = await getDB();
@@ -1110,33 +1128,24 @@ function setGalleryImgAsImg2Img(id) {
 }
 
 // ── Vibe Transfer ──
-async function addVibeImage() {
-  const input = document.createElement('input');
-  input.type = 'file'; input.accept = 'image/*';
-  input.onchange = async e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const b64 = await fileToBase64(file);
-    vibeImages.push({ base64: b64, url: URL.createObjectURL(file), name: file.name,
-      infoExtracted: 1.0, refStrength: 0.6, isPreEncoded: false });
-    renderVibeList();
-    if (!vibeOpen) setVibeOpen(true);
-    updateVibeCount();
-  };
-  input.click();
-}
-
-// loadVibeFile kept for backward compat but now redirects to library page
-function loadVibeFile() {
-  showPage('vibe');
-  toast('請在 Vibe 庫頁面載入 .naiv4vibe 檔案', 'info');
-}
 
 function removeVibeImage(idx) {
   vibeImages.splice(idx, 1);
   renderVibeList();
   updateVibeCount();
 }
+function editSessionVibeIE(idx) {
+  const v = vibeImages[idx];
+  if (!v) return;
+  const cur = (v.infoExtracted || 1.0).toFixed(2);
+  const input = prompt(`修改「${v.name}」的提取程度記錄值\n（僅供標記參考，不影響實際生圖）`, cur);
+  if (input === null) return;
+  const val = Math.min(1, Math.max(0.01, parseFloat(input) || 1.0));
+  vibeImages[idx].infoExtracted = val;
+  const el = document.getElementById(`vp-${idx}-ie-display`);
+  if (el) el.textContent = val.toFixed(2);
+}
+
 function updateVibeCount() {
   document.getElementById('vibe-count').textContent = vibeImages.length ? `(${vibeImages.length})` : '';
 }
@@ -1148,21 +1157,13 @@ function renderVibeList() {
   const list = document.getElementById('vibe-list');
   if (!vibeImages.length) { list.innerHTML = ''; return; }
   list.innerHTML = vibeImages.map((v, i) => {
-    const badge = v.isPreEncoded
-      ? `<span class="badge-encoded">已預編碼 ✓</span>`
-      : `<span class="badge-img">原圖 (-2 pts)</span>`;
-
-    // Information Extracted: only relevant for original images (not pre-encoded)
-    const infoSlider = v.isPreEncoded
-      ? `<div style="font-size:.72rem;color:var(--txt2);margin-top:4px;line-height:1.4;">
-           提取程度在編碼時已定，無法修改
-         </div>`
-      : `<div class="range-row" style="margin-top:6px;">
-           <label>提取程度 <span style="font-size:.68rem;color:var(--warn);">(-2 pts)</span></label>
-           <span class="range-val" id="vp-${i}-infoExtracted">${v.infoExtracted.toFixed(2)}</span>
-         </div>
-         <input type="range" min="0.01" max="1" step="0.01" value="${v.infoExtracted}"
-           oninput="updateVibeParam(${i},'infoExtracted',this.value)">`;
+    const infoSlider = `<div style="margin-top:6px;display:flex;align-items:center;gap:6px;">
+         <span style="font-size:.75rem;color:var(--txt2);">提取程度（編碼時）：</span>
+         <span style="font-size:.8rem;color:var(--txt);font-weight:700;" id="vp-${i}-ie-display">${(v.infoExtracted||1.0).toFixed(2)}</span>
+         <button onclick="editSessionVibeIE(${i})" title="修改記錄值（僅供參考，不影響生圖）"
+           style="background:none;border:none;color:var(--txt2);cursor:pointer;font-size:.8rem;padding:0 2px;">✏</button>
+         <span style="font-size:.68rem;color:var(--txt2);">（記錄用）</span>
+       </div>`;
 
     return `<div class="vibe-item">
       <div class="vibe-item-top">
@@ -1170,7 +1171,7 @@ function renderVibeList() {
         <div class="vibe-sliders">
           <div class="range-row" style="margin-bottom:4px;">
             <span style="font-size:.78rem;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px;">${esc(v.name||'')}</span>
-            ${badge}
+            <span class="badge-encoded">已預編碼 ✓</span>
           </div>
           <div class="range-row"><label>參考強度</label><span class="range-val" id="vp-${i}-refStrength">${v.refStrength.toFixed(2)}</span></div>
           <input type="range" min="0.01" max="1" step="0.01" value="${v.refStrength}"
@@ -1220,6 +1221,13 @@ async function renderVibePage(saved) {
       ? `<span class="badge-encoded">預編碼 ✓</span>`
       : `<span class="badge-img">原圖</span>`;
     const time = new Date(v.timestamp).toLocaleDateString('zh-TW',{month:'short',day:'numeric'});
+    const ieNote = v.isPreEncoded
+      ? `<div style="font-size:.72rem;color:var(--txt2);display:flex;align-items:center;gap:3px;margin-top:2px;">
+           IE: <b style="color:var(--txt);">${(v.infoExtracted||1.0).toFixed(2)}</b>
+           <button onclick="event.stopPropagation();editLibVibeIE(${v.id})" title="編輯提取程度記錄"
+             style="background:none;border:none;color:var(--txt2);cursor:pointer;font-size:.75rem;padding:0 1px;">✏</button>
+         </div>`
+      : '';
     return `<div class="gcard ${sel}" data-vid="${v.id}" onclick="onVibePageCardClick(event,${v.id})">
       <div class="gcard-check">✓</div>
       <img class="gcard-img" src="${v.thumbUrl}" alt="" onerror="this.style.background='var(--bg3)'">
@@ -1228,10 +1236,24 @@ async function renderVibePage(saved) {
           ${badge}
         </div>
         <div style="font-size:.78rem;color:var(--txt);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(v.name)}">${esc(v.name)}</div>
+        ${ieNote}
         <div class="gcard-time">${time}</div>
       </div>
     </div>`;
   }).join('');
+}
+
+async function editLibVibeIE(id) {
+  const saved = await dbGetVibes();
+  const v = saved.find(x => x.id === id);
+  if (!v) return;
+  const cur = (v.infoExtracted || 1.0).toFixed(2);
+  const input = prompt(`修改「${v.name}」的提取程度記錄\n（encode 當時用的值，僅供標記，不影響生圖）`, cur);
+  if (input === null) return;
+  const val = Math.min(1, Math.max(0.01, parseFloat(input) || 1.0));
+  await dbUpdateVibe(id, { infoExtracted: val });
+  await renderVibePage();
+  toast('已更新', 'ok');
 }
 
 async function loadVibeFileToLibrary() {
@@ -1249,7 +1271,12 @@ async function loadVibeFileToLibrary() {
         const blob = new Blob([bytes], { type: 'image/webp' });
         const thumbUrl = URL.createObjectURL(blob);
         const name = file.name.replace(/\.naiv4vibe$/i, '');
-        await dbSaveVibe(name, json.image, thumbUrl, true);
+        // Read values from importInfo (NAI stores them in the file)
+        const info = json.importInfo || {};
+        const ie = info.information_extracted ?? 1.0;
+        const strength = info.strength ?? 0.6;
+        const model = info.model || '';
+        await dbSaveVibe(name, json.image, thumbUrl, true, ie, strength, model);
         loaded++;
       } catch(err) { toast(`「${file.name}」讀取失敗`, 'err'); }
     }
@@ -1276,7 +1303,8 @@ async function addVibeToSession(id) {
     toast(`「${v.name}」已在 Vibe Transfer 清單中`, 'warn'); return;
   }
   vibeImages.push({ base64: v.base64, url: v.thumbUrl, name: v.name,
-    infoExtracted: 1.0, refStrength: 0.6, isPreEncoded: v.isPreEncoded });
+    infoExtracted: v.infoExtracted ?? 1.0,
+    refStrength: v.strength ?? 0.6, isPreEncoded: v.isPreEncoded });
   renderVibeList();
   if (!vibeOpen) setVibeOpen(true);
   updateVibeCount();
@@ -1355,7 +1383,8 @@ async function pickerSelectVibe(id) {
     toast(`已移除「${v.name}」`, 'info');
   } else {
     vibeImages.push({ base64: v.base64, url: v.thumbUrl, name: v.name,
-      infoExtracted: 1.0, refStrength: 0.6, isPreEncoded: v.isPreEncoded });
+      infoExtracted: v.infoExtracted ?? 1.0,
+      refStrength: v.strength ?? 0.6, isPreEncoded: v.isPreEncoded });
     renderVibeList();
     if (!vibeOpen) setVibeOpen(true);
     updateVibeCount();
@@ -1591,11 +1620,8 @@ async function generate() {
   if (vibeImages.length > 0) {
     params.reference_image_multiple    = vibeImages.map(v => v.base64);
     params.reference_strength_multiple = vibeImages.map(v => v.refStrength);
-    // Information Extracted: pre-encoded files have it baked in (no extra cost, send 1.0 as placeholder)
-    // Original images: user-set value triggers re-encoding (costs 2 ANLAS each generation)
-    params.reference_information_extracted_multiple = vibeImages.map(v =>
-      v.isPreEncoded ? 1.0 : v.infoExtracted
-    );
+    // All vibes are pre-encoded (.naiv4vibe); send 1.0 as placeholder (encoding already baked in)
+    params.reference_information_extracted_multiple = vibeImages.map(() => 1.0);
     params.add_original_image = false;
   }
 
