@@ -823,6 +823,96 @@ let modalImageId = null;
 let modalMeta = {};
 
 const FREE_RES = new Set(['832x1216','1216x832','1024x1024']);
+const DRAFT_KEY = 'nai_generate_draft_v1';
+
+function loadDraftState() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraftState() {
+  try {
+    const draft = {
+      prompt: document.getElementById('prompt')?.value || '',
+      negPrompt: document.getElementById('neg-prompt')?.value || '',
+      model: document.getElementById('model')?.value || '',
+      resolution: document.getElementById('res')?.value || '',
+      steps: document.getElementById('steps')?.value || '',
+      cfg: document.getElementById('cfg')?.value || '',
+      cfgRescale: document.getElementById('cfg-r')?.value || '',
+      sampler: document.getElementById('sampler')?.value || '',
+      noiseSchedule: document.getElementById('noise-sch')?.value || '',
+      seed: document.getElementById('seed')?.value || '',
+      seedRandom,
+      genMode,
+      i2iStrength: document.getElementById('i2i-strength')?.value || '',
+      i2iNoise: document.getElementById('i2i-noise')?.value || '',
+      enhanceStrength: document.getElementById('enh-strength')?.value || '',
+      currentTags,
+      advOpen,
+      adv2Open,
+      vibeOpen,
+      prefOpen
+    };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch {}
+}
+
+function bindDraftAutosave() {
+  [
+    'prompt','neg-prompt','model','res','steps','cfg','cfg-r','sampler','noise-sch','seed',
+    'i2i-strength','i2i-noise','enh-strength'
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', saveDraftState);
+    el.addEventListener('change', saveDraftState);
+  });
+}
+
+function applyDraftState(draft, isMob) {
+  if (!draft) return;
+  const setVal = (id, value) => {
+    if (value === undefined || value === null) return;
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  };
+
+  setVal('prompt', draft.prompt);
+  setVal('neg-prompt', draft.negPrompt);
+  setVal('model', draft.model);
+  setVal('res', draft.resolution);
+  setVal('steps', draft.steps);
+  setVal('cfg', draft.cfg);
+  setVal('cfg-r', draft.cfgRescale);
+  setVal('sampler', draft.sampler);
+  setVal('noise-sch', draft.noiseSchedule);
+  setVal('seed', draft.seed);
+  setVal('i2i-strength', draft.i2iStrength);
+  setVal('i2i-noise', draft.i2iNoise);
+  setVal('enh-strength', draft.enhanceStrength);
+
+  updateResNote();
+  setSeedMode(draft.seedRandom !== undefined ? !!draft.seedRandom : true);
+  if (!seedRandom && draft.seed !== undefined && draft.seed !== null) {
+    document.getElementById('seed').value = draft.seed;
+  }
+  setGenMode(draft.genMode || 'txt2img');
+  currentTags = Array.isArray(draft.currentTags) ? draft.currentTags.filter(Boolean) : [];
+  renderTagChips();
+  setAdv(typeof draft.advOpen === 'boolean' ? draft.advOpen : !isMob);
+  setAdv2(!!draft.adv2Open);
+  setVibeOpen(!!draft.vibeOpen);
+  setPreciseRefOpen(!!draft.prefOpen);
+
+  document.getElementById('i2i-s-val').textContent = parseFloat(document.getElementById('i2i-strength').value || 0.5).toFixed(2);
+  document.getElementById('i2i-n-val').textContent = parseFloat(document.getElementById('i2i-noise').value || 0.4).toFixed(2);
+  document.getElementById('enh-s-val').textContent = parseFloat(document.getElementById('enh-strength').value || 0.2).toFixed(2);
+}
 
 // ═══════════════════════════════════════════
 // INIT
@@ -834,6 +924,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   const isMob = window.innerWidth <= 768;
   setAdv(!isMob);
   setSeedMode(true);
+  bindDraftAutosave();
 
   // prompt autocomplete events
   const promptTA = document.getElementById('prompt');
@@ -870,6 +961,12 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // login enter
   document.getElementById('tok-in').addEventListener('keydown', e => { if(e.key==='Enter') login(); });
+
+  applyDraftState(loadDraftState(), isMob);
+  document.querySelectorAll('textarea').forEach(ta => {
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+  });
 });
 
 // ═══════════════════════════════════════════
@@ -1166,6 +1263,7 @@ function setAdv(open) {
   advOpen = open;
   document.getElementById('adv-body').className = 'coll-body ' + (open?'open':'closed');
   document.getElementById('adv-arrow').className = 'coll-arrow ' + (open?'open':'closed');
+  saveDraftState();
 }
 function toggleAdv() { setAdv(!advOpen); }
 
@@ -1180,6 +1278,7 @@ function setSeedMode(random) {
     btn.className = 'seed-toggle'; btn.textContent = '🔒 固定';
     inp.disabled = false;
   }
+  saveDraftState();
 }
 function toggleSeedMode() { setSeedMode(!seedRandom); }
 
@@ -1249,11 +1348,13 @@ function addTag(name) {
   dbSaveTag(name);
   if (!allKnownTags.find(t=>t.name===name)) allKnownTags.unshift({name,count:1});
   renderTagChips();
+  saveDraftState();
 }
 
 function removeTag(name) {
   currentTags = currentTags.filter(t=>t!==name);
   renderTagChips();
+  saveDraftState();
 }
 
 function renderTagChips() {
@@ -1283,6 +1384,7 @@ function setAdv2(open) {
   adv2Open = open;
   document.getElementById('adv2-body').className = 'coll-body ' + (open ? 'open' : 'closed');
   document.getElementById('adv2-arrow').className = 'coll-arrow ' + (open ? 'open' : 'closed');
+  saveDraftState();
 }
 function toggleAdv2() { setAdv2(!adv2Open); }
 
@@ -1290,6 +1392,7 @@ function setVibeOpen(open) {
   vibeOpen = open;
   document.getElementById('vibe-body').className = 'coll-body ' + (open ? 'open' : 'closed');
   document.getElementById('vibe-arrow').className = 'coll-arrow ' + (open ? 'open' : 'closed');
+  saveDraftState();
 }
 function toggleVibe() { setVibeOpen(!vibeOpen); }
 
@@ -1304,6 +1407,7 @@ function setGenMode(mode) {
   document.getElementById('src-img-section').style.display = needSrc ? 'block' : 'none';
   document.getElementById('i2i-params').style.display  = mode === 'img2img' ? 'block' : 'none';
   document.getElementById('enh-params').style.display  = mode === 'enhance'  ? 'block' : 'none';
+  saveDraftState();
 }
 
 function getGenModeLabel(mode) {
@@ -1365,14 +1469,17 @@ function setGalleryImgAsImg2Img(id) {
 
 // ── Precise Reference ──
 let preciseRef = null; // {base64, url, name, mimeType, mode, strength, fidelity, cacheKey}
+let prefOpen = false;
 
-function togglePreciseRef() {
+function setPreciseRefOpen(open) {
   const body = document.getElementById('pref-body');
   const arrow = document.getElementById('pref-arrow');
-  const isOpen = !body.classList.contains('closed');
-  body.classList.toggle('closed', isOpen);
-  arrow.classList.toggle('closed', isOpen);
+  prefOpen = open;
+  body.classList.toggle('closed', !open);
+  arrow.classList.toggle('closed', !open);
+  saveDraftState();
 }
+function togglePreciseRef() { setPreciseRefOpen(!prefOpen); }
 
 function preciseRefUpload() {
   const inp = document.createElement('input');
