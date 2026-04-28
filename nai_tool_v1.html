@@ -272,6 +272,16 @@
     .vibe-item-top{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;}
     .vibe-thumb{width:56px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0;}
     .vibe-sliders{flex:1;min-width:0;}
+    .badge-encoded{background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3);
+      font-size:.68rem;padding:1px 7px;border-radius:10px;white-space:nowrap;}
+    .badge-img{background:rgba(156,163,175,.12);color:#9ca3af;border:1px solid rgba(156,163,175,.2);
+      font-size:.68rem;padding:1px 7px;border-radius:10px;white-space:nowrap;}
+    .vibe-saved-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;
+      background:var(--bg);border:1px solid var(--border);margin-bottom:6px;}
+    .vibe-saved-item:hover{border-color:var(--accent);}
+    .vibe-saved-thumb{width:36px;height:36px;object-fit:cover;border-radius:4px;flex-shrink:0;}
+    .vibe-saved-name{flex:1;font-size:.8rem;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .vibe-lib-empty{font-size:.78rem;color:var(--txt2);text-align:center;padding:10px;}
 
     /* ── MOBILE ── */
     @media(max-width:768px){
@@ -436,7 +446,18 @@
         </div>
         <div class="coll-body closed" id="vibe-body">
           <div id="vibe-list" style="margin-top:8px;"></div>
-          <button class="btn btn-s btn-full" style="margin-top:4px;" onclick="addVibeImage()">＋ 新增參考圖</button>
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <button class="btn btn-s" style="flex:1;" onclick="addVibeImage()">＋ 新增圖片</button>
+            <button class="btn btn-s" style="flex:1;" onclick="loadVibeFile()" title="載入 .naiv4vibe 已預編碼檔，不花 ANLAS">📁 .naiv4vibe</button>
+          </div>
+          <!-- Vibe Library -->
+          <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px;">
+            <div class="range-row" style="margin-bottom:6px;">
+              <label style="font-size:.75rem;font-weight:600;color:var(--txt2);">Vibe 庫</label>
+              <button class="btn btn-s" style="font-size:.7rem;padding:2px 8px;" onclick="refreshVibeLibrary()">重新整理</button>
+            </div>
+            <div id="vibe-saved-list"></div>
+          </div>
         </div>
       </div>
 
@@ -650,7 +671,7 @@ let _db = null;
 async function getDB() {
   if (_db) return _db;
   _db = await new Promise((res, rej) => {
-    const r = indexedDB.open('nai_tool', 2);
+    const r = indexedDB.open('nai_tool', 3);
     r.onupgradeneeded = e => {
       const db = e.target.result;
       if (!db.objectStoreNames.contains('images')) {
@@ -660,6 +681,9 @@ async function getDB() {
       }
       if (!db.objectStoreNames.contains('tags')) {
         db.createObjectStore('tags', { keyPath:'name' });
+      }
+      if (!db.objectStoreNames.contains('vibe_library')) {
+        db.createObjectStore('vibe_library', { keyPath:'id', autoIncrement:true });
       }
     };
     r.onsuccess = () => res(r.result);
@@ -725,6 +749,23 @@ async function dbSaveTag(name) {
   return dbOp(db,'tags','readwrite', s => s.put({
     name, count: (existing?.count||0)+1, lastUsed: Date.now()
   }));
+}
+
+// ── Vibe Library DB ──
+async function dbSaveVibe(name, base64, thumbUrl, isPreEncoded) {
+  const db = await getDB();
+  return dbOp(db,'vibe_library','readwrite', s => s.add({
+    name, base64, thumbUrl, isPreEncoded: !!isPreEncoded, timestamp: Date.now()
+  }));
+}
+async function dbGetVibes() {
+  const db = await getDB();
+  const all = await dbOp(db,'vibe_library','readonly', s => s.getAll());
+  return all.sort((a,b) => b.timestamp - a.timestamp);
+}
+async function dbDeleteVibe(id) {
+  const db = await getDB();
+  return dbOp(db,'vibe_library','readwrite', s => s.delete(id));
 }
 
 async function dbGetTags() {
@@ -802,6 +843,7 @@ async function showApp() {
   document.getElementById('app').style.display = 'flex';
   allKnownTags = await dbGetTags();
   await loadGallery();
+  await refreshVibeLibrary();
 }
 
 function showLoginErr(msg) {
@@ -1040,16 +1082,56 @@ async function addVibeImage() {
     const file = e.target.files[0];
     if (!file) return;
     const b64 = await fileToBase64(file);
-    vibeImages.push({ base64: b64, url: URL.createObjectURL(file), infoExtracted: 1.0, refStrength: 0.6 });
+    vibeImages.push({ base64: b64, url: URL.createObjectURL(file), name: file.name,
+      infoExtracted: 1.0, refStrength: 0.6, isPreEncoded: false });
     renderVibeList();
     if (!vibeOpen) setVibeOpen(true);
-    document.getElementById('vibe-count').textContent = `(${vibeImages.length})`;
+    updateVibeCount();
   };
   input.click();
 }
+
+async function loadVibeFile() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.naiv4vibe,application/json';
+  input.onchange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      if (json.identifier !== 'novelai-vibe-transfer' || !json.image) {
+        toast('不是有效的 .naiv4vibe 檔案', 'err'); return;
+      }
+      // Build thumbnail from RIFF/WebP data
+      const bytes = Uint8Array.from(atob(json.image), c => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: 'image/webp' });
+      const url = URL.createObjectURL(blob);
+      const name = file.name.replace(/\.naiv4vibe$/i, '');
+      vibeImages.push({ base64: json.image, url, name,
+        infoExtracted: 1.0, refStrength: 0.6, isPreEncoded: true });
+      renderVibeList();
+      if (!vibeOpen) setVibeOpen(true);
+      updateVibeCount();
+      // Ask to save to library
+      if (confirm(`「${name}」載入成功！要存到 Vibe 庫方便下次使用嗎？`)) {
+        await dbSaveVibe(name, json.image, url, true);
+        await refreshVibeLibrary();
+        toast('已存入 Vibe 庫', 'ok');
+      }
+    } catch(err) {
+      toast('讀取失敗：' + err.message, 'err');
+    }
+  };
+  input.click();
+}
+
 function removeVibeImage(idx) {
   vibeImages.splice(idx, 1);
   renderVibeList();
+  updateVibeCount();
+}
+function updateVibeCount() {
   document.getElementById('vibe-count').textContent = vibeImages.length ? `(${vibeImages.length})` : '';
 }
 function updateVibeParam(idx, key, val) {
@@ -1059,22 +1141,74 @@ function updateVibeParam(idx, key, val) {
 function renderVibeList() {
   const list = document.getElementById('vibe-list');
   if (!vibeImages.length) { list.innerHTML = ''; return; }
-  list.innerHTML = vibeImages.map((v, i) => `
-    <div class="vibe-item">
+  list.innerHTML = vibeImages.map((v, i) => {
+    const badge = v.isPreEncoded
+      ? `<span class="badge-encoded">已預編碼 ✓</span>`
+      : `<span class="badge-img">原圖 (-2 pts)</span>`;
+    return `<div class="vibe-item">
       <div class="vibe-item-top">
-        <img class="vibe-thumb" src="${v.url}" alt="">
+        <img class="vibe-thumb" src="${v.url}" alt="" onerror="this.style.background='var(--bg3)';this.style.display='block'">
         <div class="vibe-sliders">
+          <div class="range-row" style="margin-bottom:4px;">
+            <span style="font-size:.78rem;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px;">${esc(v.name||'')}</span>
+            ${badge}
+          </div>
           <div class="range-row"><label>提取程度</label><span class="range-val" id="vp-${i}-infoExtracted">${v.infoExtracted.toFixed(2)}</span></div>
           <input type="range" min="0.01" max="1" step="0.01" value="${v.infoExtracted}"
             oninput="updateVibeParam(${i},'infoExtracted',this.value)">
-          <div class="range-row" style="margin-top:6px;"><label>參考強度</label><span class="range-val" id="vp-${i}-refStrength">${v.refStrength.toFixed(2)}</span></div>
+          <div class="range-row" style="margin-top:4px;"><label>參考強度</label><span class="range-val" id="vp-${i}-refStrength">${v.refStrength.toFixed(2)}</span></div>
           <input type="range" min="0.01" max="1" step="0.01" value="${v.refStrength}"
             oninput="updateVibeParam(${i},'refStrength',this.value)">
         </div>
-        <button class="btn btn-d btn-icon" style="flex-shrink:0;" onclick="removeVibeImage(${i})">✕</button>
+        <button class="btn btn-d btn-icon" style="flex-shrink:0;align-self:flex-start;" onclick="removeVibeImage(${i})">✕</button>
       </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Vibe Library ──
+async function refreshVibeLibrary() {
+  const saved = await dbGetVibes();
+  renderVibeLibrary(saved);
+}
+function renderVibeLibrary(saved) {
+  const list = document.getElementById('vibe-saved-list');
+  if (!saved.length) {
+    list.innerHTML = '<div class="vibe-lib-empty">庫是空的，載入 .naiv4vibe 後可以存入這裡</div>';
+    return;
+  }
+  list.innerHTML = saved.map(v => `
+    <div class="vibe-saved-item">
+      <img class="vibe-saved-thumb" src="${v.thumbUrl}" alt="" onerror="this.style.background='var(--bg3)'">
+      <span class="vibe-saved-name" title="${esc(v.name)}">${esc(v.name)}</span>
+      ${v.isPreEncoded ? '<span class="badge-encoded" style="flex-shrink:0;">預編碼</span>' : ''}
+      <button class="btn btn-s btn-icon" style="flex-shrink:0;font-size:.72rem;" onclick="applyVibeFromLibrary(${v.id})" title="套用到當前 Vibe Transfer">套用</button>
+      <button class="btn btn-d btn-icon" style="flex-shrink:0;" onclick="deleteVibeFromLibrary(${v.id})" title="從庫刪除">✕</button>
     </div>
   `).join('');
+}
+async function applyVibeFromLibrary(id) {
+  const saved = await dbGetVibes();
+  const v = saved.find(x => x.id === id);
+  if (!v) return;
+  // Don't add duplicates
+  if (vibeImages.find(x => x.base64 === v.base64)) {
+    toast(`「${v.name}」已在清單中`, 'warn'); return;
+  }
+  vibeImages.push({ base64: v.base64, url: v.thumbUrl, name: v.name,
+    infoExtracted: 1.0, refStrength: 0.6, isPreEncoded: v.isPreEncoded });
+  renderVibeList();
+  if (!vibeOpen) setVibeOpen(true);
+  updateVibeCount();
+  toast(`已套用「${v.name}」`, 'ok');
+}
+async function deleteVibeFromLibrary(id) {
+  const saved = await dbGetVibes();
+  const v = saved.find(x => x.id === id);
+  if (!confirm(`確定刪除「${v?.name || id}」？`)) return;
+  await dbDeleteVibe(id);
+  await refreshVibeLibrary();
+  toast('已從庫刪除', 'ok');
 }
 
 // ── Helpers ──
