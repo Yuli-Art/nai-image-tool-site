@@ -650,7 +650,9 @@
 
 <div id="toast-container"></div>
 
-<!-- msgpack for decoding NAI API response -->
+<!-- JSZip for extracting NAI ZIP response -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<!-- msgpack fallback -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/msgpack-lite/0.1.26/msgpack.min.js"></script>
 
 <script>
@@ -953,20 +955,50 @@ async function generateImage() {
         return;
     }
 
-    // Decode msgpack response
+    // Decode response (NAI 回傳 ZIP 格式)
     try {
         showStatus('處理圖片中...');
         const buf = await resp.arrayBuffer();
-        const decoded = msgpack.decode(new Uint8Array(buf));
+        const bytes = new Uint8Array(buf);
 
-        // 偵錯：把實際收到的 key 顯示出來
-        console.log('NAI response keys:', Object.keys(decoded || {}));
-        console.log('NAI response:', decoded);
+        let blob = null;
 
-        if (!decoded?.output?.length) throw new Error('回應格式不正確，keys: ' + JSON.stringify(Object.keys(decoded || {})));
+        // 方法1: ZIP 格式（NAI 標準回應）
+        if (bytes[0] === 0x50 && bytes[1] === 0x4b) {
+            const zip = await JSZip.loadAsync(buf);
+            const files = Object.keys(zip.files);
+            const pngFile = files.find(f => f.endsWith('.png')) || files[0];
+            if (pngFile) {
+                const pngBytes = await zip.files[pngFile].async('uint8array');
+                blob = new Blob([pngBytes], { type: 'image/png' });
+            }
+        }
 
-        const imgBytes = decoded.output[0];
-        const blob = new Blob([imgBytes], { type: 'image/png' });
+        // 方法2: 直接是 PNG
+        if (!blob && bytes[0] === 0x89 && bytes[1] === 0x50) {
+            blob = new Blob([bytes], { type: 'image/png' });
+        }
+
+        // 方法3: msgpack
+        if (!blob) {
+            try {
+                const decoded = msgpack.decode(bytes);
+                const imgData = decoded?.output?.[0] ?? decoded?.images?.[0] ?? decoded?.image;
+                if (imgData) {
+                    if (typeof imgData === 'string') {
+                        const binStr = atob(imgData);
+                        const arr = new Uint8Array(binStr.length);
+                        for (let i = 0; i < binStr.length; i++) arr[i] = binStr.charCodeAt(i);
+                        blob = new Blob([arr], { type: 'image/png' });
+                    } else {
+                        blob = new Blob([imgData], { type: 'image/png' });
+                    }
+                }
+            } catch(e) { /* ignore */ }
+        }
+
+        if (!blob) throw new Error('無法解析圖片格式（大小: ' + bytes.length + ' bytes）');
+
         lastBlob = blob;
 
         const url = URL.createObjectURL(blob);
