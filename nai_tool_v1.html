@@ -1123,6 +1123,10 @@ function setGenMode(mode) {
   document.getElementById('enh-params').style.display  = mode === 'enhance'  ? 'block' : 'none';
 }
 
+function getGenModeLabel(mode) {
+  return mode === 'img2img' ? '圖片變體' : mode === 'enhance' ? '強化放大' : '文字生圖';
+}
+
 // ── Source image upload ──
 async function onSrcImgFile(e) {
   const file = e.target.files[0];
@@ -1862,7 +1866,8 @@ async function generate() {
   let action = 'generate';
   if (genMode === 'img2img' || genMode === 'enhance') {
     if (!srcImgBase64) {
-      toast('請先在「進階生圖」上傳來源圖片', 'err');
+      setAdv2(true);
+      toast(`目前模式是「${getGenModeLabel(genMode)}」。精確參考圖不會取代進階生圖來源圖，請在「進階生圖」上傳來源圖片，或切回「文字生圖」再生成。`, 'err');
       setGenerating(false); return;
     }
     action = 'img2img';
