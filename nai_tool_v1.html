@@ -1181,7 +1181,7 @@ function setGalleryImgAsImg2Img(id) {
 }
 
 // ── Precise Reference ──
-let preciseRef = null; // {base64, url, name, mode, strength, fidelity, cacheKey}
+let preciseRef = null; // {base64, url, name, mimeType, mode, strength, fidelity, cacheKey}
 
 function togglePreciseRef() {
   const body = document.getElementById('pref-body');
@@ -1208,6 +1208,7 @@ async function loadPreciseRefFile(file) {
   const b64 = await fileToBase64(file);
   const cacheKey = await sha256HexFromBase64(b64);
   preciseRef = { base64: b64, url: URL.createObjectURL(file), name: file.name,
+    mimeType: file.type || 'application/octet-stream',
     mode: 'character&style', strength: 1.0, fidelity: 1.0, cacheKey };
   renderPreciseRef();
   toast('已載入精確參考圖', 'ok');
@@ -1935,7 +1936,7 @@ async function generate() {
       if (preciseRef) {
         // Precise Reference: multipart/form-data → generate-image-stream
         const fd = new FormData();
-        fd.append('director_ref_0', base64ToBlob(preciseRef.base64), 'reference.png');
+        fd.append('director_ref_0', base64ToBlob(preciseRef.base64, preciseRef.mimeType), preciseRef.name || 'blob');
         fd.append('request', new Blob([JSON.stringify(body)], {type:'application/json'}), 'blob');
         resp = await fetch('https://image.novelai.net/ai/generate-image-stream',{
           method:'POST',
