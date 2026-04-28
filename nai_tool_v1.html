@@ -959,7 +959,11 @@ async function generateImage() {
         const buf = await resp.arrayBuffer();
         const decoded = msgpack.decode(new Uint8Array(buf));
 
-        if (!decoded?.output?.length) throw new Error('回應格式不正確');
+        // 偵錯：把實際收到的 key 顯示出來
+        console.log('NAI response keys:', Object.keys(decoded || {}));
+        console.log('NAI response:', decoded);
+
+        if (!decoded?.output?.length) throw new Error('回應格式不正確，keys: ' + JSON.stringify(Object.keys(decoded || {})));
 
         const imgBytes = decoded.output[0];
         const blob = new Blob([imgBytes], { type: 'image/png' });
