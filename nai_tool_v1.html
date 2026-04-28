@@ -417,6 +417,7 @@
     <!-- Selection actions bar -->
     <div class="gallery-actions" id="gal-actions">
       <span class="gallery-sel-count" id="sel-count">已選 0 張</span>
+      <button class="btn btn-s" onclick="selectAll()" id="sel-all-btn">全選</button>
       <button class="btn btn-s" onclick="downloadSelected()">⬇ 打包下載</button>
       <button class="btn btn-d" onclick="deleteSelected()">🗑 刪除選取</button>
       <button class="btn btn-s" onclick="clearSelection()">取消選取</button>
@@ -1040,6 +1041,7 @@ function toggleSelectMode() {
   document.getElementById('sel-mode-btn').textContent = selectMode ? '結束多選' : '多選';
   document.getElementById('gal-actions').classList.toggle('visible', selectMode);
   document.getElementById('sel-count').textContent = '已選 0 張';
+  document.getElementById('sel-all-btn').textContent = '全選';
   renderGallery();
 }
 
@@ -1049,6 +1051,29 @@ function toggleSelect(id) {
   document.getElementById('sel-count').textContent = `已選 ${selectedIds.size} 張`;
   const card = document.querySelector(`[data-id="${id}"]`);
   if (card) card.classList.toggle('selected', selectedIds.has(id));
+}
+
+function selectAll() {
+  const btn = document.getElementById('sel-all-btn');
+  const allSelected = filteredData.length > 0 && filteredData.every(img => selectedIds.has(img.id));
+  if (allSelected) {
+    // deselect all filtered
+    filteredData.forEach(img => {
+      selectedIds.delete(img.id);
+      const card = document.querySelector(`[data-id="${img.id}"]`);
+      if (card) card.classList.remove('selected');
+    });
+    btn.textContent = '全選';
+  } else {
+    // select all filtered
+    filteredData.forEach(img => {
+      selectedIds.add(img.id);
+      const card = document.querySelector(`[data-id="${img.id}"]`);
+      if (card) card.classList.add('selected');
+    });
+    btn.textContent = '取消全選';
+  }
+  document.getElementById('sel-count').textContent = `已選 ${selectedIds.size} 張`;
 }
 
 function clearSelection() {
