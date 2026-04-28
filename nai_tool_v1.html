@@ -36,7 +36,7 @@
       width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;
       color:var(--txt);padding:9px 12px;font-size:.875rem;outline:none;transition:border-color .15s;font-family:inherit;}
     input:focus,textarea:focus,select:focus{border-color:var(--accent);}
-    textarea{resize:vertical;line-height:1.5;}
+    textarea{resize:none;line-height:1.6;overflow:hidden;min-height:60px;}
     select option{background:var(--bg2);}
     input[type=number]{-moz-appearance:textfield;}
     input[type=number]::-webkit-inner-spin-button,
@@ -203,8 +203,7 @@
     .modal-section-title{font-size:.72rem;font-weight:700;color:var(--txt2);text-transform:uppercase;
       letter-spacing:.06em;margin-bottom:6px;}
     .modal-prompt-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;
-      padding:10px;font-size:.8rem;line-height:1.5;color:var(--txt);word-break:break-word;
-      max-height:120px;overflow-y:auto;}
+      padding:10px;font-size:.8rem;line-height:1.6;color:var(--txt);word-break:break-word;}
     .meta-grid{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:.8rem;}
     .meta-key{color:var(--txt2);}
     .meta-val{color:var(--txt);word-break:break-all;}
@@ -471,6 +470,7 @@ let selectedIds = new Set();
 
 // Modal state
 let modalImageId = null;
+let modalMeta = {};
 
 const FREE_RES = new Set(['832x1216','1216x832','1024x1024']);
 
@@ -484,6 +484,16 @@ window.addEventListener('DOMContentLoaded', async () => {
   const isMob = window.innerWidth <= 768;
   setAdv(!isMob);
   setSeedMode(true);
+
+  // textarea auto-resize
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }
+  document.querySelectorAll('textarea').forEach(ta => {
+    ta.addEventListener('input', () => autoResize(ta));
+    autoResize(ta);
+  });
 
   // tag input events
   const tagIn = document.getElementById('tag-text-in');
@@ -1088,9 +1098,10 @@ function openModal(id, url) {
   const img = galleryData.find(i=>i.id===id);
   if (!img) return;
   modalImageId = id;
+  modalMeta = img.metadata || {};
 
   document.getElementById('modal-img').src = url;
-  const meta = img.metadata || {};
+  const meta = modalMeta;
   const tags = (img.tags||[]);
   const time = new Date(img.timestamp).toLocaleString('zh-TW');
 
@@ -1098,12 +1109,12 @@ function openModal(id, url) {
     <div>
       <div class="modal-section-title">Prompt</div>
       <div class="modal-prompt-box">${esc(meta.prompt||'—')}</div>
-      <button class="btn btn-s" style="margin-top:6px;width:100%;font-size:.8rem;" onclick="navigator.clipboard.writeText(${JSON.stringify(meta.prompt||'')}).then(()=>toast('已複製','ok'))">📋 複製 Prompt</button>
+      <button class="btn btn-s" style="margin-top:6px;width:100%;font-size:.8rem;" onclick="copyModalField('prompt')">📋 複製 Prompt</button>
     </div>
     <div>
       <div class="modal-section-title">負向 Prompt</div>
-      <div class="modal-prompt-box" style="max-height:80px;">${esc(meta.negPrompt||'—')}</div>
-      <button class="btn btn-s" style="margin-top:6px;width:100%;font-size:.8rem;" onclick="navigator.clipboard.writeText(${JSON.stringify(meta.negPrompt||'')}).then(()=>toast('已複製','ok'))">📋 複製</button>
+      <div class="modal-prompt-box">${esc(meta.negPrompt||'—')}</div>
+      <button class="btn btn-s" style="margin-top:6px;width:100%;font-size:.8rem;" onclick="copyModalField('negPrompt')">📋 複製</button>
     </div>
     <div>
       <div class="modal-section-title">參數</div>
@@ -1132,6 +1143,20 @@ function openModal(id, url) {
   `;
 
   document.getElementById('modal').classList.add('open');
+}
+
+function copyModalField(key) {
+  const text = modalMeta[key] || '';
+  navigator.clipboard.writeText(text)
+    .then(() => toast('已複製', 'ok'))
+    .catch(() => {
+      // fallback for non-secure context
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      toast('已複製', 'ok');
+    });
 }
 
 function closeModal(e) {
@@ -1178,6 +1203,11 @@ function fillFromModal() {
   if (meta.seed) { setSeedMode(false); document.getElementById('seed').value = meta.seed; }
   document.getElementById('modal').classList.remove('open');
   showPage('generate');
+  // re-trigger auto-resize for updated textareas
+  document.querySelectorAll('textarea').forEach(ta => {
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+  });
   toast('已填入生圖介面','ok');
 }
 
