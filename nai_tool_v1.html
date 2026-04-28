@@ -842,29 +842,54 @@ async function generateImage() {
     let seed = parseInt(document.getElementById('seed').value);
     if (isNaN(seed) || seed < 0) seed = Math.floor(Math.random() * 9999999999);
 
+    const isV4 = model.startsWith('nai-diffusion-4');
+
+    const parameters = {
+        width, height, scale,
+        sampler, steps,
+        n_samples: 1,
+        ucPreset: 0,
+        qualityToggle: true,
+        dynamic_thresholding: false,
+        controlnet_strength: 1,
+        legacy: false,
+        add_original_image: false,
+        cfg_rescale: cfgRescale,
+        noise_schedule: noiseSchedule,
+        legacy_v3_extend: false,
+        seed,
+        negative_prompt: negPrompt
+    };
+
+    // V4/V4.5 需要額外的 v4_prompt 欄位
+    if (isV4) {
+        parameters.v4_prompt = {
+            caption: {
+                base_caption: prompt,
+                char_captions: []
+            },
+            use_coords: false,
+            use_order: false
+        };
+        parameters.v4_negative_prompt = {
+            caption: {
+                base_caption: negPrompt,
+                char_captions: []
+            },
+            use_coords: false,
+            use_order: false
+        };
+    } else {
+        // V3 用 sm/sm_dyn
+        parameters.sm = false;
+        parameters.sm_dyn = false;
+    }
+
     const body = {
         input: prompt,
         model: model,
         action: 'generate',
-        parameters: {
-            params_version: 3,
-            width, height, scale,
-            sampler, steps,
-            n_samples: 1,
-            ucPreset: 0,
-            qualityToggle: true,
-            sm: false,
-            sm_dyn: false,
-            dynamic_thresholding: false,
-            controlnet_strength: 1,
-            legacy: false,
-            add_original_image: false,
-            cfg_rescale: cfgRescale,
-            noise_schedule: noiseSchedule,
-            legacy_v3_extend: false,
-            seed,
-            negative_prompt: negPrompt
-        }
+        parameters
     };
 
     // Record ANLAS before
