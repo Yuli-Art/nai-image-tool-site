@@ -1849,15 +1849,24 @@ async function generate() {
   const isV4 = model.startsWith('nai-diffusion-4');
   const params = {
     width, height, scale, sampler, steps,
+    params_version: 3,
     n_samples:1, ucPreset:0, qualityToggle:true,
+    autoSmea:false,
     dynamic_thresholding:false, controlnet_strength:1,
     legacy:false, add_original_image:false,
     cfg_rescale:cfgR, noise_schedule:noiseSch,
-    legacy_v3_extend:false, seed, negative_prompt:negPrompt
+    legacy_v3_extend:false,
+    deliberate_euler_ancestral_bug:false,
+    prefer_brownian:true,
+    skip_cfg_above_sigma:58,
+    inpaintImg2ImgStrength:1,
+    image_format:'png',
+    legacy_uc:false,
+    seed, negative_prompt:negPrompt
   };
   if (isV4) {
     params.v4_prompt = { caption:{ base_caption:prompt, char_captions:[] }, use_coords:false, use_order:false };
-    params.v4_negative_prompt = { caption:{ base_caption:negPrompt, char_captions:[] }, use_coords:false, use_order:false };
+    params.v4_negative_prompt = { caption:{ base_caption:negPrompt, char_captions:[] }, legacy_uc:false };
   } else {
     params.sm = false; params.sm_dyn = false;
   }
