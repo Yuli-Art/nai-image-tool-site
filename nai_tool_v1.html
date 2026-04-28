@@ -134,6 +134,24 @@
     .tag-dd-item:hover{background:var(--accent-l);}
     .tag-dd-new{color:var(--accent);}
 
+    /* Prompt autocomplete */
+    .prompt-dd-wrap{position:relative;}
+    .prompt-dd{position:absolute;left:0;right:0;top:100%;margin-top:2px;
+      background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+      z-index:300;display:none;overflow:hidden;box-shadow:0 6px 18px rgba(0,0,0,.4);}
+    .prompt-dd-item{padding:7px 12px;cursor:pointer;font-size:.83rem;
+      display:flex;align-items:center;gap:8px;transition:background .1s;}
+    .prompt-dd-item:hover,.prompt-dd-item.active{background:var(--accent-l);}
+    .pdd-name{flex:1;color:var(--txt);}
+    .pdd-cat{font-size:.68rem;padding:1px 6px;border-radius:8px;white-space:nowrap;flex-shrink:0;}
+    .pdd-general  {background:rgba(156,163,175,.15);color:#9ca3af;}
+    .pdd-artist   {background:rgba(251,191,36,.12);color:#fbbf24;}
+    .pdd-copyright{background:rgba(167,139,250,.12);color:#a78bfa;}
+    .pdd-character{background:rgba(52,211,153,.12);color:#34d399;}
+    .pdd-meta     {background:rgba(96,165,250,.12);color:#60a5fa;}
+    .pdd-count{font-size:.72rem;color:var(--txt2);flex-shrink:0;}
+    .pdd-loading{padding:8px 12px;font-size:.78rem;color:var(--txt2);}
+
     /* Result area */
     .result-area{width:100%;max-width:540px;display:flex;flex-direction:column;align-items:center;gap:14px;}
     .result-placeholder{width:100%;aspect-ratio:5/7;max-height:65vh;background:var(--bg2);
@@ -319,8 +337,11 @@
       <div class="card">
         <div class="card-title">Prompt</div>
         <div class="fg">
-          <label>正向 Prompt</label>
-          <textarea id="prompt" rows="5" placeholder="1girl, blue eyes, long hair..."></textarea>
+          <label>正向 Prompt <span id="db-status" style="font-size:.7rem;color:var(--txt2);font-weight:400;"></span></label>
+          <div class="prompt-dd-wrap">
+            <textarea id="prompt" rows="5" placeholder="1girl, blue eyes, long hair..."></textarea>
+            <div id="prompt-dd" class="prompt-dd"></div>
+          </div>
         </div>
         <div class="fg">
           <label>負向 Prompt（Undesired Content）</label>
@@ -462,6 +483,11 @@ let seedRandom = true;
 let currentTags = [];
 let allKnownTags = [];
 
+// Danbooru autocomplete state
+let danbooruIndex = [];   // alphabetically sorted for binary search prefix lookup
+let danbooruLoaded = false;
+let promptDDActive = -1;
+
 // Gallery state
 let galleryData = [];       // all images from DB
 let filteredData = [];      // after filter/search
@@ -485,6 +511,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   const isMob = window.innerWidth <= 768;
   setAdv(!isMob);
   setSeedMode(true);
+
+  // prompt autocomplete events
+  const promptTA = document.getElementById('prompt');
+  promptTA.addEventListener('input', onPromptInput);
+  promptTA.addEventListener('keydown', onPromptKeydown);
+  promptTA.addEventListener('blur', () => setTimeout(hidePromptDD, 150));
+
+  // load danbooru tags async
+  loadDanbooruTags();
 
   // textarea auto-resize
   function autoResize(el) {
@@ -811,6 +846,147 @@ function renderTagDD(matches, input) {
   }
   dd.innerHTML = items.join('');
   dd.style.display = 'block';
+}
+
+// ═══════════════════════════════════════════
+// DANBOORU AUTOCOMPLETE
+// ═══════════════════════════════════════════
+const DB_CAT_LABEL = {0:'一般', 1:'繪師', 3:'版權', 4:'角色', 5:'Meta'};
+const DB_CAT_CLASS = {0:'pdd-general', 1:'pdd-artist', 3:'pdd-copyright', 4:'pdd-character', 5:'pdd-meta'};
+
+async function loadDanbooruTags() {
+  const statusEl = document.getElementById('db-status');
+  statusEl.textContent = '（載入 tag 庫中…）';
+  try {
+    const r = await fetch('./danbooru_tags.csv', { signal: AbortSignal.timeout(30000) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const text = await r.text();
+    const lines = text.split('\n');
+    const tags = [];
+    const firstLine = lines[0].trim();
+    const start = (firstLine.startsWith('name') || firstLine.startsWith('"name')) ? 1 : 0;
+    for (let i = start; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const c1 = line.indexOf(',');
+      if (c1 < 0) continue;
+      const name = line.slice(0, c1);
+      if (!name || name === 'name') continue;
+      const rest = line.slice(c1 + 1);
+      const c2 = rest.indexOf(',');
+      const cat = parseInt(c2 >= 0 ? rest.slice(0, c2) : rest) || 0;
+      const after = c2 >= 0 ? rest.slice(c2 + 1) : '0';
+      const c3 = after.indexOf(',');
+      const count = parseInt(c3 >= 0 ? after.slice(0, c3) : after) || 0;
+      tags.push({ name, category: cat, count });
+    }
+    // Sort alphabetically for binary-search prefix lookup
+    danbooruIndex = tags.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+    danbooruLoaded = true;
+    statusEl.textContent = `（${(tags.length/1000).toFixed(0)}k tags）`;
+  } catch(e) {
+    statusEl.textContent = '';
+    console.log('Danbooru tags unavailable:', e.message);
+  }
+}
+
+function danbooruSearch(prefix, limit) {
+  limit = limit || 10;
+  if (!danbooruLoaded || prefix.length < 2) return [];
+  const p = prefix.toLowerCase().replace(/ /g, '_');
+  // binary search for first entry >= p
+  let lo = 0, hi = danbooruIndex.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (danbooruIndex[mid].name < p) lo = mid + 1;
+    else hi = mid;
+  }
+  const results = [];
+  for (let i = lo; i < danbooruIndex.length && results.length < limit; i++) {
+    if (!danbooruIndex[i].name.startsWith(p)) break;
+    results.push(danbooruIndex[i]);
+  }
+  // sort by post count descending within matches
+  return results.sort((a, b) => b.count - a.count);
+}
+
+function getPromptToken(ta) {
+  const val = ta.value;
+  const pos = ta.selectionStart;
+  const before = val.slice(0, pos);
+  const lastSep = Math.max(before.lastIndexOf(','), before.lastIndexOf('\n'));
+  const raw = before.slice(lastSep + 1);
+  const leading = raw.length - raw.trimStart().length;
+  return { token: raw.trim(), start: lastSep + 1 + leading, end: pos };
+}
+
+function onPromptInput() {
+  const ta = document.getElementById('prompt');
+  const { token } = getPromptToken(ta);
+  if (!token || token.length < 2) { hidePromptDD(); return; }
+  const results = danbooruSearch(token, 10);
+  if (!results.length) { hidePromptDD(); return; }
+  showPromptDD(results);
+}
+
+function showPromptDD(items) {
+  const dd = document.getElementById('prompt-dd');
+  promptDDActive = -1;
+  dd.innerHTML = items.map((t, i) => {
+    const catLabel = DB_CAT_LABEL[t.category] || '';
+    const catCls   = DB_CAT_CLASS[t.category]  || 'pdd-general';
+    const countTxt = t.count >= 1000 ? (t.count/1000).toFixed(0)+'k' : String(t.count);
+    return `<div class="prompt-dd-item" data-idx="${i}" data-tag="${esc(t.name)}" onmousedown="insertPromptTag('${esc(t.name)}')">`
+      + `<span class="pdd-name">${esc(t.name.replace(/_/g,' '))}</span>`
+      + (catLabel ? `<span class="pdd-cat ${catCls}">${catLabel}</span>` : '')
+      + `<span class="pdd-count">${countTxt}</span>`
+      + `</div>`;
+  }).join('');
+  dd.style.display = 'block';
+}
+
+function hidePromptDD() {
+  document.getElementById('prompt-dd').style.display = 'none';
+  promptDDActive = -1;
+}
+
+function onPromptKeydown(e) {
+  const dd = document.getElementById('prompt-dd');
+  if (dd.style.display === 'none') return;
+  const items = dd.querySelectorAll('.prompt-dd-item');
+  if (!items.length) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    promptDDActive = Math.min(promptDDActive + 1, items.length - 1);
+    items.forEach((el, i) => el.classList.toggle('active', i === promptDDActive));
+    items[promptDDActive]?.scrollIntoView({ block:'nearest' });
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    promptDDActive = Math.max(promptDDActive - 1, 0);
+    items.forEach((el, i) => el.classList.toggle('active', i === promptDDActive));
+    items[promptDDActive]?.scrollIntoView({ block:'nearest' });
+  } else if (e.key === 'Enter' && promptDDActive >= 0) {
+    e.preventDefault();
+    insertPromptTag(items[promptDDActive].dataset.tag);
+  } else if (e.key === 'Escape') {
+    hidePromptDD();
+  }
+}
+
+function insertPromptTag(tagName) {
+  const ta = document.getElementById('prompt');
+  const val = ta.value;
+  const { start, end } = getPromptToken(ta);
+  const before = val.slice(0, start);
+  const after = val.slice(end).replace(/^[\s,]*/, '');
+  const newVal = before + tagName + ', ' + after;
+  ta.value = newVal;
+  const newPos = before.length + tagName.length + 2;
+  ta.setSelectionRange(newPos, newPos);
+  ta.focus();
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+  hidePromptDD();
 }
 
 // ═══════════════════════════════════════════
