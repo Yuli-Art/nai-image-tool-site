@@ -824,6 +824,7 @@ let modalMeta = {};
 
 const FREE_RES = new Set(['832x1216','1216x832','1024x1024']);
 const DRAFT_KEY = 'nai_generate_draft_v1';
+let draftSaveReady = false;
 
 function loadDraftState() {
   try {
@@ -835,6 +836,7 @@ function loadDraftState() {
 }
 
 function saveDraftState() {
+  if (!draftSaveReady) return;
   try {
     const draft = {
       prompt: document.getElementById('prompt')?.value || '',
@@ -963,6 +965,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('tok-in').addEventListener('keydown', e => { if(e.key==='Enter') login(); });
 
   applyDraftState(loadDraftState(), isMob);
+  draftSaveReady = true;
+  saveDraftState();
   document.querySelectorAll('textarea').forEach(ta => {
     ta.style.height = 'auto';
     ta.style.height = ta.scrollHeight + 'px';
