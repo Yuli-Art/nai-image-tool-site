@@ -1205,13 +1205,22 @@ function preciseRefDrop(e) {
 }
 
 async function loadPreciseRefFile(file) {
-  const b64 = await fileToBase64(file);
-  const cacheKey = await sha256HexFromBase64(b64);
-  preciseRef = { base64: b64, url: URL.createObjectURL(file), name: file.name,
-    mimeType: file.type || 'application/octet-stream',
-    mode: 'character&style', strength: 1.0, fidelity: 1.0, cacheKey };
+  const normalized = await normalizePreciseReferenceFile(file);
+  const cacheKey = await sha256HexFromBase64(normalized.base64);
+  preciseRef = {
+    base64: normalized.base64,
+    url: normalized.url,
+    name: normalized.name,
+    mimeType: normalized.mimeType,
+    width: normalized.width,
+    height: normalized.height,
+    mode: 'character&style',
+    strength: 1.0,
+    fidelity: 1.0,
+    cacheKey
+  };
   renderPreciseRef();
-  toast('已載入精確參考圖', 'ok');
+  toast(`已載入精確參考圖（${normalized.width}×${normalized.height}）`, 'ok');
 }
 
 function renderPreciseRef() {
@@ -1243,6 +1252,68 @@ function base64ToBlob(b64, mimeType = 'image/png') {
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return new Blob([bytes], {type: mimeType});
+}
+
+function blobToBase64(blob) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result.replace(/^data:[^;]+;base64,/, ''));
+    r.onerror = rej;
+    r.readAsDataURL(blob);
+  });
+}
+
+function loadImageElementFromFile(file) {
+  return new Promise((res, rej) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); res(img); };
+    img.onerror = e => { URL.revokeObjectURL(url); rej(e); };
+    img.src = url;
+  });
+}
+
+function choosePreciseReferenceCanvasSize(width, height) {
+  const targets = [
+    { width: 1024, height: 1536 },
+    { width: 1472, height: 1472 },
+    { width: 1536, height: 1024 }
+  ];
+  const aspect = width / height;
+  let best = targets[0];
+  let bestScore = Infinity;
+  for (const t of targets) {
+    const targetAspect = t.width / t.height;
+    const score = Math.abs(Math.log(aspect / targetAspect));
+    if (score < bestScore) { best = t; bestScore = score; }
+  }
+  return best;
+}
+
+async function normalizePreciseReferenceFile(file) {
+  const img = await loadImageElementFromFile(file);
+  const target = choosePreciseReferenceCanvasSize(img.naturalWidth || img.width, img.naturalHeight || img.height);
+  const canvas = document.createElement('canvas');
+  canvas.width = target.width;
+  canvas.height = target.height;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+  const drawW = Math.round(img.width * scale);
+  const drawH = Math.round(img.height * scale);
+  const dx = Math.floor((canvas.width - drawW) / 2);
+  const dy = Math.floor((canvas.height - drawH) / 2);
+  ctx.drawImage(img, dx, dy, drawW, drawH);
+  const blob = await new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('無法處理精確參考圖')), 'image/png'));
+  const base64 = await blobToBase64(blob);
+  return {
+    base64,
+    url: URL.createObjectURL(blob),
+    name: (file.name || 'precise-reference').replace(/\.[^.]+$/, '') + '.png',
+    mimeType: 'image/png',
+    width: target.width,
+    height: target.height
+  };
 }
 
 async function sha256HexFromBase64(b64) {
