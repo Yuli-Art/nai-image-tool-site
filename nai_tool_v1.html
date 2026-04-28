@@ -693,24 +693,23 @@ async function login() {
     const raw = document.getElementById('token-input').value.trim();
     if (!raw) { showLoginErr('請輸入 Token'); return; }
 
+    // 移除使用者不小心帶上的 "Bearer " 前綴
     apiToken = raw.replace(/^Bearer\s+/i, '');
 
-    const btn = document.getElementById('login-btn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span> 驗證中...';
-
-    try {
-        await fetchAnlas();
-        if (document.getElementById('remember-token').checked) {
-            localStorage.setItem('nai_token', apiToken);
-        }
-        showApp();
-    } catch(e) {
-        apiToken = '';
-        showLoginErr('Token 無效或無法連線，請確認後再試');
-        btn.disabled = false;
-        btn.innerHTML = '登入';
+    // 簡單檢查格式（NAI token 是很長的 JWT 字串）
+    if (apiToken.length < 20) {
+        showLoginErr('Token 格式不正確，請確認是否複製完整');
+        return;
     }
+
+    if (document.getElementById('remember-token').checked) {
+        localStorage.setItem('nai_token', apiToken);
+    }
+
+    showApp();
+
+    // 背景靜默查詢 ANLAS（失敗不影響使用）
+    fetchAnlasSilent();
 }
 
 function logout() {
@@ -726,7 +725,6 @@ function showApp() {
     document.getElementById('login-screen').style.display = 'none';
     const app = document.getElementById('app');
     app.style.display = 'flex';
-    fetchAnlas();
 }
 
 function showLoginErr(msg) {
@@ -755,6 +753,17 @@ async function fetchAnlas() {
     document.getElementById('anlas-mobile-val').textContent = formatted;
 
     return anlasBalance;
+}
+
+// 靜默查詢 ANLAS，失敗顯示 N/A，不中斷主流程
+async function fetchAnlasSilent() {
+    try {
+        await fetchAnlas();
+    } catch(e) {
+        // CORS 或其他原因失敗，顯示 N/A
+        document.getElementById('anlas-balance').textContent = 'N/A';
+        document.getElementById('anlas-mobile-val').textContent = 'N/A';
+    }
 }
 
 function showCost(cost) {
@@ -943,10 +952,12 @@ async function generateImage() {
         // Update seed shown
         document.getElementById('seed').value = seed;
 
-        // Calc cost
+        // Calc cost（靜默，失敗不影響）
         try {
             const afterAnlas = await fetchAnlas();
-            if (beforeAnlas !== null) showCost(beforeAnlas - afterAnlas);
+            if (beforeAnlas !== null && beforeAnlas !== anlasBalance) {
+                showCost(beforeAnlas - afterAnlas);
+            }
         } catch(_) {}
 
         toast('生圖完成！', 'success');
