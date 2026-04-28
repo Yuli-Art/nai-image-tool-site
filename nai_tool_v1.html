@@ -244,6 +244,35 @@
     .toast.warn{border-color:var(--warn);color:var(--warn);}
     @keyframes tIn{from{transform:translateX(30px);opacity:0;}to{transform:translateX(0);opacity:1;}}
 
+    /* Mode tabs */
+    .mode-tabs{display:flex;gap:4px;margin-top:10px;}
+    .mode-tab{flex:1;padding:7px 4px;border-radius:6px;border:1px solid var(--border);
+      background:var(--bg);color:var(--txt2);cursor:pointer;font-size:.78rem;
+      font-family:inherit;font-weight:500;transition:all .15s;text-align:center;}
+    .mode-tab.active{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
+    .mode-tab:hover:not(.active){background:var(--bg3);}
+
+    /* Upload zone */
+    .upload-zone{background:var(--bg);border:2px dashed var(--border);border-radius:8px;
+      padding:16px 10px;text-align:center;cursor:pointer;transition:border-color .15s;overflow:hidden;position:relative;}
+    .upload-zone:hover{border-color:var(--accent);}
+    .upload-zone-hint{font-size:.8rem;color:var(--txt2);pointer-events:none;}
+    .uz-preview{width:100%;border-radius:6px;display:none;}
+
+    /* Range slider */
+    input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;margin:4px 0;}
+    .slider-hint{font-size:.72rem;color:var(--txt2);margin-top:2px;}
+    .range-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;}
+    .range-row label{font-size:.8rem;color:var(--txt2);font-weight:500;}
+    .range-val{font-size:.8rem;color:var(--txt);font-weight:700;}
+
+    /* Vibe item */
+    .vibe-item{background:var(--bg);border:1px solid var(--border);border-radius:8px;
+      padding:10px;margin-bottom:8px;}
+    .vibe-item-top{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px;}
+    .vibe-thumb{width:56px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0;}
+    .vibe-sliders{flex:1;min-width:0;}
+
     /* ── MOBILE ── */
     @media(max-width:768px){
       #page-generate.active{flex-direction:column;}
@@ -349,6 +378,68 @@
         </div>
       </div>
 
+      <!-- 進階生圖 -->
+      <div class="card">
+        <div class="coll-hd" onclick="toggleAdv2()">
+          <div class="card-title">進階生圖</div>
+          <span class="coll-arrow closed" id="adv2-arrow">▼</span>
+        </div>
+        <div class="coll-body closed" id="adv2-body">
+          <div class="mode-tabs">
+            <button class="mode-tab active" id="mode-txt" onclick="setGenMode('txt2img')">文字生圖</button>
+            <button class="mode-tab" id="mode-i2i" onclick="setGenMode('img2img')">圖片變體</button>
+            <button class="mode-tab" id="mode-enh" onclick="setGenMode('enhance')">強化放大</button>
+          </div>
+          <!-- Source image upload (img2img + enhance) -->
+          <div id="src-img-section" style="display:none;margin-top:10px;">
+            <label style="display:block;font-size:.8rem;color:var(--txt2);font-weight:500;margin-bottom:5px;">來源圖片</label>
+            <div class="upload-zone" id="src-upload-zone"
+              onclick="document.getElementById('src-img-file').click()"
+              ondragover="event.preventDefault()" ondrop="onSrcImgDrop(event)">
+              <input type="file" id="src-img-file" accept="image/*" style="display:none;" onchange="onSrcImgFile(event)">
+              <img id="src-img-preview" class="uz-preview" alt="">
+              <div id="src-upload-hint" class="upload-zone-hint">📁 點擊或拖曳圖片</div>
+            </div>
+            <button id="src-img-clear" class="btn btn-s" style="display:none;margin-top:6px;font-size:.78rem;width:100%;" onclick="clearSrcImg()">✕ 移除來源圖</button>
+          </div>
+          <!-- img2img sliders -->
+          <div id="i2i-params" style="display:none;margin-top:10px;">
+            <div class="row2">
+              <div>
+                <div class="range-row"><label>Strength</label><span class="range-val" id="i2i-s-val">0.50</span></div>
+                <input type="range" min="0.01" max="0.99" step="0.01" value="0.5" id="i2i-strength"
+                  oninput="document.getElementById('i2i-s-val').textContent=parseFloat(this.value).toFixed(2)">
+                <div class="slider-hint">越高變化越大</div>
+              </div>
+              <div>
+                <div class="range-row"><label>Noise</label><span class="range-val" id="i2i-n-val">0.00</span></div>
+                <input type="range" min="0" max="0.99" step="0.01" value="0" id="i2i-noise"
+                  oninput="document.getElementById('i2i-n-val').textContent=parseFloat(this.value).toFixed(2)">
+              </div>
+            </div>
+          </div>
+          <!-- enhance slider -->
+          <div id="enh-params" style="display:none;margin-top:10px;">
+            <div class="range-row"><label>Strength</label><span class="range-val" id="enh-s-val">0.20</span></div>
+            <input type="range" min="0.01" max="0.99" step="0.01" value="0.2" id="enh-strength"
+              oninput="document.getElementById('enh-s-val').textContent=parseFloat(this.value).toFixed(2)">
+            <div class="slider-hint">強化放大建議 0.1–0.4，越低越保守。搭配解析度選大一檔效果最好。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vibe Transfer -->
+      <div class="card">
+        <div class="coll-hd" onclick="toggleVibe()">
+          <div class="card-title">Vibe Transfer <span id="vibe-count" style="font-size:.72rem;font-weight:400;color:var(--accent);"></span></div>
+          <span class="coll-arrow closed" id="vibe-arrow">▼</span>
+        </div>
+        <div class="coll-body closed" id="vibe-body">
+          <div id="vibe-list" style="margin-top:8px;"></div>
+          <button class="btn btn-s btn-full" style="margin-top:4px;" onclick="addVibeImage()">＋ 新增參考圖</button>
+        </div>
+      </div>
+
       <!-- 圖庫 Tag -->
       <div class="card">
         <div class="card-title">生圖 Tag（套用到本次生圖）</div>
@@ -420,6 +511,7 @@
         <div id="result-actions" class="result-actions">
           <button class="btn btn-p" onclick="downloadCurrent()">⬇ 下載圖片</button>
           <button class="btn btn-s" onclick="copyCurrentPrompt()">📋 複製 Prompt</button>
+          <button class="btn btn-s" onclick="setCurrentAsImg2Img()">🔄 設為來源圖</button>
           <button class="btn btn-s" onclick="showPage('gallery')">📁 查看圖庫</button>
         </div>
       </div>
@@ -482,6 +574,13 @@ let seedRandom = true;
 // Tag input state
 let currentTags = [];
 let allKnownTags = [];
+
+// Phase 3: advanced generation state
+let genMode = 'txt2img';      // 'txt2img' | 'img2img' | 'enhance'
+let srcImgBase64 = null;      // base64 string (no data: prefix) for img2img/enhance
+let vibeImages = [];          // [{base64, url, infoExtracted, refStrength}]
+let adv2Open = false;
+let vibeOpen = false;
 
 // Danbooru autocomplete state
 let danbooruIndex = [];   // alphabetically sorted for binary search prefix lookup
@@ -849,6 +948,156 @@ function renderTagDD(matches, input) {
 }
 
 // ═══════════════════════════════════════════
+// PHASE 3 — ADVANCED GENERATION
+// ═══════════════════════════════════════════
+
+// ── Collapsibles ──
+function setAdv2(open) {
+  adv2Open = open;
+  document.getElementById('adv2-body').className = 'coll-body ' + (open ? 'open' : 'closed');
+  document.getElementById('adv2-arrow').className = 'coll-arrow ' + (open ? 'open' : 'closed');
+}
+function toggleAdv2() { setAdv2(!adv2Open); }
+
+function setVibeOpen(open) {
+  vibeOpen = open;
+  document.getElementById('vibe-body').className = 'coll-body ' + (open ? 'open' : 'closed');
+  document.getElementById('vibe-arrow').className = 'coll-arrow ' + (open ? 'open' : 'closed');
+}
+function toggleVibe() { setVibeOpen(!vibeOpen); }
+
+// ── Gen mode ──
+function setGenMode(mode) {
+  genMode = mode;
+  ['txt', 'i2i', 'enh'].forEach(k => {
+    const map = { txt: 'txt2img', i2i: 'img2img', enh: 'enhance' };
+    document.getElementById('mode-' + k).classList.toggle('active', map[k] === mode);
+  });
+  const needSrc = mode === 'img2img' || mode === 'enhance';
+  document.getElementById('src-img-section').style.display = needSrc ? 'block' : 'none';
+  document.getElementById('i2i-params').style.display  = mode === 'img2img' ? 'block' : 'none';
+  document.getElementById('enh-params').style.display  = mode === 'enhance'  ? 'block' : 'none';
+}
+
+// ── Source image upload ──
+async function onSrcImgFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  await loadSrcImg(file);
+}
+async function onSrcImgDrop(e) {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  await loadSrcImg(file);
+}
+async function loadSrcImg(file) {
+  srcImgBase64 = await fileToBase64(file);
+  showSrcImgPreview(URL.createObjectURL(file));
+}
+function showSrcImgPreview(url) {
+  const preview = document.getElementById('src-img-preview');
+  const hint    = document.getElementById('src-upload-hint');
+  const clearBtn = document.getElementById('src-img-clear');
+  preview.src = url;
+  preview.style.display = 'block';
+  hint.style.display = 'none';
+  clearBtn.style.display = 'block';
+}
+function clearSrcImg() {
+  srcImgBase64 = null;
+  document.getElementById('src-img-file').value = '';
+  document.getElementById('src-img-preview').style.display = 'none';
+  document.getElementById('src-img-preview').src = '';
+  document.getElementById('src-upload-hint').style.display = 'block';
+  document.getElementById('src-img-clear').style.display = 'none';
+}
+function setCurrentAsImg2Img() {
+  if (!lastAB) return;
+  srcImgBase64 = arrayBufferToBase64(lastAB);
+  showSrcImgPreview(URL.createObjectURL(new Blob([lastAB], { type: 'image/png' })));
+  setGenMode('img2img');
+  setAdv2(true);
+  toast('已設為圖片變體來源', 'ok');
+}
+function setGalleryImgAsImg2Img(id) {
+  const img = galleryData.find(i => i.id === id);
+  if (!img) return;
+  srcImgBase64 = arrayBufferToBase64(img.data);
+  showSrcImgPreview(URL.createObjectURL(new Blob([img.data], { type: 'image/png' })));
+  setGenMode('img2img');
+  setAdv2(true);
+  document.getElementById('modal').classList.remove('open');
+  showPage('generate');
+  toast('已設為圖片變體來源', 'ok');
+}
+
+// ── Vibe Transfer ──
+async function addVibeImage() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = 'image/*';
+  input.onchange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const b64 = await fileToBase64(file);
+    vibeImages.push({ base64: b64, url: URL.createObjectURL(file), infoExtracted: 1.0, refStrength: 0.6 });
+    renderVibeList();
+    if (!vibeOpen) setVibeOpen(true);
+    document.getElementById('vibe-count').textContent = `(${vibeImages.length})`;
+  };
+  input.click();
+}
+function removeVibeImage(idx) {
+  vibeImages.splice(idx, 1);
+  renderVibeList();
+  document.getElementById('vibe-count').textContent = vibeImages.length ? `(${vibeImages.length})` : '';
+}
+function updateVibeParam(idx, key, val) {
+  vibeImages[idx][key] = parseFloat(val);
+  document.getElementById(`vp-${idx}-${key}`).textContent = parseFloat(val).toFixed(2);
+}
+function renderVibeList() {
+  const list = document.getElementById('vibe-list');
+  if (!vibeImages.length) { list.innerHTML = ''; return; }
+  list.innerHTML = vibeImages.map((v, i) => `
+    <div class="vibe-item">
+      <div class="vibe-item-top">
+        <img class="vibe-thumb" src="${v.url}" alt="">
+        <div class="vibe-sliders">
+          <div class="range-row"><label>提取程度</label><span class="range-val" id="vp-${i}-infoExtracted">${v.infoExtracted.toFixed(2)}</span></div>
+          <input type="range" min="0.01" max="1" step="0.01" value="${v.infoExtracted}"
+            oninput="updateVibeParam(${i},'infoExtracted',this.value)">
+          <div class="range-row" style="margin-top:6px;"><label>參考強度</label><span class="range-val" id="vp-${i}-refStrength">${v.refStrength.toFixed(2)}</span></div>
+          <input type="range" min="0.01" max="1" step="0.01" value="${v.refStrength}"
+            oninput="updateVibeParam(${i},'refStrength',this.value)">
+        </div>
+        <button class="btn btn-d btn-icon" style="flex-shrink:0;" onclick="removeVibeImage(${i})">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Helpers ──
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res(e.target.result.replace(/^data:[^;]+;base64,/, ''));
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+function arrayBufferToBase64(ab) {
+  const bytes = new Uint8Array(ab);
+  let binary = '';
+  // process in chunks to avoid stack overflow on large images
+  const chunkSize = 8192;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+  return btoa(binary);
+}
+
+// ═══════════════════════════════════════════
 // DANBOORU AUTOCOMPLETE
 // ═══════════════════════════════════════════
 const DB_CAT_LABEL = {0:'一般', 1:'繪師', 3:'版權', 4:'角色', 5:'Meta'};
@@ -1026,7 +1275,34 @@ async function generate() {
     params.sm = false; params.sm_dyn = false;
   }
 
-  const body = { input:prompt, model, action:'generate', parameters:params };
+  // ── Phase 3: determine action + extra params ──
+  let action = 'generate';
+  if (genMode === 'img2img' || genMode === 'enhance') {
+    if (!srcImgBase64) {
+      toast('請先在「進階生圖」上傳來源圖片', 'err');
+      setGenerating(false); return;
+    }
+    action = 'img2img';
+    params.image = srcImgBase64;
+    params.extra_noise_seed = Math.floor(Math.random() * 9999999999);
+    if (genMode === 'img2img') {
+      params.strength = parseFloat(document.getElementById('i2i-strength').value);
+      params.noise    = parseFloat(document.getElementById('i2i-noise').value);
+    } else {
+      // enhance: low strength, no extra noise
+      params.strength = parseFloat(document.getElementById('enh-strength').value);
+      params.noise    = 0;
+    }
+  }
+  // Vibe Transfer
+  if (vibeImages.length > 0) {
+    params.reference_image_multiple                 = vibeImages.map(v => v.base64);
+    params.reference_information_extracted_multiple = vibeImages.map(v => v.infoExtracted);
+    params.reference_strength_multiple              = vibeImages.map(v => v.refStrength);
+    params.add_original_image = false;
+  }
+
+  const body = { input:prompt, model, action, parameters:params };
   const beforeAnlas = anlasBalance;
 
   const TIMEOUT = 120000, MAX_RETRY = 2;
@@ -1338,6 +1614,7 @@ function openModal(id, url) {
     </div>
     <div class="modal-actions">
       <button class="btn btn-s btn-full" onclick="fillFromModal()">↩ 填入生圖介面</button>
+      <button class="btn btn-s btn-full" onclick="setGalleryImgAsImg2Img(modalImageId)">🔄 設為圖片變體來源</button>
       <button class="btn btn-p btn-full" onclick="downloadModal()">⬇ 下載圖片</button>
       <button class="btn btn-d btn-full" onclick="deleteModal()">🗑 刪除</button>
     </div>
