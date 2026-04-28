@@ -276,6 +276,13 @@
       font-size:.68rem;padding:1px 7px;border-radius:10px;white-space:nowrap;}
     .badge-img{background:rgba(156,163,175,.12);color:#9ca3af;border:1px solid rgba(156,163,175,.2);
       font-size:.68rem;padding:1px 7px;border-radius:10px;white-space:nowrap;}
+    /* Precise Reference */
+    .pref-dropzone{border:1.5px dashed var(--border);border-radius:10px;padding:22px 12px;text-align:center;
+      cursor:pointer;color:var(--txt2);font-size:.82rem;transition:border-color .2s;}
+    .pref-dropzone:hover{border-color:var(--accent);color:var(--accent);}
+    .pref-thumb{width:56px;height:56px;object-fit:cover;border-radius:6px;flex-shrink:0;}
+    .pref-mode-sel{width:100%;margin-top:4px;background:var(--bg3);color:var(--txt);border:1px solid var(--border);
+      border-radius:6px;padding:4px 8px;font-size:.8rem;}
     .vibe-saved-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;
       background:var(--bg);border:1px solid var(--border);margin-bottom:6px;}
     .vibe-saved-item:hover{border-color:var(--accent);}
@@ -449,6 +456,48 @@
           <div id="vibe-list" style="margin-top:8px;"></div>
           <div style="display:flex;gap:6px;margin-top:6px;">
             <button class="btn btn-s" style="flex:1;" onclick="openVibePicker()">📚 從 Vibe 庫選取</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Precise Reference -->
+      <div class="card">
+        <div class="coll-hd" onclick="togglePreciseRef()">
+          <div class="card-title">精確參考 <span id="pref-count" style="font-size:.72rem;font-weight:400;color:var(--accent);"></span></div>
+          <span class="coll-arrow closed" id="pref-arrow">▼</span>
+        </div>
+        <div class="coll-body closed" id="pref-body">
+          <div id="pref-dropzone" class="pref-dropzone"
+               onclick="preciseRefUpload()"
+               ondragover="event.preventDefault()"
+               ondrop="preciseRefDrop(event)">
+            🖼 點擊或拖曳圖片
+          </div>
+          <div id="pref-preview" style="display:none;margin-top:8px;">
+            <div style="display:flex;align-items:flex-start;gap:8px;">
+              <img id="pref-thumb" class="pref-thumb" src="" alt="">
+              <div style="flex:1;min-width:0;">
+                <div id="pref-name" style="font-size:.76rem;color:var(--txt2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-bottom:4px;"></div>
+                <select id="pref-mode" class="pref-mode-sel" onchange="preciseRef&&(preciseRef.mode=this.value)">
+                  <option value="character&style">Character &amp; Style</option>
+                  <option value="character">Character</option>
+                  <option value="style">Style</option>
+                </select>
+              </div>
+              <button class="btn btn-d btn-icon" style="flex-shrink:0;" onclick="clearPreciseRef()">✕</button>
+            </div>
+            <div class="range-row" style="margin-top:10px;">
+              <label>強度</label>
+              <span class="range-val" id="pref-strength-val">1.00</span>
+            </div>
+            <input type="range" min="0.1" max="1" step="0.01" value="1" id="pref-strength"
+              oninput="preciseRef&&(preciseRef.strength=parseFloat(this.value));document.getElementById('pref-strength-val').textContent=parseFloat(this.value).toFixed(2)">
+            <div class="range-row" style="margin-top:4px;">
+              <label>保真度 <span style="font-size:.66rem;color:var(--txt2);">（暫定）</span></label>
+              <span class="range-val" id="pref-fidelity-val">1.00</span>
+            </div>
+            <input type="range" min="0.01" max="1" step="0.01" value="1" id="pref-fidelity"
+              oninput="preciseRef&&(preciseRef.fidelity=parseFloat(this.value));document.getElementById('pref-fidelity-val').textContent=parseFloat(this.value).toFixed(2)">
           </div>
         </div>
       </div>
@@ -1127,6 +1176,218 @@ function setGalleryImgAsImg2Img(id) {
   toast('已設為圖片變體來源', 'ok');
 }
 
+// ── Precise Reference ──
+let preciseRef = null; // {base64, url, name, mode, strength, fidelity, cacheKey}
+
+function togglePreciseRef() {
+  const body = document.getElementById('pref-body');
+  const arrow = document.getElementById('pref-arrow');
+  const isOpen = !body.classList.contains('closed');
+  body.classList.toggle('closed', isOpen);
+  arrow.classList.toggle('closed', isOpen);
+}
+
+function preciseRefUpload() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*';
+  inp.onchange = e => { const f = e.target.files[0]; if (f) loadPreciseRefFile(f); };
+  inp.click();
+}
+
+function preciseRefDrop(e) {
+  e.preventDefault();
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) loadPreciseRefFile(f);
+}
+
+async function loadPreciseRefFile(file) {
+  const b64 = await fileToBase64(file);
+  const cacheKey = await sha256HexFromBase64(b64);
+  preciseRef = { base64: b64, url: URL.createObjectURL(file), name: file.name,
+    mode: 'character&style', strength: 1.0, fidelity: 1.0, cacheKey };
+  renderPreciseRef();
+  toast('已載入精確參考圖', 'ok');
+}
+
+function renderPreciseRef() {
+  const dz = document.getElementById('pref-dropzone');
+  const pv = document.getElementById('pref-preview');
+  const cnt = document.getElementById('pref-count');
+  if (!preciseRef) {
+    dz.style.display = ''; pv.style.display = 'none'; cnt.textContent = '';
+    return;
+  }
+  dz.style.display = 'none'; pv.style.display = ''; cnt.textContent = '(1)';
+  document.getElementById('pref-thumb').src = preciseRef.url;
+  document.getElementById('pref-name').textContent = preciseRef.name;
+  document.getElementById('pref-mode').value = preciseRef.mode;
+  document.getElementById('pref-strength').value = preciseRef.strength;
+  document.getElementById('pref-strength-val').textContent = preciseRef.strength.toFixed(2);
+  document.getElementById('pref-fidelity').value = preciseRef.fidelity;
+  document.getElementById('pref-fidelity-val').textContent = preciseRef.fidelity.toFixed(2);
+}
+
+function clearPreciseRef() {
+  if (preciseRef?.url) URL.revokeObjectURL(preciseRef.url);
+  preciseRef = null; renderPreciseRef();
+}
+
+// Convert base64 (pure, no data: prefix) to Blob
+function base64ToBlob(b64, mimeType = 'image/png') {
+  const binary = atob(b64.replace(/^data:[^;]+;base64,/, ''));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new Blob([bytes], {type: mimeType});
+}
+
+async function sha256HexFromBase64(b64) {
+  if (!globalThis.crypto?.subtle) return '';
+  const binary = atob(b64.replace(/^data:[^;]+;base64,/, ''));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function readUint32BE(bytes, offset) {
+  return (bytes[offset] * 0x1000000) + (bytes[offset + 1] << 16) + (bytes[offset + 2] << 8) + bytes[offset + 3];
+}
+
+function decodeMsgpackValue(bytes, offset = 0) {
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const head = bytes[offset++];
+  if (head <= 0x7f) return [head, offset];
+  if (head >= 0xe0) return [head - 0x100, offset];
+  if (head >= 0xa0 && head <= 0xbf) {
+    const len = head & 0x1f;
+    return [new TextDecoder().decode(bytes.slice(offset, offset + len)), offset + len];
+  }
+  if (head >= 0x90 && head <= 0x9f) {
+    const len = head & 0x0f;
+    const arr = [];
+    for (let i = 0; i < len; i++) {
+      const decoded = decodeMsgpackValue(bytes, offset);
+      arr.push(decoded[0]); offset = decoded[1];
+    }
+    return [arr, offset];
+  }
+  if (head >= 0x80 && head <= 0x8f) {
+    const len = head & 0x0f;
+    const obj = {};
+    for (let i = 0; i < len; i++) {
+      const keyDecoded = decodeMsgpackValue(bytes, offset);
+      offset = keyDecoded[1];
+      const valDecoded = decodeMsgpackValue(bytes, offset);
+      offset = valDecoded[1];
+      obj[keyDecoded[0]] = valDecoded[0];
+    }
+    return [obj, offset];
+  }
+  switch (head) {
+    case 0xc0: return [null, offset];
+    case 0xc2: return [false, offset];
+    case 0xc3: return [true, offset];
+    case 0xc4: { const len = bytes[offset++]; return [bytes.slice(offset, offset + len), offset + len]; }
+    case 0xc5: { const len = dv.getUint16(offset); offset += 2; return [bytes.slice(offset, offset + len), offset + len]; }
+    case 0xc6: { const len = dv.getUint32(offset); offset += 4; return [bytes.slice(offset, offset + len), offset + len]; }
+    case 0xca: { const val = dv.getFloat32(offset); return [val, offset + 4]; }
+    case 0xcb: { const val = dv.getFloat64(offset); return [val, offset + 8]; }
+    case 0xcc: return [bytes[offset], offset + 1];
+    case 0xcd: return [dv.getUint16(offset), offset + 2];
+    case 0xce: return [dv.getUint32(offset), offset + 4];
+    case 0xcf: return [Number(dv.getBigUint64(offset)), offset + 8];
+    case 0xd0: return [dv.getInt8(offset), offset + 1];
+    case 0xd1: return [dv.getInt16(offset), offset + 2];
+    case 0xd2: return [dv.getInt32(offset), offset + 4];
+    case 0xd3: return [Number(dv.getBigInt64(offset)), offset + 8];
+    case 0xd9: { const len = bytes[offset++]; return [new TextDecoder().decode(bytes.slice(offset, offset + len)), offset + len]; }
+    case 0xda: { const len = dv.getUint16(offset); offset += 2; return [new TextDecoder().decode(bytes.slice(offset, offset + len)), offset + len]; }
+    case 0xdb: { const len = dv.getUint32(offset); offset += 4; return [new TextDecoder().decode(bytes.slice(offset, offset + len)), offset + len]; }
+    case 0xdc: {
+      const len = dv.getUint16(offset); offset += 2;
+      const arr = [];
+      for (let i = 0; i < len; i++) {
+        const decoded = decodeMsgpackValue(bytes, offset);
+        arr.push(decoded[0]); offset = decoded[1];
+      }
+      return [arr, offset];
+    }
+    case 0xde: {
+      const len = dv.getUint16(offset); offset += 2;
+      const obj = {};
+      for (let i = 0; i < len; i++) {
+        const keyDecoded = decodeMsgpackValue(bytes, offset);
+        offset = keyDecoded[1];
+        const valDecoded = decodeMsgpackValue(bytes, offset);
+        offset = valDecoded[1];
+        obj[keyDecoded[0]] = valDecoded[0];
+      }
+      return [obj, offset];
+    }
+    default:
+      throw new Error(`Unsupported msgpack token: 0x${head.toString(16)}`);
+  }
+}
+
+function parseMsgpackFinalImage(bytes) {
+  let offset = 0;
+  let finalImage = null;
+  while (offset + 4 <= bytes.length) {
+    const messageLength = readUint32BE(bytes, offset);
+    offset += 4;
+    if (messageLength <= 0 || offset + messageLength > bytes.length) break;
+    const message = bytes.slice(offset, offset + messageLength);
+    offset += messageLength;
+    try {
+      const decoded = decodeMsgpackValue(message, 0)[0];
+      if (decoded && decoded.event_type === 'final' && decoded.image instanceof Uint8Array) {
+        finalImage = decoded.image;
+      }
+    } catch (_) {}
+  }
+  if (!finalImage) return null;
+  return finalImage.buffer.slice(finalImage.byteOffset, finalImage.byteOffset + finalImage.byteLength);
+}
+
+// Parse NAI response — handles ZIP, direct PNG, msgpack stream, and SSE text
+async function parseNaiResponse(resp) {
+  const buf = await resp.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  // ZIP (standard NAI generate-image response)
+  if (bytes[0] === 0x50 && bytes[1] === 0x4b) {
+    const zip = await JSZip.loadAsync(buf);
+    const files = Object.keys(zip.files);
+    const pngFile = files.find(f => f.endsWith('.png')) || files[0];
+    if (pngFile) return zip.files[pngFile].async('arraybuffer');
+  }
+  // Direct PNG
+  if (bytes[0] === 0x89 && bytes[1] === 0x50) return buf;
+  // Length-prefixed msgpack stream (used by V4/V4.5 stream endpoint)
+  const msgpackImage = parseMsgpackFinalImage(bytes);
+  if (msgpackImage) return msgpackImage;
+  // SSE text stream — find last data: line containing image
+  const text = new TextDecoder().decode(buf);
+  const lines = text.split('\n').filter(l => l.startsWith('data:'));
+  for (let i = lines.length - 1; i >= 0; i--) {
+    try {
+      const json = JSON.parse(lines[i].slice(5).trim());
+      const outputs = json.output || json.outputs;
+      if (outputs) {
+        const item = Array.isArray(outputs) ? outputs[0] : outputs;
+        const dataStr = item?.data || (typeof item === 'string' ? item : null);
+        if (typeof dataStr === 'string' && dataStr.length > 100) {
+          const bin = atob(dataStr);
+          const ab = new ArrayBuffer(bin.length);
+          const view = new Uint8Array(ab);
+          for (let j = 0; j < bin.length; j++) view[j] = bin.charCodeAt(j);
+          return ab;
+        }
+      }
+    } catch(_) {}
+  }
+  throw new Error(`無法解析圖片回應（${bytes.length} bytes）`);
+}
+
 // ── Vibe Transfer ──
 
 function removeVibeImage(idx) {
@@ -1625,6 +1886,27 @@ async function generate() {
     params.add_original_image = false;
   }
 
+  // Precise Reference (director)
+  if (preciseRef) {
+    params.director_reference_descriptions = [{
+      caption: { base_caption: preciseRef.mode, char_captions: [] },
+      legacy_uc: false
+    }];
+    params.director_reference_information_extracted  = [preciseRef.fidelity];
+    params.director_reference_strength_values        = [preciseRef.strength];
+    params.director_reference_secondary_strength_values = [0]; // provisional until fidelity mapping confirmed
+    params.director_reference_images_cached = [{
+      ...(preciseRef.cacheKey ? { cache_secret_key: preciseRef.cacheKey } : {}),
+      data: 'director_ref_0'
+    }];
+    params.controlnet_strength = 1;
+    params.add_original_image  = true;
+    params.use_coords          = true;
+    params.normalize_reference_strength_multiple = true;
+    params.stream = 'msgpack';
+    params.v4_prompt = Object.assign({}, params.v4_prompt, { use_coords: true, use_order: true });
+  }
+
   const body = { input:prompt, model, action, parameters:params };
   const beforeAnlas = anlasBalance;
 
@@ -1636,11 +1918,23 @@ async function generate() {
     const tid = setTimeout(()=>ctrl.abort(), TIMEOUT);
     try {
       showStatus(attempt>0 ? `重試中（第 ${attempt} 次）...` : '生成中，請稍候...');
-      resp = await fetch('https://image.novelai.net/ai/generate-image',{
-        method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiToken}`,'Accept':'application/x-msgpack'},
-        body:JSON.stringify(body), signal:ctrl.signal
-      });
+      if (preciseRef) {
+        // Precise Reference: multipart/form-data → generate-image-stream
+        const fd = new FormData();
+        fd.append('director_ref_0', base64ToBlob(preciseRef.base64), 'reference.png');
+        fd.append('request', new Blob([JSON.stringify(body)], {type:'application/json'}), 'blob');
+        resp = await fetch('https://image.novelai.net/ai/generate-image-stream',{
+          method:'POST',
+          headers:{'Authorization':`Bearer ${apiToken}`},
+          body:fd, signal:ctrl.signal
+        });
+      } else {
+        resp = await fetch('https://image.novelai.net/ai/generate-image',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiToken}`,'Accept':'application/x-msgpack'},
+          body:JSON.stringify(body), signal:ctrl.signal
+        });
+      }
       clearTimeout(tid);
       if ((resp.status===429||(resp.status>=500&&resp.status<=599)) && attempt<MAX_RETRY) {
         const wait = resp.status===429 ? 3000*(attempt+1) : 1500*(attempt+1);
@@ -1663,21 +1957,7 @@ async function generate() {
 
   try {
     showStatus('處理圖片中...');
-    const buf = await resp.arrayBuffer();
-    const bytes = new Uint8Array(buf);
-    let ab = null;
-
-    // ZIP format (standard NAI response)
-    if (bytes[0]===0x50 && bytes[1]===0x4b) {
-      const zip = await JSZip.loadAsync(buf);
-      const files = Object.keys(zip.files);
-      const pngFile = files.find(f=>f.endsWith('.png'))||files[0];
-      if (pngFile) ab = (await zip.files[pngFile].async('arraybuffer'));
-    }
-    // Direct PNG
-    if (!ab && bytes[0]===0x89 && bytes[1]===0x50) ab = buf;
-
-    if (!ab) throw new Error('無法解析圖片（大小: '+bytes.length+' bytes）');
+    const ab = await parseNaiResponse(resp);
 
     // Display
     lastAB = ab;
