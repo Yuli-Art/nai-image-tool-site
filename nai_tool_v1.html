@@ -276,6 +276,35 @@
       font-size:.68rem;padding:1px 7px;border-radius:10px;white-space:nowrap;}
     .badge-img{background:rgba(156,163,175,.12);color:#9ca3af;border:1px solid rgba(156,163,175,.2);
       font-size:.68rem;padding:1px 7px;border-radius:10px;white-space:nowrap;}
+    /* Character Library */
+    .char-card{position:relative;background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;cursor:pointer;transition:box-shadow .15s;}
+    .char-card:hover{box-shadow:0 0 0 2px var(--accent);}
+    .char-card.selected{box-shadow:0 0 0 2px var(--accent);}
+    .char-card-thumb{width:100%;aspect-ratio:1/1;object-fit:cover;background:var(--bg3);display:block;}
+    .char-card-thumb-ph{width:100%;aspect-ratio:1/1;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:1.8rem;color:var(--txt2);}
+    .char-card-footer{padding:7px 9px;}
+    .char-card-name{font-size:.8rem;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .char-card-series{font-size:.7rem;color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
+    .char-card-tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;}
+    .char-card-tag{font-size:.65rem;padding:1px 6px;border-radius:8px;background:var(--bg3);color:var(--txt2);}
+    .char-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;display:flex;align-items:center;justify-content:center;}
+    .char-modal-overlay:not(.open){display:none;}
+    .char-modal-box{background:var(--bg2);border-radius:14px;width:min(96vw,560px);max-height:90vh;display:flex;flex-direction:column;overflow:hidden;}
+    .char-modal-hd{padding:14px 20px;border-bottom:1px solid var(--border);font-weight:700;font-size:.95rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+    .char-modal-body{overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px;}
+    .char-modal-ft{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;}
+    .char-field-label{font-size:.78rem;font-weight:600;color:var(--txt2);margin-bottom:4px;}
+    .char-ref-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
+    .char-ref-item{position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;flex-shrink:0;}
+    .char-ref-item img{width:100%;height:100%;object-fit:cover;display:block;}
+    .char-ref-remove{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.65rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
+    .gal-picker-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:250;display:flex;align-items:center;justify-content:center;}
+    .gal-picker-overlay:not(.open){display:none;}
+    .gal-picker-box{background:var(--bg2);border-radius:14px;width:min(96vw,700px);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;}
+    .char-ref-picker-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:260;display:flex;align-items:center;justify-content:center;}
+    .char-ref-picker-overlay:not(.open){display:none;}
+    .char-ref-picker-box{background:var(--bg2);border-radius:14px;width:min(96vw,520px);max-height:80vh;display:flex;flex-direction:column;overflow:hidden;}
+
     /* Precise Reference */
     .pref-dropzone{border:1.5px dashed var(--border);border-radius:10px;padding:22px 12px;text-align:center;
       cursor:pointer;color:var(--txt2);font-size:.82rem;transition:border-color .2s;}
@@ -335,6 +364,7 @@
       <button class="nav-tab active" id="tab-gen" onclick="showPage('generate')">生圖</button>
       <button class="nav-tab" id="tab-gal" onclick="showPage('gallery')">圖庫 <span id="gal-count" style="font-size:.72rem;opacity:.7;"></span></button>
       <button class="nav-tab" id="tab-vibe-page" onclick="showPage('vibe')">Vibe 庫 <span id="vibe-lib-count" style="font-size:.72rem;opacity:.7;"></span></button>
+      <button class="nav-tab" id="tab-char-page" onclick="showPage('characters')">角色庫 <span id="char-lib-count" style="font-size:.72rem;opacity:.7;"></span></button>
     </div>
     <div class="nav-right">
       <div class="anlas-info">
@@ -473,6 +503,10 @@
                ondrop="preciseRefDrop(event)">
             🖼 點擊或拖曳圖片
           </div>
+          <div style="display:flex;gap:6px;margin-top:6px;">
+            <button class="btn btn-s" style="flex:1;font-size:.75rem;" onclick="openCharPickerForPreciseRef()">👤 角色庫</button>
+            <button class="btn btn-s" style="flex:1;font-size:.75rem;" onclick="openGalleryPicker('preciseRef')">🖼 圖庫</button>
+          </div>
           <div id="pref-preview" style="display:none;margin-top:8px;">
             <div style="display:flex;align-items:flex-start;gap:8px;">
               <img id="pref-thumb" class="pref-thumb" src="" alt="">
@@ -602,6 +636,25 @@
     <div class="gallery-grid" id="gal-grid"></div>
   </div>
 
+  <!-- ── 角色庫 PAGE ── -->
+  <div id="page-characters" class="page">
+    <div class="gallery-toolbar">
+      <span style="font-size:.9rem;font-weight:700;">角色庫</span>
+      <button class="btn btn-p" onclick="openCharEditModal(null)">＋ 新增角色</button>
+      <input type="search" class="gallery-search" id="char-search" placeholder="搜尋名稱 / prompt..." oninput="renderCharPage()" style="max-width:180px;">
+      <div style="flex:1;"></div>
+      <button class="btn btn-s" id="char-sel-mode-btn" onclick="toggleCharSelectMode()">多選</button>
+    </div>
+    <div class="gallery-actions" id="char-page-actions">
+      <span class="gallery-sel-count" id="char-sel-count">已選 0 個</span>
+      <button class="btn btn-d" onclick="deleteSelectedChars()">🗑 刪除選取</button>
+      <button class="btn btn-s" onclick="clearCharSelection()">取消選取</button>
+    </div>
+    <!-- Series / tag filter row -->
+    <div style="padding:4px 12px 0;display:flex;gap:6px;flex-wrap:wrap;" id="char-filter-row"></div>
+    <div class="gallery-grid" id="char-page-grid"></div>
+  </div>
+
   <!-- ── VIBE 庫 PAGE ── -->
   <div id="page-vibe" class="page">
     <div class="gallery-toolbar">
@@ -634,6 +687,82 @@
     <div style="padding:10px 16px;border-top:1px solid var(--border);flex-shrink:0;">
       <button class="btn btn-s" style="font-size:.8rem;" onclick="closeVibePicker();showPage('vibe');">＋ 管理 Vibe 庫</button>
     </div>
+  </div>
+</div>
+
+<!-- ── CHARACTER EDIT MODAL ── -->
+<div class="char-modal-overlay" id="char-edit-modal">
+  <div class="char-modal-box" onclick="event.stopPropagation()">
+    <div class="char-modal-hd">
+      <span id="char-edit-title">新增角色</span>
+      <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeCharEditModal()">✕</button>
+    </div>
+    <div class="char-modal-body">
+      <div>
+        <div class="char-field-label">角色名稱 *</div>
+        <input id="char-edit-name" class="inp" type="text" placeholder="例：雷電將軍" style="width:100%;">
+      </div>
+      <div>
+        <div class="char-field-label">作品 / 系列</div>
+        <input id="char-edit-series" class="inp" type="text" placeholder="例：原神" style="width:100%;">
+      </div>
+      <div>
+        <div class="char-field-label">標籤（逗號分隔）</div>
+        <input id="char-edit-tags" class="inp" type="text" placeholder="例：原創, 遊戲" style="width:100%;">
+      </div>
+      <div>
+        <div class="char-field-label">角色 Prompt</div>
+        <textarea id="char-edit-prompt" class="inp" rows="3" placeholder="例：raiden shogun, 1girl, ..." style="width:100%;resize:vertical;"></textarea>
+      </div>
+      <div>
+        <div class="char-field-label">備註</div>
+        <textarea id="char-edit-notes" class="inp" rows="2" placeholder="自由備註..." style="width:100%;resize:vertical;"></textarea>
+      </div>
+      <div>
+        <div class="char-field-label">預覽縮圖（從圖庫選一張）</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+          <div id="char-edit-thumb-wrap" style="width:64px;height:64px;border-radius:8px;overflow:hidden;background:var(--bg3);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--txt2);font-size:1.4rem;">👤</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <button class="btn btn-s" onclick="openGalleryPicker('charThumb')">從圖庫選縮圖</button>
+            <button class="btn btn-s btn-out" id="char-edit-thumb-clear" onclick="charEditClearThumb()" style="display:none;">清除縮圖</button>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="char-field-label">Precise Reference 圖（可綁多張，從圖庫選）</div>
+        <div class="char-ref-list" id="char-edit-ref-list"></div>
+        <button class="btn btn-s" style="margin-top:8px;" onclick="openGalleryPicker('charRef')">＋ 從圖庫新增參考圖</button>
+      </div>
+    </div>
+    <div class="char-modal-ft">
+      <button class="btn btn-s btn-out" onclick="closeCharEditModal()">取消</button>
+      <button class="btn btn-p" onclick="saveCharEdit()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── GALLERY IMAGE PICKER MODAL ── -->
+<div class="gal-picker-overlay" id="gal-picker-modal">
+  <div class="gal-picker-box" onclick="event.stopPropagation()">
+    <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <span style="font-weight:700;font-size:.9rem;" id="gal-picker-title">從圖庫選圖</span>
+      <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeGalleryPicker()">✕</button>
+    </div>
+    <div style="padding:8px 18px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <input type="search" class="gallery-search" id="gal-picker-search" placeholder="搜尋..." oninput="renderGalleryPickerGrid()" style="width:100%;max-width:none;">
+    </div>
+    <div id="gal-picker-grid" style="overflow-y:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;flex:1;"></div>
+  </div>
+</div>
+
+<!-- ── CHARACTER REF SUB-PICKER MODAL ── -->
+<div class="char-ref-picker-overlay" id="char-ref-picker-modal">
+  <div class="char-ref-picker-box" onclick="event.stopPropagation()">
+    <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <span style="font-weight:700;font-size:.9rem;" id="char-ref-picker-title">選擇參考圖</span>
+      <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeCharRefPicker()">✕</button>
+    </div>
+    <div id="char-ref-picker-grid" style="overflow-y:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;"></div>
   </div>
 </div>
 
@@ -750,7 +879,7 @@ let _db = null;
 async function getDB() {
   if (_db) return _db;
   _db = await new Promise((res, rej) => {
-    const r = indexedDB.open('nai_tool', 3);
+    const r = indexedDB.open('nai_tool', 4);
     r.onupgradeneeded = e => {
       const db = e.target.result;
       if (!db.objectStoreNames.contains('images')) {
@@ -763,6 +892,11 @@ async function getDB() {
       }
       if (!db.objectStoreNames.contains('vibe_library')) {
         db.createObjectStore('vibe_library', { keyPath:'id', autoIncrement:true });
+      }
+      if (!db.objectStoreNames.contains('characters')) {
+        const cs = db.createObjectStore('characters', { keyPath:'id', autoIncrement:true });
+        cs.createIndex('by_series','seriesName');
+        cs.createIndex('by_time','timestamp');
       }
     };
     r.onsuccess = () => res(r.result);
@@ -866,6 +1000,50 @@ async function dbDeleteVibe(id) {
   return dbOp(db,'vibe_library','readwrite', s => s.delete(id));
 }
 
+async function dbGetImageById(id) {
+  const db = await getDB();
+  return dbOp(db,'images','readonly', s => s.get(id));
+}
+
+// ── Characters DB ──
+async function dbSaveCharacter(char) {
+  const db = await getDB();
+  return dbOp(db,'characters','readwrite', s => s.add({
+    name: char.name || '',
+    seriesName: char.seriesName || '',
+    tags: char.tags || [],
+    prompt: char.prompt || '',
+    notes: char.notes || '',
+    thumbImageId: char.thumbImageId ?? null,
+    preciseRefImageIds: char.preciseRefImageIds || [],
+    timestamp: Date.now()
+  }));
+}
+async function dbUpdateCharacter(id, fields) {
+  const db = await getDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('characters','readwrite');
+    const store = tx.objectStore('characters');
+    const r = store.get(id);
+    r.onsuccess = () => {
+      const rec = Object.assign({}, r.result, fields);
+      const r2 = store.put(rec);
+      r2.onsuccess = () => res(r2.result);
+      r2.onerror = () => rej(r2.error);
+    };
+    r.onerror = () => rej(r.error);
+  });
+}
+async function dbGetCharacters() {
+  const db = await getDB();
+  const all = await dbOp(db,'characters','readonly', s => s.getAll());
+  return all.sort((a,b) => b.timestamp - a.timestamp);
+}
+async function dbDeleteCharacter(id) {
+  const db = await getDB();
+  return dbOp(db,'characters','readwrite', s => s.delete(id));
+}
+
 async function dbGetTags() {
   const db = await getDB();
   const tags = await dbOp(db,'tags','readonly', s => s.getAll());
@@ -942,6 +1120,7 @@ async function showApp() {
   allKnownTags = await dbGetTags();
   await loadGallery();
   await refreshVibeLibrary();
+  await loadCharacterData();
 }
 
 function showLoginErr(msg) {
@@ -1017,9 +1196,9 @@ function setGenerating(on) {
 }
 
 function showPage(page) {
-  ['page-generate','page-gallery','page-vibe'].forEach(id =>
+  ['page-generate','page-gallery','page-vibe','page-characters'].forEach(id =>
     document.getElementById(id).classList.remove('active'));
-  ['tab-gen','tab-gal','tab-vibe-page'].forEach(id =>
+  ['tab-gen','tab-gal','tab-vibe-page','tab-char-page'].forEach(id =>
     document.getElementById(id).classList.remove('active'));
   if (page === 'generate') {
     document.getElementById('page-generate').classList.add('active');
@@ -1032,6 +1211,10 @@ function showPage(page) {
     document.getElementById('page-vibe').classList.add('active');
     document.getElementById('tab-vibe-page').classList.add('active');
     renderVibePage();
+  } else if (page === 'characters') {
+    document.getElementById('page-characters').classList.add('active');
+    document.getElementById('tab-char-page').classList.add('active');
+    renderCharPage();
   }
 }
 
@@ -1519,6 +1702,432 @@ function renderVibeList() {
       </div>
     </div>`;
   }).join('');
+}
+
+// ═══════════════════════════════════════════
+// CHARACTER LIBRARY
+// ═══════════════════════════════════════════
+let characterData = [];       // {id, name, seriesName, tags, prompt, notes, thumbImageId, preciseRefImageIds, timestamp, _thumbUrl}
+let charSelectMode = false;
+let charSelected = new Set();
+let charEditId = null;        // null = new, number = editing
+let charEditThumbImageId = null;
+let charEditRefImageIds = [];
+let charEditRefUrls = {};     // imageId → blob URL cache
+
+// ── Gallery Image Picker ──
+let galPickerPurpose = null;  // 'charThumb' | 'charRef' | 'preciseRef'
+let galPickerCallback = null; // (imageRecord) => void
+
+// ── Char Ref Sub-picker ──
+// used when selecting a character for preciseRef and it has multiple refs
+
+async function loadCharacterData() {
+  characterData = await dbGetCharacters();
+  // resolve thumbnail blob URLs
+  for (const c of characterData) {
+    if (c.thumbImageId && !c._thumbUrl) {
+      try {
+        const img = await dbGetImageById(c.thumbImageId);
+        if (img) c._thumbUrl = URL.createObjectURL(new Blob([img.data], {type:'image/png'}));
+      } catch(_) {}
+    }
+  }
+  updateCharLibCount(characterData.length);
+}
+
+function updateCharLibCount(n) {
+  document.getElementById('char-lib-count').textContent = n ? `(${n})` : '';
+}
+
+async function renderCharPage() {
+  if (!characterData.length) await loadCharacterData();
+  updateCharLibCount(characterData.length);
+  buildCharFilterRow();
+  const grid = document.getElementById('char-page-grid');
+  const q = (document.getElementById('char-search')?.value || '').toLowerCase();
+  const activeSeries = charActiveSeries;
+  const activeTags = charActiveTags;
+
+  let filtered = characterData.filter(c => {
+    const matchQ = !q || c.name.toLowerCase().includes(q) || (c.prompt||'').toLowerCase().includes(q) || (c.seriesName||'').toLowerCase().includes(q);
+    const matchSeries = !activeSeries || c.seriesName === activeSeries;
+    const matchTags = activeTags.size === 0 || [...activeTags].every(t => (c.tags||[]).includes(t));
+    return matchQ && matchSeries && matchTags;
+  });
+
+  if (!filtered.length) {
+    grid.innerHTML = `<div class="gallery-empty" style="grid-column:1/-1;">
+      <div style="font-size:1.5rem;margin-bottom:8px;">👤</div>
+      <span>${characterData.length ? '沒有符合條件的角色' : '角色庫是空的，點「＋ 新增角色」開始建立'}</span>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(c => {
+    const sel = charSelected.has(c.id) ? 'selected' : '';
+    const thumb = c._thumbUrl
+      ? `<img class="char-card-thumb" src="${c._thumbUrl}" alt="">`
+      : `<div class="char-card-thumb-ph">👤</div>`;
+    const tags = (c.tags||[]).slice(0,3).map(t => `<span class="char-card-tag">${esc(t)}</span>`).join('');
+    const refCount = (c.preciseRefImageIds||[]).length;
+    const refBadge = refCount ? `<span class="feat-tag" style="font-size:.65rem;margin-top:3px;">Ref ×${refCount}</span>` : '';
+    return `<div class="gcard char-card ${sel}" onclick="onCharCardClick(event,${c.id})">
+      ${sel ? '<div class="gcard-check">✓</div>' : ''}
+      ${thumb}
+      <div class="char-card-footer">
+        <div class="char-card-name">${esc(c.name)}</div>
+        ${c.seriesName ? `<div class="char-card-series">${esc(c.seriesName)}</div>` : ''}
+        <div class="char-card-tags">${tags}${refBadge}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let charActiveSeries = '';
+let charActiveTags = new Set();
+
+function buildCharFilterRow() {
+  const row = document.getElementById('char-filter-row');
+  const seriesSet = new Set(characterData.map(c => c.seriesName).filter(Boolean));
+  const tagCount = {};
+  characterData.forEach(c => (c.tags||[]).forEach(t => tagCount[t] = (tagCount[t]||0)+1));
+  let html = '';
+  if (charActiveSeries || charActiveTags.size) {
+    html += `<span class="tag-filter-chip active" onclick="clearCharFilters()">✕ 清除篩選</span>`;
+  }
+  seriesSet.forEach(s => {
+    html += `<span class="tag-filter-chip ${charActiveSeries===s?'active':''}" onclick="toggleCharSeries('${esc(s)}')">${esc(s)}</span>`;
+  });
+  Object.entries(tagCount).sort((a,b)=>b[1]-a[1]).forEach(([t]) => {
+    html += `<span class="tag-filter-chip ${charActiveTags.has(t)?'active':''}" onclick="toggleCharTag('${esc(t)}')">#${esc(t)}</span>`;
+  });
+  row.innerHTML = html;
+}
+
+function toggleCharSeries(s) { charActiveSeries = charActiveSeries === s ? '' : s; renderCharPage(); }
+function toggleCharTag(t) { charActiveTags.has(t) ? charActiveTags.delete(t) : charActiveTags.add(t); renderCharPage(); }
+function clearCharFilters() { charActiveSeries = ''; charActiveTags.clear(); renderCharPage(); }
+
+function onCharCardClick(e, id) {
+  if (charSelectMode) { toggleCharSelect(id); return; }
+  openCharEditModal(id);
+}
+function toggleCharSelectMode() {
+  charSelectMode = !charSelectMode;
+  charSelected.clear();
+  document.getElementById('char-sel-mode-btn').textContent = charSelectMode ? '結束多選' : '多選';
+  document.getElementById('char-page-actions').classList.toggle('visible', charSelectMode);
+  renderCharPage();
+}
+function toggleCharSelect(id) {
+  charSelected.has(id) ? charSelected.delete(id) : charSelected.add(id);
+  document.getElementById('char-sel-count').textContent = `已選 ${charSelected.size} 個`;
+  const card = document.querySelector(`#char-page-grid .gcard[onclick*="onCharCardClick(event,${id})"]`);
+  if (card) card.classList.toggle('selected', charSelected.has(id));
+}
+async function deleteSelectedChars() {
+  if (!charSelected.size) return;
+  if (!confirm(`確定刪除 ${charSelected.size} 個角色？`)) return;
+  for (const id of charSelected) await dbDeleteCharacter(id);
+  charSelected.clear(); charSelectMode = false;
+  document.getElementById('char-sel-mode-btn').textContent = '多選';
+  document.getElementById('char-page-actions').classList.remove('visible');
+  characterData = await dbGetCharacters();
+  updateCharLibCount(characterData.length);
+  toast('已刪除','ok');
+  renderCharPage();
+}
+function clearCharSelection() {
+  charSelected.clear(); charSelectMode = false;
+  document.getElementById('char-sel-mode-btn').textContent = '多選';
+  document.getElementById('char-page-actions').classList.remove('visible');
+  renderCharPage();
+}
+
+// ── Character Edit Modal ──
+async function openCharEditModal(id) {
+  charEditId = id;
+  charEditThumbImageId = null;
+  charEditRefImageIds = [];
+  charEditRefUrls = {};
+
+  if (id) {
+    const c = characterData.find(x => x.id === id);
+    if (!c) return;
+    document.getElementById('char-edit-title').textContent = '編輯角色';
+    document.getElementById('char-edit-name').value = c.name || '';
+    document.getElementById('char-edit-series').value = c.seriesName || '';
+    document.getElementById('char-edit-tags').value = (c.tags||[]).join(', ');
+    document.getElementById('char-edit-prompt').value = c.prompt || '';
+    document.getElementById('char-edit-notes').value = c.notes || '';
+    charEditThumbImageId = c.thumbImageId ?? null;
+    charEditRefImageIds = [...(c.preciseRefImageIds || [])];
+    // restore thumb url
+    if (charEditThumbImageId && c._thumbUrl) {
+      charEditRefUrls[charEditThumbImageId] = c._thumbUrl;
+      renderCharEditThumb(c._thumbUrl);
+    } else {
+      renderCharEditThumb(null);
+    }
+    // restore ref urls
+    for (const refId of charEditRefImageIds) {
+      const cached = characterData.find(x=>x.id===id)?._refUrls?.[refId];
+      if (cached) charEditRefUrls[refId] = cached;
+      else {
+        try {
+          const img = await dbGetImageById(refId);
+          if (img) charEditRefUrls[refId] = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
+        } catch(_) {}
+      }
+    }
+  } else {
+    document.getElementById('char-edit-title').textContent = '新增角色';
+    document.getElementById('char-edit-name').value = '';
+    document.getElementById('char-edit-series').value = '';
+    document.getElementById('char-edit-tags').value = '';
+    document.getElementById('char-edit-prompt').value = '';
+    document.getElementById('char-edit-notes').value = '';
+    renderCharEditThumb(null);
+  }
+  renderCharEditRefList();
+  document.getElementById('char-edit-modal').classList.add('open');
+}
+
+function closeCharEditModal() {
+  document.getElementById('char-edit-modal').classList.remove('open');
+}
+
+function renderCharEditThumb(url) {
+  const wrap = document.getElementById('char-edit-thumb-wrap');
+  const clearBtn = document.getElementById('char-edit-thumb-clear');
+  if (url) {
+    wrap.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`;
+    clearBtn.style.display = '';
+  } else {
+    wrap.innerHTML = '👤';
+    clearBtn.style.display = 'none';
+  }
+}
+
+function charEditClearThumb() {
+  charEditThumbImageId = null;
+  renderCharEditThumb(null);
+}
+
+function renderCharEditRefList() {
+  const list = document.getElementById('char-edit-ref-list');
+  if (!charEditRefImageIds.length) { list.innerHTML = ''; return; }
+  list.innerHTML = charEditRefImageIds.map((refId, idx) => {
+    const url = charEditRefUrls[refId] || '';
+    return `<div class="char-ref-item">
+      <img src="${url}" onerror="this.style.background='var(--bg3)';this.style.opacity='.3'">
+      <button class="char-ref-remove" onclick="charEditRemoveRef(${idx})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function charEditRemoveRef(idx) {
+  charEditRefImageIds.splice(idx, 1);
+  renderCharEditRefList();
+}
+
+async function saveCharEdit() {
+  const name = document.getElementById('char-edit-name').value.trim();
+  if (!name) { toast('請填寫角色名稱','err'); return; }
+  const tagsRaw = document.getElementById('char-edit-tags').value;
+  const tags = tagsRaw.split(',').map(t=>t.trim()).filter(Boolean);
+  const data = {
+    name,
+    seriesName: document.getElementById('char-edit-series').value.trim(),
+    tags,
+    prompt: document.getElementById('char-edit-prompt').value.trim(),
+    notes: document.getElementById('char-edit-notes').value.trim(),
+    thumbImageId: charEditThumbImageId,
+    preciseRefImageIds: [...charEditRefImageIds],
+    timestamp: Date.now()
+  };
+  if (charEditId) {
+    await dbUpdateCharacter(charEditId, data);
+    toast('已更新','ok');
+  } else {
+    await dbSaveCharacter(data);
+    toast('角色已新增','ok');
+  }
+  closeCharEditModal();
+  characterData = await dbGetCharacters();
+  // re-resolve thumb URLs for updated/new record
+  for (const c of characterData) {
+    if (c.thumbImageId && !c._thumbUrl) {
+      try {
+        const img = await dbGetImageById(c.thumbImageId);
+        if (img) c._thumbUrl = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
+      } catch(_) {}
+    }
+  }
+  updateCharLibCount(characterData.length);
+  renderCharPage();
+}
+
+// ── Gallery Image Picker ──
+function openGalleryPicker(purpose, callback) {
+  galPickerPurpose = purpose;
+  galPickerCallback = callback || null;
+  const titles = { charThumb:'選擇縮圖', charRef:'選擇 Precise Reference 圖', preciseRef:'從圖庫選圖' };
+  document.getElementById('gal-picker-title').textContent = titles[purpose] || '從圖庫選圖';
+  document.getElementById('gal-picker-search').value = '';
+  renderGalleryPickerGrid();
+  document.getElementById('gal-picker-modal').classList.add('open');
+}
+
+function closeGalleryPicker() {
+  document.getElementById('gal-picker-modal').classList.remove('open');
+}
+
+function renderGalleryPickerGrid() {
+  const q = (document.getElementById('gal-picker-search').value||'').toLowerCase();
+  const grid = document.getElementById('gal-picker-grid');
+  const items = galleryData.filter(img => {
+    if (!q) return true;
+    return (img.metadata?.prompt||'').toLowerCase().includes(q) ||
+           (img.tags||[]).some(t=>t.toLowerCase().includes(q));
+  });
+  if (!items.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--txt2);padding:30px;font-size:.85rem;">圖庫是空的或沒有符合的圖片</div>`;
+    return;
+  }
+  grid.innerHTML = items.map(img => {
+    const url = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
+    return `<div class="gcard" onclick="onGalPickerSelect(${img.id})" style="cursor:pointer;">
+      <img class="gcard-img" src="${url}" alt="">
+    </div>`;
+  }).join('');
+}
+
+async function onGalPickerSelect(imgId) {
+  closeGalleryPicker();
+  const img = galleryData.find(i => i.id === imgId);
+  if (!img) return;
+  const url = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
+
+  if (galPickerPurpose === 'charThumb') {
+    charEditThumbImageId = imgId;
+    charEditRefUrls[imgId] = url;
+    renderCharEditThumb(url);
+  } else if (galPickerPurpose === 'charRef') {
+    if (!charEditRefImageIds.includes(imgId)) {
+      charEditRefImageIds.push(imgId);
+      charEditRefUrls[imgId] = url;
+      renderCharEditRefList();
+    } else {
+      toast('這張圖已在參考清單中','warn');
+    }
+  } else if (galPickerPurpose === 'preciseRef') {
+    // Load directly into Precise Reference
+    const b64 = arrayBufferToBase64(img.data);
+    preciseRef = { base64: b64, url, name: `圖庫 #${imgId}`,
+      mode: 'character&style', strength: 1.0, fidelity: 1.0 };
+    renderPreciseRef();
+    if (!document.getElementById('pref-body').classList.contains('open')) {
+      // open the section if closed
+      const body = document.getElementById('pref-body');
+      const arrow = document.getElementById('pref-arrow');
+      if (body.classList.contains('closed')) {
+        body.classList.remove('closed'); arrow.classList.remove('closed');
+      }
+    }
+    toast('已從圖庫載入精確參考圖','ok');
+  } else if (galPickerCallback) {
+    galPickerCallback(img);
+  }
+}
+
+// ── Character Picker for Precise Reference ──
+async function openCharPickerForPreciseRef() {
+  if (!characterData.length) await loadCharacterData();
+  const grid = document.getElementById('vibe-picker-grid'); // reuse vibe picker? No, use char ref picker
+  // We'll open a new inline modal. Use the char-ref-picker-modal as char selector.
+  document.getElementById('char-ref-picker-title').textContent = '選擇角色';
+  const pickGrid = document.getElementById('char-ref-picker-grid');
+
+  const chars = characterData.filter(c => (c.preciseRefImageIds||[]).length > 0);
+  if (!chars.length) {
+    toast('角色庫沒有綁定 Precise Reference 的角色','warn');
+    return;
+  }
+
+  pickGrid.innerHTML = chars.map(c => {
+    const thumb = c._thumbUrl
+      ? `<img class="char-card-thumb" src="${c._thumbUrl}" alt="" style="border-radius:8px;width:100%;aspect-ratio:1/1;object-fit:cover;">`
+      : `<div style="width:100%;aspect-ratio:1/1;background:var(--bg3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;">👤</div>`;
+    return `<div class="gcard" onclick="onCharPickerSelect(${c.id})" style="cursor:pointer;">
+      ${thumb}
+      <div class="gcard-footer" style="padding:5px 7px;">
+        <div style="font-size:.78rem;font-weight:600;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(c.name)}</div>
+        ${c.seriesName ? `<div style="font-size:.68rem;color:var(--txt2);">${esc(c.seriesName)}</div>` : ''}
+        <div style="font-size:.68rem;color:var(--accent);">Ref ×${c.preciseRefImageIds.length}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('char-ref-picker-modal').classList.add('open');
+}
+
+async function onCharPickerSelect(charId) {
+  const c = characterData.find(x => x.id === charId);
+  if (!c) return;
+  const refIds = c.preciseRefImageIds || [];
+  if (!refIds.length) { toast('此角色尚未綁定 Precise Reference','warn'); return; }
+
+  if (refIds.length === 1) {
+    // Load directly
+    await loadPreciseRefFromImageId(refIds[0], c.name);
+    closeCharRefPicker();
+  } else {
+    // Show sub-picker to choose one
+    await showCharRefSubPicker(c);
+  }
+}
+
+async function showCharRefSubPicker(c) {
+  document.getElementById('char-ref-picker-title').textContent = `${c.name} — 選擇參考圖`;
+  const grid = document.getElementById('char-ref-picker-grid');
+  const items = [];
+  for (const refId of c.preciseRefImageIds) {
+    try {
+      const img = await dbGetImageById(refId);
+      if (img) {
+        const url = charEditRefUrls[refId] || URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
+        charEditRefUrls[refId] = url;
+        items.push({ id: refId, url, charName: c.name });
+      }
+    } catch(_) {}
+  }
+  grid.innerHTML = items.map(item => `
+    <div class="gcard" onclick="loadPreciseRefFromImageId(${item.id},'${esc(item.charName)}');closeCharRefPicker();" style="cursor:pointer;">
+      <img class="gcard-img" src="${item.url}" alt="">
+      <div class="gcard-footer"><div style="font-size:.72rem;color:var(--txt2);">點擊套用</div></div>
+    </div>`).join('');
+}
+
+function closeCharRefPicker() {
+  document.getElementById('char-ref-picker-modal').classList.remove('open');
+}
+
+async function loadPreciseRefFromImageId(imgId, label) {
+  const img = galleryData.find(i => i.id === imgId) || await dbGetImageById(imgId);
+  if (!img) { toast('找不到圖片','err'); return; }
+  const url = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
+  const b64 = arrayBufferToBase64(img.data);
+  preciseRef = { base64: b64, url, name: label || `圖庫 #${imgId}`,
+    mode: 'character&style', strength: 1.0, fidelity: 1.0 };
+  renderPreciseRef();
+  const body = document.getElementById('pref-body');
+  if (body.classList.contains('closed')) {
+    body.classList.remove('closed');
+    document.getElementById('pref-arrow').classList.remove('closed');
+  }
+  toast(`已載入「${label || '參考圖'}」到精確參考`, 'ok');
 }
 
 // ── Vibe Library ──
