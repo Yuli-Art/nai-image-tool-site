@@ -327,6 +327,7 @@
     <div class="nav-tabs">
       <button class="nav-tab active" id="tab-gen" onclick="showPage('generate')">生圖</button>
       <button class="nav-tab" id="tab-gal" onclick="showPage('gallery')">圖庫 <span id="gal-count" style="font-size:.72rem;opacity:.7;"></span></button>
+      <button class="nav-tab" id="tab-vibe-page" onclick="showPage('vibe')">Vibe 庫 <span id="vibe-lib-count" style="font-size:.72rem;opacity:.7;"></span></button>
     </div>
     <div class="nav-right">
       <div class="anlas-info">
@@ -448,15 +449,7 @@
           <div id="vibe-list" style="margin-top:8px;"></div>
           <div style="display:flex;gap:6px;margin-top:6px;">
             <button class="btn btn-s" style="flex:1;" onclick="addVibeImage()">＋ 新增圖片</button>
-            <button class="btn btn-s" style="flex:1;" onclick="loadVibeFile()" title="載入 .naiv4vibe 已預編碼檔，不花 ANLAS">📁 .naiv4vibe</button>
-          </div>
-          <!-- Vibe Library -->
-          <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px;">
-            <div class="range-row" style="margin-bottom:6px;">
-              <label style="font-size:.75rem;font-weight:600;color:var(--txt2);">Vibe 庫</label>
-              <button class="btn btn-s" style="font-size:.7rem;padding:2px 8px;" onclick="refreshVibeLibrary()">重新整理</button>
-            </div>
-            <div id="vibe-saved-list"></div>
+            <button class="btn btn-s" style="flex:1;" onclick="openVibePicker()">📚 從 Vibe 庫選取</button>
           </div>
         </div>
       </div>
@@ -561,7 +554,40 @@
     <div class="gallery-grid" id="gal-grid"></div>
   </div>
 
+  <!-- ── VIBE 庫 PAGE ── -->
+  <div id="page-vibe" class="page">
+    <div class="gallery-toolbar">
+      <span style="font-size:.9rem;font-weight:700;">Vibe 庫</span>
+      <button class="btn btn-p" onclick="loadVibeFileToLibrary()">📁 載入 .naiv4vibe</button>
+      <div style="flex:1;"></div>
+      <button class="btn btn-s" id="vibe-sel-mode-btn" onclick="toggleVibeSelectMode()">多選</button>
+    </div>
+    <div class="gallery-actions" id="vibe-page-actions">
+      <span class="gallery-sel-count" id="vibe-sel-count">已選 0 個</span>
+      <button class="btn btn-d" onclick="deleteSelectedVibes()">🗑 刪除選取</button>
+      <button class="btn btn-s" onclick="clearVibeSelection()">取消選取</button>
+    </div>
+    <div class="gallery-grid" id="vibe-page-grid"></div>
+  </div>
+
 </div><!-- /app -->
+
+<!-- ── VIBE PICKER MODAL ── -->
+<div class="modal-overlay" id="vibe-picker-modal" onclick="closeVibePicker(event)">
+  <div class="modal-box" style="max-width:680px;flex-direction:column;max-height:85vh;" onclick="event.stopPropagation()">
+    <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <span style="font-weight:700;font-size:.95rem;">選取 Vibe</span>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:.78rem;color:var(--txt2);">點選即套用</span>
+        <button class="btn btn-s" style="padding:4px 10px;font-size:.78rem;" onclick="closeVibePicker()">關閉</button>
+      </div>
+    </div>
+    <div id="vibe-picker-grid" style="overflow-y:auto;padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;"></div>
+    <div style="padding:10px 16px;border-top:1px solid var(--border);flex-shrink:0;">
+      <button class="btn btn-s" style="font-size:.8rem;" onclick="closeVibePicker();showPage('vibe');">＋ 管理 Vibe 庫</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── IMAGE MODAL ── -->
 <div class="modal-overlay" id="modal" onclick="closeModal(event)">
@@ -658,7 +684,12 @@ window.addEventListener('DOMContentLoaded', async () => {
   tagIn.addEventListener('blur', () => setTimeout(() => document.getElementById('tag-dd').style.display='none', 150));
 
   // modal keyboard
-  document.addEventListener('keydown', e => { if (e.key==='Escape') closeModal(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeModal();
+      document.getElementById('vibe-picker-modal').classList.remove('open');
+    }
+  });
 
   // login enter
   document.getElementById('tok-in').addEventListener('keydown', e => { if(e.key==='Enter') login(); });
@@ -919,17 +950,21 @@ function setGenerating(on) {
 }
 
 function showPage(page) {
-  document.getElementById('page-generate').classList.remove('active');
-  document.getElementById('page-gallery').classList.remove('active');
-  document.getElementById('tab-gen').classList.remove('active');
-  document.getElementById('tab-gal').classList.remove('active');
+  ['page-generate','page-gallery','page-vibe'].forEach(id =>
+    document.getElementById(id).classList.remove('active'));
+  ['tab-gen','tab-gal','tab-vibe-page'].forEach(id =>
+    document.getElementById(id).classList.remove('active'));
   if (page === 'generate') {
     document.getElementById('page-generate').classList.add('active');
     document.getElementById('tab-gen').classList.add('active');
-  } else {
+  } else if (page === 'gallery') {
     document.getElementById('page-gallery').classList.add('active');
     document.getElementById('tab-gal').classList.add('active');
     renderGallery();
+  } else if (page === 'vibe') {
+    document.getElementById('page-vibe').classList.add('active');
+    document.getElementById('tab-vibe-page').classList.add('active');
+    renderVibePage();
   }
 }
 
@@ -1091,39 +1126,10 @@ async function addVibeImage() {
   input.click();
 }
 
-async function loadVibeFile() {
-  const input = document.createElement('input');
-  input.type = 'file'; input.accept = '.naiv4vibe,application/json';
-  input.onchange = async e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const json = JSON.parse(text);
-      if (json.identifier !== 'novelai-vibe-transfer' || !json.image) {
-        toast('不是有效的 .naiv4vibe 檔案', 'err'); return;
-      }
-      // Build thumbnail from RIFF/WebP data
-      const bytes = Uint8Array.from(atob(json.image), c => c.charCodeAt(0));
-      const blob = new Blob([bytes], { type: 'image/webp' });
-      const url = URL.createObjectURL(blob);
-      const name = file.name.replace(/\.naiv4vibe$/i, '');
-      vibeImages.push({ base64: json.image, url, name,
-        infoExtracted: 1.0, refStrength: 0.6, isPreEncoded: true });
-      renderVibeList();
-      if (!vibeOpen) setVibeOpen(true);
-      updateVibeCount();
-      // Ask to save to library
-      if (confirm(`「${name}」載入成功！要存到 Vibe 庫方便下次使用嗎？`)) {
-        await dbSaveVibe(name, json.image, url, true);
-        await refreshVibeLibrary();
-        toast('已存入 Vibe 庫', 'ok');
-      }
-    } catch(err) {
-      toast('讀取失敗：' + err.message, 'err');
-    }
-  };
-  input.click();
+// loadVibeFile kept for backward compat but now redirects to library page
+function loadVibeFile() {
+  showPage('vibe');
+  toast('請在 Vibe 庫頁面載入 .naiv4vibe 檔案', 'info');
 }
 
 function removeVibeImage(idx) {
@@ -1167,48 +1173,190 @@ function renderVibeList() {
 }
 
 // ── Vibe Library ──
+let vibePageSelectMode = false;
+let vibePageSelected = new Set();
+
 async function refreshVibeLibrary() {
   const saved = await dbGetVibes();
-  renderVibeLibrary(saved);
+  updateVibeLibCount(saved.length);
+  // Also refresh page if visible
+  if (document.getElementById('page-vibe').classList.contains('active')) {
+    renderVibePage(saved);
+  }
 }
-function renderVibeLibrary(saved) {
-  const list = document.getElementById('vibe-saved-list');
+
+function updateVibeLibCount(n) {
+  document.getElementById('vibe-lib-count').textContent = n ? `(${n})` : '';
+}
+
+// ── Vibe 庫 Page ──
+async function renderVibePage(saved) {
+  if (!saved) saved = await dbGetVibes();
+  updateVibeLibCount(saved.length);
+  const grid = document.getElementById('vibe-page-grid');
   if (!saved.length) {
-    list.innerHTML = '<div class="vibe-lib-empty">庫是空的，載入 .naiv4vibe 後可以存入這裡</div>';
+    grid.innerHTML = `<div class="gallery-empty" style="grid-column:1/-1;">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+      </svg>
+      <span>庫是空的，點「載入 .naiv4vibe」開始收藏</span>
+    </div>`;
     return;
   }
-  list.innerHTML = saved.map(v => `
-    <div class="vibe-saved-item">
-      <img class="vibe-saved-thumb" src="${v.thumbUrl}" alt="" onerror="this.style.background='var(--bg3)'">
-      <span class="vibe-saved-name" title="${esc(v.name)}">${esc(v.name)}</span>
-      ${v.isPreEncoded ? '<span class="badge-encoded" style="flex-shrink:0;">預編碼</span>' : ''}
-      <button class="btn btn-s btn-icon" style="flex-shrink:0;font-size:.72rem;" onclick="applyVibeFromLibrary(${v.id})" title="套用到當前 Vibe Transfer">套用</button>
-      <button class="btn btn-d btn-icon" style="flex-shrink:0;" onclick="deleteVibeFromLibrary(${v.id})" title="從庫刪除">✕</button>
-    </div>
-  `).join('');
+  grid.innerHTML = saved.map(v => {
+    const sel = vibePageSelected.has(v.id) ? 'selected' : '';
+    const badge = v.isPreEncoded
+      ? `<span class="badge-encoded">預編碼 ✓</span>`
+      : `<span class="badge-img">原圖</span>`;
+    const time = new Date(v.timestamp).toLocaleDateString('zh-TW',{month:'short',day:'numeric'});
+    return `<div class="gcard ${sel}" data-vid="${v.id}" onclick="onVibePageCardClick(event,${v.id})">
+      <div class="gcard-check">✓</div>
+      <img class="gcard-img" src="${v.thumbUrl}" alt="" onerror="this.style.background='var(--bg3)'">
+      <div class="gcard-footer">
+        <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:3px;">
+          ${badge}
+        </div>
+        <div style="font-size:.78rem;color:var(--txt);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(v.name)}">${esc(v.name)}</div>
+        <div class="gcard-time">${time}</div>
+      </div>
+    </div>`;
+  }).join('');
 }
-async function applyVibeFromLibrary(id) {
+
+async function loadVibeFileToLibrary() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.naiv4vibe,application/json'; input.multiple = true;
+  input.onchange = async e => {
+    const files = Array.from(e.target.files);
+    let loaded = 0;
+    for (const file of files) {
+      try {
+        const text = await file.text();
+        const json = JSON.parse(text);
+        if (json.identifier !== 'novelai-vibe-transfer' || !json.image) continue;
+        const bytes = Uint8Array.from(atob(json.image), c => c.charCodeAt(0));
+        const blob = new Blob([bytes], { type: 'image/webp' });
+        const thumbUrl = URL.createObjectURL(blob);
+        const name = file.name.replace(/\.naiv4vibe$/i, '');
+        await dbSaveVibe(name, json.image, thumbUrl, true);
+        loaded++;
+      } catch(err) { toast(`「${file.name}」讀取失敗`, 'err'); }
+    }
+    if (loaded > 0) {
+      toast(`已載入 ${loaded} 個 Vibe`, 'ok');
+      await renderVibePage();
+      updateVibeLibCount((await dbGetVibes()).length);
+    }
+  };
+  input.click();
+}
+
+function onVibePageCardClick(e, id) {
+  if (vibePageSelectMode) { toggleVibePageSelect(id); return; }
+  // Single click: add to current session
+  addVibeToSession(id);
+}
+
+async function addVibeToSession(id) {
   const saved = await dbGetVibes();
   const v = saved.find(x => x.id === id);
   if (!v) return;
-  // Don't add duplicates
   if (vibeImages.find(x => x.base64 === v.base64)) {
-    toast(`「${v.name}」已在清單中`, 'warn'); return;
+    toast(`「${v.name}」已在 Vibe Transfer 清單中`, 'warn'); return;
   }
   vibeImages.push({ base64: v.base64, url: v.thumbUrl, name: v.name,
     infoExtracted: 1.0, refStrength: 0.6, isPreEncoded: v.isPreEncoded });
   renderVibeList();
   if (!vibeOpen) setVibeOpen(true);
   updateVibeCount();
-  toast(`已套用「${v.name}」`, 'ok');
+  toast(`已加入「${v.name}」，切回生圖頁可設定參數`, 'ok');
 }
-async function deleteVibeFromLibrary(id) {
+
+function toggleVibeSelectMode() {
+  vibePageSelectMode = !vibePageSelectMode;
+  vibePageSelected.clear();
+  document.getElementById('vibe-sel-mode-btn').textContent = vibePageSelectMode ? '結束多選' : '多選';
+  document.getElementById('vibe-page-actions').classList.toggle('visible', vibePageSelectMode);
+  renderVibePage();
+}
+function toggleVibePageSelect(id) {
+  if (vibePageSelected.has(id)) vibePageSelected.delete(id);
+  else vibePageSelected.add(id);
+  document.getElementById('vibe-sel-count').textContent = `已選 ${vibePageSelected.size} 個`;
+  const card = document.querySelector(`[data-vid="${id}"]`);
+  if (card) card.classList.toggle('selected', vibePageSelected.has(id));
+}
+async function deleteSelectedVibes() {
+  if (!vibePageSelected.size) return;
+  if (!confirm(`確定刪除 ${vibePageSelected.size} 個 Vibe？`)) return;
+  for (const id of vibePageSelected) await dbDeleteVibe(id);
+  vibePageSelected.clear();
+  vibePageSelectMode = false;
+  document.getElementById('vibe-sel-mode-btn').textContent = '多選';
+  document.getElementById('vibe-page-actions').classList.remove('visible');
+  toast('已刪除', 'ok');
+  await renderVibePage();
+  updateVibeLibCount((await dbGetVibes()).length);
+}
+function clearVibeSelection() {
+  vibePageSelected.clear();
+  vibePageSelectMode = false;
+  document.getElementById('vibe-sel-mode-btn').textContent = '多選';
+  document.getElementById('vibe-page-actions').classList.remove('visible');
+  renderVibePage();
+}
+
+// ── Vibe Picker Modal ──
+async function openVibePicker() {
+  const saved = await dbGetVibes();
+  const grid = document.getElementById('vibe-picker-grid');
+  if (!saved.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--txt2);font-size:.85rem;padding:30px;">
+      Vibe 庫是空的<br><br>
+      <button class="btn btn-s" onclick="closeVibePicker();showPage('vibe');">前往 Vibe 庫載入檔案</button>
+    </div>`;
+  } else {
+    grid.innerHTML = saved.map(v => {
+      const already = vibeImages.find(x => x.base64 === v.base64);
+      const badge = v.isPreEncoded ? `<span class="badge-encoded">預編碼</span>` : '';
+      return `<div class="gcard ${already ? 'selected' : ''}" onclick="pickerSelectVibe(${v.id})" style="cursor:pointer;">
+        ${already ? '<div class="gcard-check">✓</div>' : ''}
+        <img class="gcard-img" src="${v.thumbUrl}" alt="" onerror="this.style.background='var(--bg3)'">
+        <div class="gcard-footer">
+          <div style="margin-bottom:3px;">${badge}</div>
+          <div style="font-size:.76rem;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(v.name)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('vibe-picker-modal').classList.add('open');
+}
+
+async function pickerSelectVibe(id) {
   const saved = await dbGetVibes();
   const v = saved.find(x => x.id === id);
-  if (!confirm(`確定刪除「${v?.name || id}」？`)) return;
-  await dbDeleteVibe(id);
-  await refreshVibeLibrary();
-  toast('已從庫刪除', 'ok');
+  if (!v) return;
+  const existIdx = vibeImages.findIndex(x => x.base64 === v.base64);
+  if (existIdx >= 0) {
+    // toggle off
+    vibeImages.splice(existIdx, 1);
+    renderVibeList(); updateVibeCount();
+    toast(`已移除「${v.name}」`, 'info');
+  } else {
+    vibeImages.push({ base64: v.base64, url: v.thumbUrl, name: v.name,
+      infoExtracted: 1.0, refStrength: 0.6, isPreEncoded: v.isPreEncoded });
+    renderVibeList();
+    if (!vibeOpen) setVibeOpen(true);
+    updateVibeCount();
+    toast(`已加入「${v.name}」`, 'ok');
+  }
+  // Re-render picker to update selected state
+  await openVibePicker();
+}
+
+function closeVibePicker(e) {
+  if (e && e.target !== document.getElementById('vibe-picker-modal')) return;
+  document.getElementById('vibe-picker-modal').classList.remove('open');
 }
 
 // ── Helpers ──
