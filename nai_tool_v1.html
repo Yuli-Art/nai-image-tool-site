@@ -1151,6 +1151,19 @@ function renderVibeList() {
     const badge = v.isPreEncoded
       ? `<span class="badge-encoded">已預編碼 ✓</span>`
       : `<span class="badge-img">原圖 (-2 pts)</span>`;
+
+    // Information Extracted: only relevant for original images (not pre-encoded)
+    const infoSlider = v.isPreEncoded
+      ? `<div style="font-size:.72rem;color:var(--txt2);margin-top:4px;line-height:1.4;">
+           提取程度在編碼時已定，無法修改
+         </div>`
+      : `<div class="range-row" style="margin-top:6px;">
+           <label>提取程度 <span style="font-size:.68rem;color:var(--warn);">(-2 pts)</span></label>
+           <span class="range-val" id="vp-${i}-infoExtracted">${v.infoExtracted.toFixed(2)}</span>
+         </div>
+         <input type="range" min="0.01" max="1" step="0.01" value="${v.infoExtracted}"
+           oninput="updateVibeParam(${i},'infoExtracted',this.value)">`;
+
     return `<div class="vibe-item">
       <div class="vibe-item-top">
         <img class="vibe-thumb" src="${v.url}" alt="" onerror="this.style.background='var(--bg3)';this.style.display='block'">
@@ -1159,12 +1172,10 @@ function renderVibeList() {
             <span style="font-size:.78rem;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px;">${esc(v.name||'')}</span>
             ${badge}
           </div>
-          <div class="range-row"><label>提取程度</label><span class="range-val" id="vp-${i}-infoExtracted">${v.infoExtracted.toFixed(2)}</span></div>
-          <input type="range" min="0.01" max="1" step="0.01" value="${v.infoExtracted}"
-            oninput="updateVibeParam(${i},'infoExtracted',this.value)">
-          <div class="range-row" style="margin-top:4px;"><label>參考強度</label><span class="range-val" id="vp-${i}-refStrength">${v.refStrength.toFixed(2)}</span></div>
+          <div class="range-row"><label>參考強度</label><span class="range-val" id="vp-${i}-refStrength">${v.refStrength.toFixed(2)}</span></div>
           <input type="range" min="0.01" max="1" step="0.01" value="${v.refStrength}"
             oninput="updateVibeParam(${i},'refStrength',this.value)">
+          ${infoSlider}
         </div>
         <button class="btn btn-d btn-icon" style="flex-shrink:0;align-self:flex-start;" onclick="removeVibeImage(${i})">✕</button>
       </div>
@@ -1578,9 +1589,13 @@ async function generate() {
   }
   // Vibe Transfer
   if (vibeImages.length > 0) {
-    params.reference_image_multiple                 = vibeImages.map(v => v.base64);
-    params.reference_information_extracted_multiple = vibeImages.map(v => v.infoExtracted);
-    params.reference_strength_multiple              = vibeImages.map(v => v.refStrength);
+    params.reference_image_multiple    = vibeImages.map(v => v.base64);
+    params.reference_strength_multiple = vibeImages.map(v => v.refStrength);
+    // Information Extracted: pre-encoded files have it baked in (no extra cost, send 1.0 as placeholder)
+    // Original images: user-set value triggers re-encoding (costs 2 ANLAS each generation)
+    params.reference_information_extracted_multiple = vibeImages.map(v =>
+      v.isPreEncoded ? 1.0 : v.infoExtracted
+    );
     params.add_original_image = false;
   }
 
