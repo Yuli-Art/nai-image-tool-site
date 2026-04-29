@@ -606,6 +606,7 @@
               <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('char', this, 'prompt')">👤 角色</button>
               <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('style', this, 'prompt')">🎨 風格</button>
               <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('note', this, 'prompt')">📝 片段</button>
+              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openNoteInsertModal('prompt')">📓 選片段</button>
             </div>
           </label>
           <div class="prompt-dd-wrap">
@@ -616,7 +617,10 @@
         <div class="fg">
           <label style="display:flex;align-items:center;justify-content:space-between;">
             <span>負向 Prompt（Undesired Content）</span>
-            <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('note', this, 'neg-prompt')">📝 片段</button>
+            <div style="display:flex;gap:4px;">
+              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('note', this, 'neg-prompt')">📝 片段</button>
+              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openNoteInsertModal('neg-prompt')">📓 選片段</button>
+            </div>
           </label>
           <textarea id="neg-prompt" rows="3" placeholder="lowres, bad anatomy..."></textarea>
         </div>
@@ -1028,6 +1032,33 @@
   </div>
 </div>
 
+<!-- ── NOTE INSERT MODAL ── -->
+<div class="char-modal-overlay" id="note-insert-modal" onclick="closeNoteInsertModal(event)">
+  <div class="char-modal-box" onclick="event.stopPropagation()" style="max-width:860px;">
+    <div class="char-modal-hd">
+      <div>
+        <div>選擇 Prompt 片段</div>
+        <div id="note-insert-subtitle" style="font-size:.74rem;color:var(--txt2);font-weight:400;margin-top:2px;">從筆記本挑一段，再插入目前欄位。</div>
+      </div>
+      <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeNoteInsertModal()">✕</button>
+    </div>
+    <div class="char-modal-body">
+      <div>
+        <div class="char-field-label">搜尋</div>
+        <input id="note-insert-search" class="inp" type="search" placeholder="搜尋片段 / 說明 / tag..." style="width:100%;" oninput="renderNoteInsertModal()">
+      </div>
+      <div>
+        <div class="char-field-label">分類</div>
+        <div id="note-insert-cat-row" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+      </div>
+      <div id="note-insert-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;"></div>
+    </div>
+    <div class="char-modal-ft">
+      <button class="btn btn-s btn-out" onclick="closeNoteInsertModal()">關閉</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── VIBE PICKER MODAL ── -->
 <div class="modal-overlay" id="vibe-picker-modal" onclick="closeVibePicker(event)">
   <div class="modal-box" style="max-width:680px;flex-direction:column;max-height:85vh;" onclick="event.stopPropagation()">
@@ -1276,6 +1307,7 @@
             <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openBtInsertPicker('char', this)">👤 插入角色</button>
             <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openBtInsertPicker('style', this)">🎨 插入風格</button>
             <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openBtInsertPicker('note', this)">📝 插入片段</button>
+            <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openNoteInsertModal('bt-prompt')">📓 選片段</button>
           </div>
         </div>
         <textarea id="bt-prompt" class="inp" rows="5"
@@ -1285,7 +1317,10 @@
       <div>
         <div class="char-field-label" style="display:flex;align-items:center;justify-content:space-between;">
           <span>負向 Prompt</span>
-          <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openBtInsertPicker('note', this, 'bt-neg')">📝 插入片段</button>
+          <div style="display:flex;gap:5px;">
+            <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openBtInsertPicker('note', this, 'bt-neg')">📝 插入片段</button>
+            <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openNoteInsertModal('bt-neg')">📓 選片段</button>
+          </div>
         </div>
         <textarea id="bt-neg" class="inp" rows="3" placeholder="負向 prompt..." style="width:100%;resize:vertical;font-family:monospace;font-size:.83rem;"></textarea>
       </div>
@@ -5534,6 +5569,8 @@ let notesActiveCategory = '';
 let noteEditId = null;
 let noteEditTags = [];
 let noteEditPreviewImageIds = [];
+let noteInsertTargetId = 'prompt';
+let noteInsertCategory = '';
 
 async function loadNotesData() {
   notesData = await dbGetNotes();
@@ -5628,6 +5665,104 @@ function buildNotesCategoryFilter() {
 function setNotesCategory(cat) {
   notesActiveCategory = cat;
   renderNotesPage();
+}
+
+function getNoteInsertTargetLabel(targetId) {
+  const labels = {
+    'prompt': '生圖頁的正向 Prompt',
+    'neg-prompt': '生圖頁的負向 Prompt',
+    'bt-prompt': '批次任務的正向 Prompt',
+    'bt-neg': '批次任務的負向 Prompt'
+  };
+  return labels[targetId] || '目前欄位';
+}
+
+function openNoteInsertModal(targetId='prompt') {
+  noteInsertTargetId = targetId;
+  noteInsertCategory = '';
+  const searchEl = document.getElementById('note-insert-search');
+  if (searchEl) searchEl.value = '';
+  const subtitle = document.getElementById('note-insert-subtitle');
+  if (subtitle) subtitle.textContent = `從筆記本挑一段，再插入到${getNoteInsertTargetLabel(targetId)}。`;
+  renderNoteInsertModal();
+  document.getElementById('note-insert-modal').classList.add('open');
+  setTimeout(() => document.getElementById('note-insert-search')?.focus(), 0);
+}
+
+function closeNoteInsertModal(e) {
+  if (e && e.target !== document.getElementById('note-insert-modal')) return;
+  document.getElementById('note-insert-modal').classList.remove('open');
+}
+
+function setNoteInsertCategory(cat) {
+  noteInsertCategory = cat;
+  renderNoteInsertModal();
+}
+
+function insertNoteFragmentToTarget(noteId) {
+  const n = notesData.find(x => x.id === noteId);
+  if (!n) return;
+  const el = document.getElementById(noteInsertTargetId || 'prompt');
+  if (!el) return;
+  insertAtCursor(el, n.fragment);
+  closeNoteInsertModal();
+  toast(`已插入到${getNoteInsertTargetLabel(noteInsertTargetId)}`, 'ok');
+}
+
+function renderNoteInsertModal() {
+  const q = (document.getElementById('note-insert-search')?.value || '').toLowerCase().trim();
+  const catRow = document.getElementById('note-insert-cat-row');
+  const list = document.getElementById('note-insert-list');
+  if (!catRow || !list) return;
+
+  const catCount = {};
+  notesData.forEach(n => { catCount[n.category] = (catCount[n.category] || 0) + 1; });
+  let catHtml = `<span class="tag-filter-chip ${noteInsertCategory === '' ? 'active' : ''}" onclick="setNoteInsertCategory('')">全部</span>`;
+  Object.entries(NOTE_CATEGORIES).forEach(([key, label]) => {
+    if (!catCount[key]) return;
+    const active = noteInsertCategory === key;
+    catHtml += `<span class="tag-filter-chip ${active ? 'active' : ''} note-cat-badge ${NOTE_CAT_CLASS[key]}"
+      style="border:1px solid currentColor;opacity:.85;"
+      onclick="setNoteInsertCategory('${key}')">${label} <small style="opacity:.7">${catCount[key]}</small></span>`;
+  });
+  catRow.innerHTML = catHtml;
+
+  const filtered = notesData.filter(n => {
+    const matchCat = !noteInsertCategory || n.category === noteInsertCategory;
+    const matchQ = !q ||
+      n.fragment.toLowerCase().includes(q) ||
+      (n.description || '').toLowerCase().includes(q) ||
+      (n.tags || []).some(t => t.toLowerCase().includes(q));
+    return matchCat && matchQ;
+  });
+
+  if (!filtered.length) {
+    list.innerHTML = `<div class="gallery-empty" style="grid-column:1/-1;padding:30px 20px;">
+      <div style="font-size:1.5rem;margin-bottom:8px;">📓</div>
+      <span>沒有符合的片段</span>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(n => {
+    const catClass = NOTE_CAT_CLASS[n.category] || 'nc-other';
+    const catLabel = NOTE_CATEGORIES[n.category] || n.category;
+    const tags = (n.tags || []).map(t => `<span class="char-card-tag" style="${getTagChipStyle(t, 0.10)}">${esc(t)}</span>`).join('');
+    return `<div class="note-card">
+      <div class="note-card-body">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <span class="note-cat-badge ${catClass}">${catLabel}</span>
+          ${tags}
+        </div>
+        <div class="note-fragment">${esc(n.fragment)}</div>
+        ${n.description ? `<div class="note-desc">${esc(n.description)}</div>` : ''}
+        <div class="note-insert-row">
+          <button class="note-ins-pos" onclick="insertNoteFragmentToTarget(${n.id})">插入</button>
+          <button class="note-edit-btn" onclick="closeNoteInsertModal();openNoteEditModal(${n.id})">編輯</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ── Insert into prompt ──
@@ -6188,6 +6323,7 @@ function insertAtCursor(el, text) {
   el.value = before + sep + text + after;
   const newPos = start + sep.length + text.length;
   el.setSelectionRange(newPos, newPos);
+  el.dispatchEvent(new Event('input'));
   el.focus();
 }
 
