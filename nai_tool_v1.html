@@ -715,6 +715,8 @@
     <div class="gallery-actions" id="gal-actions">
       <span class="gallery-sel-count" id="sel-count">已選 0 張</span>
       <button class="btn btn-s" onclick="selectAll()" id="sel-all-btn">全選</button>
+      <button class="btn btn-s" onclick="bulkAddTagsToSelected()">＋ 批次加 tag</button>
+      <button class="btn btn-s btn-out" onclick="bulkRemoveTagsFromSelected()">－ 批次刪 tag</button>
       <button class="btn btn-s" onclick="downloadSelected()">⬇ 打包下載</button>
       <button class="btn btn-d" onclick="deleteSelected()">🗑 刪除選取</button>
       <button class="btn btn-s" onclick="clearSelection()">取消選取</button>
@@ -1654,6 +1656,7 @@ function openTagPicker(options) {
     title: options.title || '選擇 Tag',
     help: options.help || '優先選既有 tag，只有在真的沒有時才建立新 tag。',
     selected: new Set(initial),
+    availableTags: Array.isArray(options.availableTags) ? dedupeTags(options.availableTags) : null,
     multi: options.multi !== false,
     allowCreate: options.allowCreate !== false,
     onConfirm: options.onConfirm || (() => {}),
@@ -1682,7 +1685,10 @@ function renderTagPicker() {
     ? selected.map(t => `<span class="tag-chip" style="${getTagChipStyle(t)}">${esc(t)}<button class="tag-chip-x" data-tag="${esc(t)}" style="color:${getTagColor(t)}" onclick="toggleTagPickerSelection(this.dataset.tag)">×</button></span>`).join('')
     : `<span class="tag-mini-empty">尚未選擇 tag</span>`;
 
-  const matches = allKnownTags.filter(t => {
+  const sourceTags = tagPickerState.availableTags
+    ? tagPickerState.availableTags.map(name => getTagMeta(name))
+    : allKnownTags;
+  const matches = sourceTags.filter(t => {
     if (tagPickerState.selected.has(t.name)) return false;
     if (!search) return true;
     return normalizeTagName(t.name).includes(normalizeTagName(search));
@@ -4242,6 +4248,62 @@ function clearSelection() {
   document.getElementById('sel-mode-btn').textContent = '多選';
   document.getElementById('gal-actions').classList.remove('visible');
   renderGallery();
+}
+
+function getSelectedGalleryItems() {
+  return galleryData.filter(img => selectedIds.has(img.id));
+}
+
+async function bulkAddTagsToSelected() {
+  const items = getSelectedGalleryItems();
+  if (!items.length) { toast('請先選擇圖片', 'warn'); return; }
+  openTagPicker({
+    title: '批次加 Tag',
+    help: `會把選到的 tag 一起加到這 ${items.length} 張圖片上。優先選既有 tag，避免批量建立太多相似分類。`,
+    initialTags: [],
+    multi: true,
+    allowCreate: true,
+    createLabel: '建立新的圖片 tag',
+    onConfirm: async tags => {
+      if (!tags.length) return;
+      const finalTags = dedupeTags(tags);
+      for (const tag of finalTags) await ensureKnownTag(tag);
+      for (const img of items) {
+        img.tags = dedupeTags([...(img.tags || []), ...finalTags]);
+        await dbUpdateTags(img.id, img.tags);
+      }
+      buildTagFilterList();
+      filterGallery();
+      if (modalImageId && selectedIds.has(modalImageId)) openModal(modalImageId, document.getElementById('modal-img').src);
+      toast(`已為 ${items.length} 張圖片加上 ${finalTags.length} 個 tag`, 'ok');
+    }
+  });
+}
+
+function bulkRemoveTagsFromSelected() {
+  const items = getSelectedGalleryItems();
+  if (!items.length) { toast('請先選擇圖片', 'warn'); return; }
+  const removable = [...new Set(items.flatMap(img => img.tags || []))];
+  if (!removable.length) { toast('這批圖片目前沒有 tag 可移除', 'info'); return; }
+  openTagPicker({
+    title: '批次刪 Tag',
+    help: `只會列出這 ${items.length} 張圖片目前真的有的 tag。選到的 tag 會從這批圖片一起移除。`,
+    initialTags: [],
+    availableTags: removable,
+    multi: true,
+    allowCreate: false,
+    onConfirm: async tags => {
+      if (!tags.length) return;
+      for (const img of items) {
+        img.tags = (img.tags || []).filter(t => !tags.includes(t));
+        await dbUpdateTags(img.id, img.tags);
+      }
+      buildTagFilterList();
+      filterGallery();
+      if (modalImageId && selectedIds.has(modalImageId)) openModal(modalImageId, document.getElementById('modal-img').src);
+      toast(`已從 ${items.length} 張圖片移除 ${tags.length} 個 tag`, 'ok');
+    }
+  });
 }
 
 async function downloadSelected() {
