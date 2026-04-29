@@ -1361,15 +1361,15 @@
           <input id="bt-count" class="inp" type="number" value="1" min="1" max="20" style="width:100%;">
         </div>
         <div class="fg">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px;">
-            <label style="margin-bottom:0;">自動加 tag（圖庫）</label>
-            <button class="btn btn-s" type="button" onclick="openBtTagsPicker()">選擇標籤</button>
-          </div>
+          <label>自動加 tag（圖庫）</label>
           <div style="position:relative;">
             <input id="bt-tag-in" class="inp" type="text" placeholder="新增 tag..." autocomplete="off" style="width:100%;">
             <div class="tag-dropdown" id="bt-tag-dd" style="top:100%;left:0;right:0;position:absolute;z-index:300;"></div>
           </div>
           <div id="bt-tags-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;"></div>
+          <div style="display:flex;justify-content:flex-end;margin-top:6px;">
+            <button class="btn btn-s" type="button" onclick="openBtTagsPicker()">選擇標籤</button>
+          </div>
         </div>
       </div>
     </div>
