@@ -327,6 +327,35 @@
     .artist-quick-btn{background:none;border:1px solid var(--border);border-radius:6px;color:var(--txt2);font-size:.7rem;padding:3px 7px;cursor:pointer;white-space:nowrap;transition:background .15s;}
     .artist-quick-btn:hover{background:var(--bg3);color:var(--txt);}
 
+    /* ── PROMPT 筆記本 ── */
+    .note-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;
+      display:flex;flex-direction:column;gap:8px;transition:box-shadow .15s;}
+    .note-card:hover{box-shadow:0 0 0 2px var(--accent-l);}
+    .note-fragment{font-family:monospace;font-size:.82rem;color:var(--txt);background:var(--bg3);
+      border-radius:6px;padding:7px 10px;word-break:break-all;line-height:1.55;position:relative;}
+    .note-fragment-copy{position:absolute;top:5px;right:6px;background:none;border:none;
+      color:var(--txt2);cursor:pointer;font-size:.75rem;opacity:.6;transition:opacity .15s;}
+    .note-fragment-copy:hover{opacity:1;}
+    .note-desc{font-size:.78rem;color:var(--txt2);line-height:1.5;display:-webkit-box;
+      -webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+    .note-cat-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.7rem;font-weight:600;}
+    .nc-effect{background:rgba(124,58,237,.15);color:#7c3aed;}
+    .nc-negative{background:rgba(239,68,68,.12);color:#ef4444;}
+    .nc-style{background:rgba(245,158,11,.15);color:#d97706;}
+    .nc-composition{background:rgba(59,130,246,.13);color:#3b82f6;}
+    .nc-linework{background:rgba(16,185,129,.12);color:#059669;}
+    .nc-other{background:rgba(156,163,175,.12);color:#9ca3af;}
+    .note-insert-row{display:flex;gap:6px;margin-top:2px;}
+    .note-ins-pos{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.3);color:#10b981;
+      border-radius:6px;font-size:.75rem;padding:4px 8px;cursor:pointer;flex:1;transition:background .15s;}
+    .note-ins-pos:hover{background:rgba(16,185,129,.3);}
+    .note-ins-neg{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#ef4444;
+      border-radius:6px;font-size:.75rem;padding:4px 8px;cursor:pointer;flex:1;transition:background .15s;}
+    .note-ins-neg:hover{background:rgba(239,68,68,.2);}
+    .note-edit-btn{background:none;border:1px solid var(--border);border-radius:6px;
+      color:var(--txt2);font-size:.75rem;padding:4px 8px;cursor:pointer;transition:background .15s;}
+    .note-edit-btn:hover{background:var(--bg3);color:var(--txt);}
+
     /* ── GALLERY VIEW TABS ── */
     .gal-views-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 10px;
       display:flex;align-items:center;gap:4px;overflow-x:auto;flex-shrink:0;min-height:38px;}
@@ -451,6 +480,7 @@
       <button class="nav-tab" id="tab-vibe-page" onclick="showPage('vibe')">Vibe 庫 <span id="vibe-lib-count" style="font-size:.72rem;opacity:.7;"></span></button>
       <button class="nav-tab" id="tab-char-page" onclick="showPage('characters')">角色庫 <span id="char-lib-count" style="font-size:.72rem;opacity:.7;"></span></button>
       <button class="nav-tab" id="tab-artist-page" onclick="showPage('artists')">風格庫 <span id="artist-lib-count" style="font-size:.72rem;opacity:.7;"></span></button>
+      <button class="nav-tab" id="tab-notes-page" onclick="showPage('notes')">筆記本 <span id="notes-count" style="font-size:.72rem;opacity:.7;"></span></button>
     </div>
     <div class="nav-right">
       <div class="anlas-info">
@@ -780,6 +810,19 @@
     <div class="gallery-grid" id="artist-page-grid"></div>
   </div>
 
+  <!-- ── PROMPT 筆記本 PAGE ── -->
+  <div id="page-notes" class="page">
+    <div class="gallery-toolbar">
+      <span style="font-size:.9rem;font-weight:700;">Prompt 筆記本</span>
+      <button class="btn btn-p" onclick="openNoteEditModal(null)">＋ 新增筆記</button>
+      <input type="search" class="gallery-search" id="notes-search" placeholder="搜尋片段 / 說明..." oninput="renderNotesPage()" style="max-width:200px;">
+    </div>
+    <!-- Category filter -->
+    <div style="padding:6px 12px 0;display:flex;gap:6px;flex-wrap:wrap;" id="notes-filter-row"></div>
+    <!-- Notes grid -->
+    <div style="padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;" id="notes-grid"></div>
+  </div>
+
   <!-- ── VIBE 庫 PAGE ── -->
   <div id="page-vibe" class="page">
     <div class="gallery-toolbar">
@@ -797,6 +840,55 @@
   </div>
 
 </div><!-- /app -->
+
+<!-- ── PROMPT NOTE EDIT MODAL ── -->
+<div class="char-modal-overlay" id="note-edit-modal">
+  <div class="char-modal-box" onclick="event.stopPropagation()" style="max-width:540px;">
+    <div class="char-modal-hd">
+      <span id="note-edit-title">新增筆記</span>
+      <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeNoteEditModal()">✕</button>
+    </div>
+    <div class="char-modal-body">
+      <div>
+        <div class="char-field-label">Prompt 片段 *</div>
+        <textarea id="note-edit-fragment" class="inp" rows="3"
+          placeholder="例：masterpiece, best quality, ..."
+          style="width:100%;resize:vertical;font-family:monospace;font-size:.85rem;"></textarea>
+      </div>
+      <div>
+        <div class="char-field-label">效果說明</div>
+        <textarea id="note-edit-desc" class="inp" rows="2"
+          placeholder="描述這個 prompt 的效果、適用場景..." style="width:100%;resize:vertical;"></textarea>
+      </div>
+      <div class="row2">
+        <div>
+          <div class="char-field-label">分類</div>
+          <select id="note-edit-category" class="sel" style="width:100%;">
+            <option value="effect">效果</option>
+            <option value="negative">負向</option>
+            <option value="style">風格</option>
+            <option value="composition">構圖</option>
+            <option value="linework">線條</option>
+            <option value="other">其他</option>
+          </select>
+        </div>
+        <div>
+          <div class="char-field-label">標籤</div>
+          <div style="position:relative;">
+            <input id="note-edit-tag-in" class="inp" type="text" placeholder="輸入後按 Enter..." style="width:100%;"
+              autocomplete="off">
+            <div class="tag-dropdown" id="note-tag-dd" style="top:100%;left:0;right:0;position:absolute;z-index:200;"></div>
+          </div>
+          <div id="note-edit-tag-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="char-modal-ft">
+      <button class="btn btn-s btn-out" onclick="closeNoteEditModal()">取消</button>
+      <button class="btn btn-p" onclick="saveNoteEdit()">儲存</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── VIBE PICKER MODAL ── -->
 <div class="modal-overlay" id="vibe-picker-modal" onclick="closeVibePicker(event)">
@@ -1280,7 +1372,7 @@ let _db = null;
 async function getDB() {
   if (_db) return _db;
   _db = await new Promise((res, rej) => {
-    const r = indexedDB.open('nai_tool', 5);
+    const r = indexedDB.open('nai_tool', 6);
     r.onupgradeneeded = e => {
       const db = e.target.result;
       if (!db.objectStoreNames.contains('images')) {
@@ -1306,6 +1398,11 @@ async function getDB() {
       }
       if (!db.objectStoreNames.contains('artist_blends')) {
         db.createObjectStore('artist_blends', { keyPath:'id', autoIncrement:true });
+      }
+      if (!db.objectStoreNames.contains('prompt_notes')) {
+        const ns = db.createObjectStore('prompt_notes', { keyPath:'id', autoIncrement:true });
+        ns.createIndex('by_category','category');
+        ns.createIndex('by_time','timestamp');
       }
     };
     r.onsuccess = () => res(r.result);
@@ -2089,6 +2186,7 @@ async function showApp() {
   await refreshVibeLibrary();
   await loadCharacterData();
   await loadArtistData();
+  await loadNotesData();
 }
 
 function showLoginErr(msg) {
@@ -2166,9 +2264,9 @@ function setGenerating(on) {
 }
 
 function showPage(page) {
-  ['page-generate','page-gallery','page-vibe','page-characters','page-artists'].forEach(id =>
+  ['page-generate','page-gallery','page-vibe','page-characters','page-artists','page-notes'].forEach(id =>
     document.getElementById(id).classList.remove('active'));
-  ['tab-gen','tab-gal','tab-vibe-page','tab-char-page','tab-artist-page'].forEach(id =>
+  ['tab-gen','tab-gal','tab-vibe-page','tab-char-page','tab-artist-page','tab-notes-page'].forEach(id =>
     document.getElementById(id).classList.remove('active'));
   if (page === 'generate') {
     document.getElementById('page-generate').classList.add('active');
@@ -2189,6 +2287,10 @@ function showPage(page) {
     document.getElementById('page-artists').classList.add('active');
     document.getElementById('tab-artist-page').classList.add('active');
     renderArtistPage();
+  } else if (page === 'notes') {
+    document.getElementById('page-notes').classList.add('active');
+    document.getElementById('tab-notes-page').classList.add('active');
+    renderNotesPage();
   }
 }
 
@@ -4795,6 +4897,270 @@ function copyCurrentPrompt() {
   navigator.clipboard.writeText(lastPrompt)
     .then(()=>toast('Prompt 已複製','ok'))
     .catch(()=>toast('複製失敗','err'));
+}
+
+// ═══════════════════════════════════════════
+// PROMPT 筆記本
+// ═══════════════════════════════════════════
+const NOTE_CATEGORIES = {
+  effect:      '效果',
+  negative:    '負向',
+  style:       '風格',
+  composition: '構圖',
+  linework:    '線條',
+  other:       '其他'
+};
+const NOTE_CAT_CLASS = {
+  effect:'nc-effect', negative:'nc-negative', style:'nc-style',
+  composition:'nc-composition', linework:'nc-linework', other:'nc-other'
+};
+
+// ── DB helpers ──
+async function dbSaveNote(n) {
+  const db = await getDB();
+  return dbOp(db,'prompt_notes','readwrite', s => s.add({
+    fragment: n.fragment||'', description: n.description||'',
+    category: n.category||'other', tags: n.tags||[],
+    timestamp: Date.now()
+  }));
+}
+async function dbUpdateNote(id, fields) {
+  const db = await getDB();
+  return new Promise((res,rej) => {
+    const tx = db.transaction('prompt_notes','readwrite');
+    const store = tx.objectStore('prompt_notes');
+    const r = store.get(id);
+    r.onsuccess = () => {
+      const rec = Object.assign({}, r.result, fields);
+      const r2 = store.put(rec);
+      r2.onsuccess = () => res(); r2.onerror = () => rej(r2.error);
+    };
+    r.onerror = () => rej(r.error);
+  });
+}
+async function dbGetNotes() {
+  const db = await getDB();
+  const all = await dbOp(db,'prompt_notes','readonly', s => s.getAll());
+  return all.sort((a,b) => b.timestamp - a.timestamp);
+}
+async function dbDeleteNote(id) {
+  const db = await getDB();
+  return dbOp(db,'prompt_notes','readwrite', s => s.delete(id));
+}
+
+// ── State ──
+let notesData = [];
+let notesActiveCategory = '';
+let noteEditId = null;
+let noteEditTags = [];
+
+async function loadNotesData() {
+  notesData = await dbGetNotes();
+  updateNotesCount(notesData.length);
+}
+
+function updateNotesCount(n) {
+  document.getElementById('notes-count').textContent = n ? `(${n})` : '';
+}
+
+// ── Render ──
+function renderNotesPage() {
+  buildNotesCategoryFilter();
+  const q = (document.getElementById('notes-search')?.value||'').toLowerCase();
+  const filtered = notesData.filter(n => {
+    const matchQ = !q ||
+      n.fragment.toLowerCase().includes(q) ||
+      (n.description||'').toLowerCase().includes(q) ||
+      (n.tags||[]).some(t => t.toLowerCase().includes(q));
+    const matchCat = !notesActiveCategory || n.category === notesActiveCategory;
+    return matchQ && matchCat;
+  });
+
+  const grid = document.getElementById('notes-grid');
+  if (!filtered.length) {
+    grid.innerHTML = `<div class="gallery-empty" style="grid-column:1/-1;">
+      <div style="font-size:1.5rem;margin-bottom:8px;">📓</div>
+      <span>${notesData.length ? '沒有符合條件的筆記' : '筆記本是空的，點「＋ 新增筆記」開始記錄 prompt 技巧'}</span>
+    </div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(n => {
+    const catClass = NOTE_CAT_CLASS[n.category] || 'nc-other';
+    const catLabel = NOTE_CATEGORIES[n.category] || n.category;
+    const tags = (n.tags||[]).map(t => `<span class="char-card-tag">${esc(t)}</span>`).join('');
+    const fragEsc = esc(n.fragment);
+    const fragJs  = n.fragment.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<div class="note-card">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span class="note-cat-badge ${catClass}">${catLabel}</span>
+        ${tags}
+      </div>
+      <div class="note-fragment">
+        ${fragEsc}
+        <button class="note-fragment-copy" onclick="navigator.clipboard.writeText('${fragJs}').then(()=>toast('已複製','ok'))" title="複製">⎘</button>
+      </div>
+      ${n.description ? `<div class="note-desc">${esc(n.description)}</div>` : ''}
+      <div class="note-insert-row">
+        <button class="note-ins-pos" onclick="insertNoteToPrompt(${n.id},'pos')" title="插入到正向 prompt">＋ 正向</button>
+        <button class="note-ins-neg" onclick="insertNoteToPrompt(${n.id},'neg')" title="插入到負向 prompt">＋ 負向</button>
+        <button class="note-edit-btn" onclick="openNoteEditModal(${n.id})">編輯</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function buildNotesCategoryFilter() {
+  const row = document.getElementById('notes-filter-row');
+  const catCount = {};
+  notesData.forEach(n => { catCount[n.category] = (catCount[n.category]||0)+1; });
+  let html = '';
+  if (notesActiveCategory) {
+    html += `<span class="tag-filter-chip active" onclick="setNotesCategory('')">✕ 清除篩選</span>`;
+  }
+  Object.entries(NOTE_CATEGORIES).forEach(([key, label]) => {
+    if (!catCount[key]) return;
+    const active = notesActiveCategory === key;
+    html += `<span class="tag-filter-chip ${active?'active':''} note-cat-badge ${NOTE_CAT_CLASS[key]}"
+      style="border:1px solid currentColor;opacity:.85;"
+      onclick="setNotesCategory('${key}')">${label} <small style="opacity:.7">${catCount[key]}</small></span>`;
+  });
+  row.innerHTML = html;
+}
+
+function setNotesCategory(cat) {
+  notesActiveCategory = cat;
+  renderNotesPage();
+}
+
+// ── Insert into prompt ──
+function insertNoteToPrompt(noteId, target) {
+  const n = notesData.find(x => x.id === noteId);
+  if (!n) return;
+  const fieldId = target === 'neg' ? 'neg-prompt' : 'prompt';
+  const el = document.getElementById(fieldId);
+  if (!el) return;
+  const existing = el.value.trim();
+  el.value = existing ? existing + ', ' + n.fragment : n.fragment;
+  el.dispatchEvent(new Event('input'));
+  showPage('generate');
+  toast(`已插入到${target === 'neg' ? '負向' : '正向'} prompt`, 'ok');
+}
+
+// ── Edit modal ──
+function openNoteEditModal(id) {
+  noteEditId = id;
+  noteEditTags = [];
+  if (id) {
+    const n = notesData.find(x => x.id === id);
+    if (!n) return;
+    document.getElementById('note-edit-title').textContent = '編輯筆記';
+    document.getElementById('note-edit-fragment').value = n.fragment||'';
+    document.getElementById('note-edit-desc').value = n.description||'';
+    document.getElementById('note-edit-category').value = n.category||'effect';
+    noteEditTags = [...(n.tags||[])];
+  } else {
+    document.getElementById('note-edit-title').textContent = '新增筆記';
+    document.getElementById('note-edit-fragment').value = '';
+    document.getElementById('note-edit-desc').value = '';
+    document.getElementById('note-edit-category').value = 'effect';
+  }
+  renderNoteEditTagChips();
+  document.getElementById('note-edit-modal').classList.add('open');
+  // bind tag input
+  const tagIn = document.getElementById('note-edit-tag-in');
+  tagIn.value = '';
+  tagIn.oninput = onNoteTagInput;
+  tagIn.onkeydown = onNoteTagKeydown;
+  tagIn.onblur = () => setTimeout(() => {
+    document.getElementById('note-tag-dd').style.display='none';
+  }, 150);
+}
+
+function closeNoteEditModal() {
+  document.getElementById('note-edit-modal').classList.remove('open');
+  document.getElementById('note-tag-dd').style.display='none';
+}
+
+function renderNoteEditTagChips() {
+  document.getElementById('note-edit-tag-chips').innerHTML =
+    noteEditTags.map(t =>
+      `<span class="tag-chip">${esc(t)}<button class="tag-chip-x" onclick="removeNoteEditTag('${esc(t)}')">×</button></span>`
+    ).join('');
+}
+
+function removeNoteEditTag(name) {
+  noteEditTags = noteEditTags.filter(t => t !== name);
+  renderNoteEditTagChips();
+}
+
+function onNoteTagInput(e) {
+  const val = e.target.value.trim();
+  const dd = document.getElementById('note-tag-dd');
+  if (!val) { dd.style.display='none'; return; }
+  const matches = allKnownTags
+    .filter(t => normalizeTagName(t.name).includes(normalizeTagName(val)) && !noteEditTags.includes(t.name))
+    .slice(0,8);
+  if (!matches.length) { dd.style.display='none'; return; }
+  dd.innerHTML = matches.map(t =>
+    `<div class="tag-dd-item" onmousedown="addNoteEditTag('${esc(t.name)}')">${esc(t.name)}</div>`
+  ).join('');
+  dd.style.display = 'block';
+}
+
+function onNoteTagKeydown(e) {
+  const tagIn = document.getElementById('note-edit-tag-in');
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    // Only add if exact match exists in allKnownTags to stay consistent with tag policy
+    const val = tagIn.value.trim().replace(/,$/,'');
+    if (!val) return;
+    const match = allKnownTags.find(t => t.name.toLowerCase() === val.toLowerCase());
+    if (match) {
+      addNoteEditTag(match.name);
+    } else {
+      // Show confirm-create option in dropdown
+      const dd = document.getElementById('note-tag-dd');
+      dd.innerHTML = `<div class="tag-dd-item tag-dd-new" onmousedown="addNoteEditTag('${esc(val)}');dbSaveTag('${esc(val)}')">＋ 建立新 tag「${esc(val)}」</div>`;
+      dd.style.display = 'block';
+    }
+    return;
+  }
+  if (e.key === 'Backspace' && !tagIn.value && noteEditTags.length) {
+    removeNoteEditTag(noteEditTags[noteEditTags.length-1]);
+  }
+}
+
+function addNoteEditTag(name) {
+  name = name.trim();
+  if (!name || noteEditTags.includes(name)) return;
+  noteEditTags.push(name);
+  document.getElementById('note-edit-tag-in').value = '';
+  document.getElementById('note-tag-dd').style.display='none';
+  renderNoteEditTagChips();
+}
+
+async function saveNoteEdit() {
+  const fragment = document.getElementById('note-edit-fragment').value.trim();
+  if (!fragment) { toast('請填寫 Prompt 片段','err'); return; }
+  const data = {
+    fragment,
+    description: document.getElementById('note-edit-desc').value.trim(),
+    category: document.getElementById('note-edit-category').value,
+    tags: [...noteEditTags],
+    timestamp: Date.now()
+  };
+  if (noteEditId) {
+    await dbUpdateNote(noteEditId, data);
+    toast('筆記已更新','ok');
+  } else {
+    await dbSaveNote(data);
+    toast('筆記已新增','ok');
+  }
+  closeNoteEditModal();
+  notesData = await dbGetNotes();
+  updateNotesCount(notesData.length);
+  renderNotesPage();
 }
 
 // ═══════════════════════════════════════════
