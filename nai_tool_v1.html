@@ -351,6 +351,25 @@
     .gal-view-tag-chip{background:var(--bg3);border:1px solid var(--border);border-radius:5px;
       padding:3px 9px;font-size:.75rem;cursor:pointer;transition:background .15s,border-color .15s;}
     .gal-view-tag-chip.sel{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
+    .tag-mini-editor{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px;min-height:44px;}
+    .tag-mini-list{display:flex;flex-wrap:wrap;gap:6px;}
+    .tag-mini-empty{font-size:.78rem;color:var(--txt2);}
+    .tag-mini-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}
+    .tag-picker-overlay{position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;align-items:center;justify-content:center;z-index:1200;padding:16px;}
+    .tag-picker-overlay.open{display:flex;}
+    .tag-picker-box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;width:100%;max-width:520px;max-height:86vh;display:flex;flex-direction:column;overflow:hidden;}
+    .tag-picker-hd{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;}
+    .tag-picker-body{padding:14px 18px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;}
+    .tag-picker-selected{display:flex;flex-wrap:wrap;gap:6px;min-height:26px;}
+    .tag-picker-help{font-size:.75rem;color:var(--txt2);line-height:1.45;}
+    .tag-picker-list{display:flex;flex-wrap:wrap;gap:6px;max-height:220px;overflow-y:auto;padding:2px 0;}
+    .tag-picker-chip{background:var(--bg3);border:1px solid var(--border);border-radius:999px;padding:5px 10px;font-size:.78rem;cursor:pointer;color:var(--txt);transition:background .15s,border-color .15s,color .15s;}
+    .tag-picker-chip.sel{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
+    .tag-picker-chip small{color:var(--txt2);margin-left:4px;}
+    .tag-picker-create{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg);border:1px dashed var(--border);border-radius:10px;padding:10px 12px;}
+    .tag-picker-create strong{color:var(--accent);}
+    .tag-picker-similar{font-size:.74rem;color:var(--warn);line-height:1.45;}
+    .tag-picker-ft{padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
 
     /* Precise Reference */
     .pref-dropzone{border:1.5px dashed var(--border);border-radius:10px;padding:22px 12px;text-align:center;
@@ -586,10 +605,13 @@
 
       <!-- 圖庫 Tag -->
       <div class="card">
-        <div class="card-title">生圖 Tag（套用到本次生圖）</div>
+        <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <span>生圖 Tag（套用到本次生圖）</span>
+          <button class="btn btn-s btn-out" type="button" onclick="openGenerateTagPicker()" style="font-size:.74rem;padding:4px 10px;">選 tag</button>
+        </div>
         <div class="tag-chip-wrap" id="tag-chip-wrap" onclick="document.getElementById('tag-text-in').focus()">
           <div id="tag-chips-display"></div>
-          <input type="text" id="tag-text-in" class="tag-text-in" placeholder="輸入 tag 後按 Enter...">
+          <input type="text" id="tag-text-in" class="tag-text-in" placeholder="搜尋既有 tag，Enter 選第一個">
         </div>
         <div class="tag-dropdown" id="tag-dd"></div>
       </div>
@@ -798,8 +820,13 @@
         </select>
       </div>
       <div>
-        <div class="char-field-label">標籤（逗號分隔）</div>
-        <input id="artist-edit-tags" class="inp" type="text" placeholder="例：厚塗, 光影強烈" style="width:100%;">
+        <div class="char-field-label">標籤</div>
+        <div class="tag-mini-editor">
+          <div class="tag-mini-list" id="artist-edit-tags-display"></div>
+          <div class="tag-mini-actions">
+            <button class="btn btn-s" type="button" onclick="openArtistTagsPicker()">選擇標籤</button>
+          </div>
+        </div>
       </div>
       <div>
         <div class="char-field-label">備註</div>
@@ -858,8 +885,13 @@
         <input id="char-edit-series" class="inp" type="text" placeholder="例：原神" style="width:100%;">
       </div>
       <div>
-        <div class="char-field-label">標籤（逗號分隔）</div>
-        <input id="char-edit-tags" class="inp" type="text" placeholder="例：原創, 遊戲" style="width:100%;">
+        <div class="char-field-label">標籤</div>
+        <div class="tag-mini-editor">
+          <div class="tag-mini-list" id="char-edit-tags-display"></div>
+          <div class="tag-mini-actions">
+            <button class="btn btn-s" type="button" onclick="openCharTagsPicker()">選擇標籤</button>
+          </div>
+        </div>
       </div>
       <div>
         <div class="char-field-label">角色 Prompt</div>
@@ -961,6 +993,38 @@
   </div>
 </div>
 
+<!-- ── TAG PICKER MODAL ── -->
+<div class="tag-picker-overlay" id="tag-picker-modal" onclick="closeTagPicker(event)">
+  <div class="tag-picker-box" onclick="event.stopPropagation()">
+    <div class="tag-picker-hd">
+      <div>
+        <div style="font-size:.94rem;font-weight:700;" id="tag-picker-title">選擇 Tag</div>
+        <div class="tag-picker-help" id="tag-picker-help">優先使用既有 tag，避免建立太多相似分類。</div>
+      </div>
+      <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeTagPicker()">✕</button>
+    </div>
+    <div class="tag-picker-body">
+      <div>
+        <div class="char-field-label">已選 Tag</div>
+        <div class="tag-picker-selected" id="tag-picker-selected"></div>
+      </div>
+      <div>
+        <div class="char-field-label">搜尋既有 Tag</div>
+        <input type="search" id="tag-picker-search" class="inp" placeholder="搜尋 tag..." style="width:100%;" oninput="renderTagPicker()">
+      </div>
+      <div class="tag-picker-create" id="tag-picker-create" style="display:none;"></div>
+      <div>
+        <div class="char-field-label">既有 Tag</div>
+        <div class="tag-picker-list" id="tag-picker-list"></div>
+      </div>
+    </div>
+    <div class="tag-picker-ft">
+      <button class="btn btn-s btn-out" onclick="closeTagPicker()">取消</button>
+      <button class="btn btn-p" onclick="confirmTagPicker()">套用</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast-wrap"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -981,6 +1045,9 @@ let seedRandom = true;
 // Tag input state
 let currentTags = [];
 let allKnownTags = [];
+let artistEditTagsState = [];
+let charEditTagsState = [];
+let tagPickerState = null;
 
 // Phase 3: advanced generation state
 let genMode = 'txt2img';      // 'txt2img' | 'img2img' | 'enhance'
@@ -1418,6 +1485,168 @@ async function dbGetTags() {
   return tags.sort((a,b) => b.count - a.count);
 }
 
+function normalizeTagName(name) {
+  return String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[，、]/g, ',')
+    .replace(/\s+/g, ' ')
+    .replace(/\s*,\s*/g, ',');
+}
+
+function dedupeTags(tags) {
+  const seen = new Set();
+  const out = [];
+  for (const raw of (tags || [])) {
+    const name = String(raw || '').trim();
+    if (!name) continue;
+    const key = normalizeTagName(name);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(name);
+  }
+  return out;
+}
+
+function findExistingTag(name) {
+  const key = normalizeTagName(name);
+  return allKnownTags.find(t => normalizeTagName(t.name) === key) || null;
+}
+
+function findSimilarTags(name) {
+  const key = normalizeTagName(name);
+  if (!key) return [];
+  return allKnownTags.filter(t => {
+    const known = normalizeTagName(t.name);
+    return known === key || known.includes(key) || key.includes(known);
+  }).slice(0, 6);
+}
+
+async function ensureKnownTag(name) {
+  const clean = String(name || '').trim();
+  if (!clean) return '';
+  const existing = findExistingTag(clean);
+  if (existing) return existing.name;
+  await dbSaveTag(clean);
+  allKnownTags = await dbGetTags();
+  return clean;
+}
+
+function renderSimpleTagList(containerId, tags, emptyText, removeFnName) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  if (!tags.length) {
+    el.innerHTML = `<span class="tag-mini-empty">${esc(emptyText)}</span>`;
+    return;
+  }
+  el.innerHTML = tags.map(t => `<span class="tag-chip">${esc(t)}${removeFnName ? `<button class="tag-chip-x" onclick="${removeFnName}(${JSON.stringify(t)})">×</button>` : ''}</span>`).join('');
+}
+
+function openTagPicker(options) {
+  const initial = dedupeTags(options.initialTags || []);
+  tagPickerState = {
+    title: options.title || '選擇 Tag',
+    help: options.help || '優先選既有 tag，只有在真的沒有時才建立新 tag。',
+    selected: new Set(initial),
+    multi: options.multi !== false,
+    allowCreate: options.allowCreate !== false,
+    onConfirm: options.onConfirm || (() => {}),
+    createLabel: options.createLabel || '建立新 tag'
+  };
+  document.getElementById('tag-picker-title').textContent = tagPickerState.title;
+  document.getElementById('tag-picker-help').textContent = tagPickerState.help;
+  document.getElementById('tag-picker-search').value = '';
+  document.getElementById('tag-picker-modal').classList.add('open');
+  renderTagPicker();
+  setTimeout(() => document.getElementById('tag-picker-search').focus(), 0);
+}
+
+function closeTagPicker(e) {
+  if (e && e.target !== document.getElementById('tag-picker-modal')) return;
+  document.getElementById('tag-picker-modal').classList.remove('open');
+  tagPickerState = null;
+}
+
+function renderTagPicker() {
+  if (!tagPickerState) return;
+  const search = document.getElementById('tag-picker-search').value.trim();
+  const selected = [...tagPickerState.selected];
+  const selectedEl = document.getElementById('tag-picker-selected');
+  selectedEl.innerHTML = selected.length
+    ? selected.map(t => `<span class="tag-chip">${esc(t)}<button class="tag-chip-x" onclick="toggleTagPickerSelection(${JSON.stringify(t)})">×</button></span>`).join('')
+    : `<span class="tag-mini-empty">尚未選擇 tag</span>`;
+
+  const matches = allKnownTags.filter(t => {
+    if (tagPickerState.selected.has(t.name)) return false;
+    if (!search) return true;
+    return normalizeTagName(t.name).includes(normalizeTagName(search));
+  }).slice(0, 120);
+  const listEl = document.getElementById('tag-picker-list');
+  listEl.innerHTML = matches.length
+    ? matches.map(t => `<span class="tag-picker-chip" onclick="toggleTagPickerSelection(${JSON.stringify(t.name)})">${esc(t.name)}<small>×${t.count}</small></span>`).join('')
+    : `<span class="tag-mini-empty">${allKnownTags.length ? '沒有符合的既有 tag' : '目前還沒有任何既有 tag'}</span>`;
+
+  const createEl = document.getElementById('tag-picker-create');
+  const existing = search ? findExistingTag(search) : null;
+  if (!tagPickerState.allowCreate || !search) {
+    createEl.style.display = 'none';
+    createEl.innerHTML = '';
+    return;
+  }
+  if (existing) {
+    createEl.style.display = 'none';
+    createEl.innerHTML = '';
+    return;
+  }
+  const similar = findSimilarTags(search);
+  createEl.style.display = 'flex';
+  createEl.innerHTML = `
+    <div style="min-width:0;">
+      <div style="font-size:.78rem;color:var(--txt2);">${esc(tagPickerState.createLabel)}</div>
+      <div style="font-size:.82rem;"><strong>${esc(search)}</strong></div>
+      ${similar.length ? `<div class="tag-picker-similar">可能和既有 tag 太像：${similar.map(t => esc(t.name)).join('、')}</div>` : ''}
+    </div>
+    <button class="btn btn-s btn-out" type="button" onclick="createTagFromPicker()">建立</button>`;
+}
+
+function toggleTagPickerSelection(tag) {
+  if (!tagPickerState) return;
+  if (tagPickerState.selected.has(tag)) tagPickerState.selected.delete(tag);
+  else {
+    if (!tagPickerState.multi) tagPickerState.selected.clear();
+    tagPickerState.selected.add(tag);
+  }
+  renderTagPicker();
+}
+
+async function createTagFromPicker() {
+  if (!tagPickerState) return;
+  const search = document.getElementById('tag-picker-search').value.trim();
+  if (!search) return;
+  const existing = findExistingTag(search);
+  if (existing) {
+    toggleTagPickerSelection(existing.name);
+    toast(`已改用既有 tag「${existing.name}」`, 'info');
+    return;
+  }
+  const similar = findSimilarTags(search).filter(t => normalizeTagName(t.name) !== normalizeTagName(search));
+  if (similar.length && !confirm(`已有相近 tag：${similar.map(t => t.name).join('、')}\n仍要建立新 tag「${search}」嗎？`)) return;
+  const created = await ensureKnownTag(search);
+  if (!tagPickerState.multi) tagPickerState.selected.clear();
+  tagPickerState.selected.add(created);
+  document.getElementById('tag-picker-search').value = '';
+  renderTagPicker();
+  toast(`已建立 tag「${created}」`, 'ok');
+}
+
+function confirmTagPicker() {
+  if (!tagPickerState) return;
+  const selected = dedupeTags([...tagPickerState.selected]);
+  const onConfirm = tagPickerState.onConfirm;
+  closeTagPicker();
+  onConfirm(selected);
+}
+
 // ═══════════════════════════════════════════
 // PNG METADATA EXTRACTION
 // ═══════════════════════════════════════════
@@ -1602,16 +1831,26 @@ function onTagInput(e) {
   const val = e.target.value.trim();
   if (!val) { document.getElementById('tag-dd').style.display='none'; return; }
   const matches = allKnownTags.filter(t =>
-    t.name.toLowerCase().includes(val.toLowerCase()) && !currentTags.includes(t.name)
+    normalizeTagName(t.name).includes(normalizeTagName(val)) && !currentTags.includes(t.name)
   ).slice(0, 8);
   renderTagDD(matches, val);
 }
 
-function onTagKeydown(e) {
+async function onTagKeydown(e) {
   if (e.key==='Enter' || e.key===',') {
     e.preventDefault();
     const val = e.target.value.trim().replace(/,$/,'');
-    if (val) addTag(val);
+    if (val) {
+      const matches = allKnownTags.filter(t =>
+        normalizeTagName(t.name).includes(normalizeTagName(val)) && !currentTags.includes(t.name)
+      );
+      if (matches.length) {
+        await addTag(matches[0].name);
+      } else {
+        openGenerateTagPicker(val);
+        return;
+      }
+    }
     e.target.value = '';
     document.getElementById('tag-dd').style.display='none';
   } else if (e.key==='Backspace' && !e.target.value && currentTags.length) {
@@ -1619,12 +1858,10 @@ function onTagKeydown(e) {
   }
 }
 
-function addTag(name) {
-  name = name.trim();
-  if (!name || currentTags.includes(name)) return;
-  currentTags.push(name);
-  dbSaveTag(name);
-  if (!allKnownTags.find(t=>t.name===name)) allKnownTags.unshift({name,count:1});
+async function addTag(name) {
+  const clean = await ensureKnownTag(name);
+  if (!clean || currentTags.includes(clean)) return;
+  currentTags = dedupeTags([...currentTags, clean]);
   renderTagChips();
   saveDraftState();
 }
@@ -1636,21 +1873,89 @@ function removeTag(name) {
 }
 
 function renderTagChips() {
-  document.getElementById('tag-chips-display').innerHTML =
-    currentTags.map(t=>`<span class="tag-chip">${esc(t)}<button class="tag-chip-x" onclick="removeTag('${esc(t)}')">×</button></span>`).join('');
+  renderSimpleTagList('tag-chips-display', currentTags, '尚未選擇 tag', 'removeTag');
 }
 
 function renderTagDD(matches, input) {
   const dd = document.getElementById('tag-dd');
   if (!matches.length && !input) { dd.style.display='none'; return; }
   const items = matches.map(t =>
-    `<div class="tag-dd-item" onmousedown="addTag('${esc(t.name)}');document.getElementById('tag-text-in').value='';document.getElementById('tag-dd').style.display='none'">${esc(t.name)} <small style="color:var(--txt2)">×${t.count}</small></div>`
+    `<div class="tag-dd-item" onmousedown="addTag(${JSON.stringify(t.name)});document.getElementById('tag-text-in').value='';document.getElementById('tag-dd').style.display='none'">${esc(t.name)} <small style="color:var(--txt2)">×${t.count}</small></div>`
   );
-  if (!matches.find(t=>t.name===input)) {
-    items.push(`<div class="tag-dd-item tag-dd-new" onmousedown="addTag('${esc(input)}');document.getElementById('tag-text-in').value='';document.getElementById('tag-dd').style.display='none'">＋ 新增「${esc(input)}」</div>`);
+  if (input && !findExistingTag(input)) {
+    const similar = findSimilarTags(input);
+    items.push(`<div class="tag-dd-item tag-dd-new" onmousedown="openGenerateTagPicker(${JSON.stringify(input)});document.getElementById('tag-dd').style.display='none'">＋ 建立/選擇「${esc(input)}」${similar.length ? ` <small style="color:var(--warn);">（有相近 tag）</small>` : ''}</div>`);
   }
   dd.innerHTML = items.join('');
   dd.style.display = 'block';
+}
+
+function openGenerateTagPicker(prefill='') {
+  openTagPicker({
+    title: '選擇生圖 Tag',
+    help: '這些 tag 會套用到本次生成的圖片。優先選既有 tag，避免批量生成時把相似 tag 越分越細。',
+    initialTags: currentTags,
+    multi: true,
+    allowCreate: true,
+    createLabel: '建立新的生圖 tag',
+    onConfirm: tags => {
+      currentTags = dedupeTags(tags);
+      renderTagChips();
+      saveDraftState();
+    }
+  });
+  if (prefill) {
+    document.getElementById('tag-picker-search').value = prefill;
+    renderTagPicker();
+  }
+}
+
+function renderArtistEditTags() {
+  renderSimpleTagList('artist-edit-tags-display', artistEditTagsState, '尚未選擇標籤', 'removeArtistEditTag');
+}
+
+function renderCharEditTags() {
+  renderSimpleTagList('char-edit-tags-display', charEditTagsState, '尚未選擇標籤', 'removeCharEditTag');
+}
+
+function removeArtistEditTag(tag) {
+  artistEditTagsState = artistEditTagsState.filter(t => t !== tag);
+  renderArtistEditTags();
+}
+
+function removeCharEditTag(tag) {
+  charEditTagsState = charEditTagsState.filter(t => t !== tag);
+  renderCharEditTags();
+}
+
+function openArtistTagsPicker() {
+  openTagPicker({
+    title: '選擇繪師標籤',
+    help: '用既有 tag 管理繪師分類，避免厚塗 / 厚塗風 / 厚塗感這種相近標籤越長越散。',
+    initialTags: artistEditTagsState,
+    multi: true,
+    allowCreate: true,
+    createLabel: '建立新的繪師標籤',
+    onConfirm: tags => {
+      artistEditTagsState = dedupeTags(tags);
+      renderArtistEditTags();
+    }
+  });
+}
+
+function openCharTagsPicker() {
+  openTagPicker({
+    title: '選擇角色標籤',
+    help: '角色分類優先沿用既有 tag，這樣之後分頁、篩選、排程才不會被很多近義標籤污染。',
+    initialTags: charEditTagsState,
+    multi: true,
+    allowCreate: true,
+    createLabel: '建立新的角色標籤',
+    onConfirm: tags => {
+      charEditTagsState = dedupeTags(tags);
+      renderCharEditTags();
+    }
+  });
 }
 
 // ═══════════════════════════════════════════
@@ -2385,14 +2690,17 @@ async function openArtistEditModal(id) {
     document.getElementById('artist-edit-name').value  = a.name||'';
     document.getElementById('artist-edit-tag').value   = a.artistTag||'';
     document.getElementById('artist-edit-style').value = a.styleType||'';
-    document.getElementById('artist-edit-tags').value  = (a.tags||[]).join(', ');
+    artistEditTagsState = dedupeTags(a.tags || []);
+    renderArtistEditTags();
     document.getElementById('artist-edit-notes').value = a.notes||'';
     artistEditThumbImageId = a.previewImageId??null;
     renderArtistEditThumb(a._previewUrl||null);
   } else {
     document.getElementById('artist-edit-title').textContent = '新增繪師';
-    ['artist-edit-name','artist-edit-tag','artist-edit-tags','artist-edit-notes'].forEach(id=>document.getElementById(id).value='');
+    ['artist-edit-name','artist-edit-tag','artist-edit-notes'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('artist-edit-style').value = '';
+    artistEditTagsState = [];
+    renderArtistEditTags();
     renderArtistEditThumb(null);
   }
   document.getElementById('artist-edit-modal').classList.add('open');
@@ -2419,7 +2727,8 @@ async function saveArtistEdit() {
   const artistTag = document.getElementById('artist-edit-tag').value.trim();
   if (!name) { toast('請填寫繪師名稱','err'); return; }
   if (!artistTag) { toast('請填寫 Prompt Tag','err'); return; }
-  const tags = document.getElementById('artist-edit-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  const tags = dedupeTags(artistEditTagsState);
+  for (const tag of tags) await ensureKnownTag(tag);
   const data = {
     name, artistTag,
     styleType: document.getElementById('artist-edit-style').value,
@@ -2689,7 +2998,8 @@ async function openCharEditModal(id) {
     document.getElementById('char-edit-title').textContent = '編輯角色';
     document.getElementById('char-edit-name').value = c.name || '';
     document.getElementById('char-edit-series').value = c.seriesName || '';
-    document.getElementById('char-edit-tags').value = (c.tags||[]).join(', ');
+    charEditTagsState = dedupeTags(c.tags || []);
+    renderCharEditTags();
     document.getElementById('char-edit-prompt').value = c.prompt || '';
     document.getElementById('char-edit-notes').value = c.notes || '';
     charEditThumbImageId = c.thumbImageId ?? null;
@@ -2716,7 +3026,8 @@ async function openCharEditModal(id) {
     document.getElementById('char-edit-title').textContent = '新增角色';
     document.getElementById('char-edit-name').value = '';
     document.getElementById('char-edit-series').value = '';
-    document.getElementById('char-edit-tags').value = '';
+    charEditTagsState = [];
+    renderCharEditTags();
     document.getElementById('char-edit-prompt').value = '';
     document.getElementById('char-edit-notes').value = '';
     renderCharEditThumb(null);
@@ -2766,8 +3077,8 @@ function charEditRemoveRef(idx) {
 async function saveCharEdit() {
   const name = document.getElementById('char-edit-name').value.trim();
   if (!name) { toast('請填寫角色名稱','err'); return; }
-  const tagsRaw = document.getElementById('char-edit-tags').value;
-  const tags = tagsRaw.split(',').map(t=>t.trim()).filter(Boolean);
+  const tags = dedupeTags(charEditTagsState);
+  for (const tag of tags) await ensureKnownTag(tag);
   const data = {
     name,
     seriesName: document.getElementById('char-edit-series').value.trim(),
@@ -3771,7 +4082,7 @@ function openModal(id, url) {
     <div>
       <div class="modal-section-title">Tags</div>
       <div class="modal-tag-wrap" id="modal-tags">
-        ${tags.map(t=>`<span class="modal-tag" onclick="removeModalTag('${esc(t)}')" title="點擊移除">${esc(t)} ×</span>`).join('')}
+        ${tags.map(t=>`<span class="modal-tag" onclick="removeModalTag(${JSON.stringify(t)})" title="點擊移除">${esc(t)} ×</span>`).join('')}
         <button class="btn btn-s btn-icon" onclick="addModalTag()" title="新增 tag" style="font-size:.75rem;padding:3px 8px;">＋</button>
       </div>
     </div>
@@ -3807,18 +4118,25 @@ function closeModal(e) {
 }
 
 function addModalTag() {
-  const t = prompt('輸入新 tag：');
-  if (!t) return;
   const img = galleryData.find(i=>i.id===modalImageId);
   if (!img) return;
-  if (!img.tags.includes(t)) {
-    img.tags.push(t);
-    dbUpdateTags(modalImageId, img.tags);
-    dbSaveTag(t);
-    if (!allKnownTags.find(x=>x.name===t)) allKnownTags.unshift({name:t,count:1});
-    openModal(modalImageId, document.getElementById('modal-img').src);
-    buildTagFilterList();
-  }
+  openTagPicker({
+    title: '編輯圖片 Tag',
+    help: '先選既有 tag；真的沒有再建立新的，避免圖庫越用越多相似 tag。',
+    initialTags: img.tags || [],
+    multi: true,
+    allowCreate: true,
+    createLabel: '建立新的圖片 tag',
+    onConfirm: async tags => {
+      const finalTags = dedupeTags(tags);
+      for (const tag of finalTags) await ensureKnownTag(tag);
+      img.tags = finalTags;
+      await dbUpdateTags(modalImageId, img.tags);
+      openModal(modalImageId, document.getElementById('modal-img').src);
+      buildTagFilterList();
+      filterGallery();
+    }
+  });
 }
 
 function removeModalTag(tag) {
