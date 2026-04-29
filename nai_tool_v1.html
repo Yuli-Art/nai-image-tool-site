@@ -3126,24 +3126,26 @@ async function createBlendFromSelected() {
 }
 
 async function createManualBlend() {
-  const raw = prompt('貼上加權混搭字串\n例如：1.5::artist:wol::, 0.8::artist:foo::', '') ?? '';
-  if (!raw.trim()) return;
-  const parsed = parseWeightedBlendText(raw);
-  if (!parsed.length) {
-    toast('沒有解析到有效的加權條目，請確認格式是 weight::artist:tag::', 'warn');
-    return;
-  }
-  const suggestedName = parsed.map(entry => entry.artistName || entry.artistTag).slice(0, 3).join(' × ');
-  const name = prompt('混搭名稱（可留空）', suggestedName) ?? '';
-  const id = await dbSaveBlend({
-    name: name.trim(),
-    artistEntries: parsed,
-    notes: ''
+  currentBlendId = null;
+  currentBlendDraft = normalizeBlendRecord({
+    id: null,
+    name: '',
+    notes: '',
+    previewImageId: null,
+    artistEntries: [
+      normalizeBlendEntry({
+        artistId: null,
+        artistName: '',
+        artistTag: '',
+        weight: 1,
+        enabled: true,
+        order: 0
+      }, 0)
+    ],
+    rawImportText: ''
   });
-  blendData = await dbGetBlends();
-  await hydrateBlendPreviewUrls(blendData);
-  toast(`已建立手動混搭記錄${name.trim() ? `「${name.trim()}」` : ''}`, 'ok');
-  openBlendDetailModal(id);
+  renderBlendDetail();
+  document.getElementById('blend-detail-modal').classList.add('open');
 }
 
 function renderBlendGrid() {
@@ -3183,6 +3185,7 @@ function renderBlendDetail() {
   const b = currentBlendDraft;
   if (!b) return;
   const promptStr = renderBlendPrompt(b.artistEntries || []);
+  const isNewBlend = !currentBlendId;
   const previewHtml = b._previewUrl
     ? `<img src="${b._previewUrl}" style="width:100%;border-radius:8px;margin-bottom:8px;">`
     : `<div style="width:100%;aspect-ratio:4/3;background:var(--bg3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:2rem;margin-bottom:8px;">🎨</div>`;
@@ -3205,6 +3208,13 @@ function renderBlendDetail() {
   `).join('');
   document.getElementById('blend-detail-body').innerHTML = `
     ${previewHtml}
+    <div>
+      <div class="char-field-label">貼上加權混搭字串</div>
+      <textarea class="inp" rows="3" style="width:100%;resize:vertical;" placeholder="例如：1.5::artist:wol::, 0.8::artist:foo::" onchange="updateBlendDraftField('rawImportText', this.value)">${esc(b.rawImportText || '')}</textarea>
+      <div style="display:flex;justify-content:flex-end;margin-top:6px;">
+        <button class="btn btn-s" onclick="importBlendTextIntoDraft()">匯入到條目</button>
+      </div>
+    </div>
     <div>
       <div class="char-field-label">混搭名稱</div>
       <input class="inp" type="text" value="${esc(b.name || '')}" placeholder="可留空，會自動用條目名稱組合" onchange="updateBlendDraftField('name', this.value)" style="width:100%;">
@@ -3231,6 +3241,21 @@ function renderBlendDetail() {
 function updateBlendDraftField(field, value) {
   if (!currentBlendDraft) return;
   currentBlendDraft[field] = value;
+}
+
+function importBlendTextIntoDraft() {
+  if (!currentBlendDraft) return;
+  const parsed = parseWeightedBlendText(currentBlendDraft.rawImportText || '');
+  if (!parsed.length) {
+    toast('沒有解析到有效的加權條目，請確認格式是 weight::artist:tag::', 'warn');
+    return;
+  }
+  currentBlendDraft.artistEntries = parsed.map((entry, index) => normalizeBlendEntry({ ...entry, order: index }, index));
+  if (!String(currentBlendDraft.name || '').trim()) {
+    currentBlendDraft.name = parsed.map(entry => entry.artistName || entry.artistTag).slice(0, 3).join(' × ');
+  }
+  renderBlendDetail();
+  toast(`已匯入 ${parsed.length} 個條目`, 'ok');
 }
 
 function updateBlendEntryField(index, field, value) {
@@ -3268,7 +3293,7 @@ function copyCurrentBlendPrompt() {
 }
 
 async function saveCurrentBlend() {
-  if (!currentBlendId || !currentBlendDraft) return;
+  if (!currentBlendDraft) return;
   const artistEntries = getBlendEntriesSorted(currentBlendDraft)
     .map((entry, index) => normalizeBlendEntry({ ...entry, order: index }, index))
     .filter(entry => entry.artistTag);
@@ -3277,11 +3302,17 @@ async function saveCurrentBlend() {
     toast('Artist Tag 欄位只填 base tag，不要把 weight::tag:: 整串貼進單一欄位', 'warn');
     return;
   }
-  await dbUpdateBlend(currentBlendId, {
+  const payload = {
     name: String(currentBlendDraft.name || '').trim(),
     notes: String(currentBlendDraft.notes || '').trim(),
-    artistEntries
-  });
+    artistEntries,
+    previewImageId: currentBlendDraft.previewImageId ?? null
+  };
+  if (currentBlendId) {
+    await dbUpdateBlend(currentBlendId, payload);
+  } else {
+    currentBlendId = await dbSaveBlend(payload);
+  }
   blendData = await dbGetBlends();
   await hydrateBlendPreviewUrls(blendData);
   const saved = blendData.find(x => x.id === currentBlendId);
@@ -3297,7 +3328,11 @@ function closeBlendDetailModal() {
 }
 
 async function deleteCurrentBlend() {
-  if (!currentBlendId) return;
+  if (!currentBlendId) {
+    closeBlendDetailModal();
+    toast('已取消未儲存的手動混搭', 'info');
+    return;
+  }
   if (!confirm('確定刪除此混搭記錄？')) return;
   await dbDeleteBlend(currentBlendId);
   blendData = blendData.filter(b=>b.id!==currentBlendId);
