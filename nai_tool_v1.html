@@ -318,6 +318,10 @@
     .blend-preview{width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--bg3);display:block;}
     .blend-preview-ph{width:100%;aspect-ratio:4/3;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:var(--txt2);}
     .blend-artists{font-size:.72rem;color:var(--txt2);margin-top:2px;}
+    .blend-entry{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px;}
+    .blend-entry-top{display:flex;gap:8px;align-items:center;}
+    .blend-entry-top input[type=text]{flex:1;min-width:0;}
+    .blend-weight-input{width:88px;}
     .artist-quick-btn{background:none;border:1px solid var(--border);border-radius:6px;color:var(--txt2);font-size:.7rem;padding:3px 7px;cursor:pointer;white-space:nowrap;transition:background .15s;}
     .artist-quick-btn:hover{background:var(--bg3);color:var(--txt);}
 
@@ -750,6 +754,7 @@
     <div class="gallery-toolbar">
       <span style="font-size:.9rem;font-weight:700;">風格庫</span>
       <button class="btn btn-p" onclick="openArtistEditModal(null)">＋ 新增繪師</button>
+      <button class="btn btn-s" onclick="createManualBlend()">＋ 手動混搭</button>
       <input type="search" class="gallery-search" id="artist-search" placeholder="搜尋名稱 / tag..." oninput="renderArtistPage()" style="max-width:180px;">
       <div style="flex:1;"></div>
       <button class="btn btn-s" id="artist-sel-mode-btn" onclick="toggleArtistSelectMode()">多選</button>
@@ -823,7 +828,7 @@
       <div>
         <div class="char-field-label">Prompt Tag *</div>
         <input id="artist-edit-tag" class="inp" type="text" placeholder="例：wlop, style of wlop" style="width:100%;">
-        <div style="font-size:.72rem;color:var(--txt2);margin-top:3px;">生圖和混搭時使用的 prompt 字串</div>
+        <div style="font-size:.72rem;color:var(--txt2);margin-top:3px;">只存 base tag，例如 <code>artist:wol</code>。不要在這裡加 weight，weight 在混搭記錄裡設定。</div>
       </div>
       <div>
         <div class="char-field-label">風格類型 <span style="font-size:.7rem;color:var(--txt2);">（選填）</span></div>
@@ -879,6 +884,8 @@
     <div class="char-modal-body" id="blend-detail-body"></div>
     <div class="char-modal-ft">
       <button class="btn btn-d btn-s" id="blend-detail-delete" onclick="deleteCurrentBlend()">🗑 刪除</button>
+      <button class="btn btn-s" onclick="addManualBlendEntry()">＋ 手動條目</button>
+      <button class="btn btn-p" onclick="saveCurrentBlend()">儲存</button>
       <button class="btn btn-s btn-out" onclick="blendGenPreview()" style="margin-left:auto;">⚡ 生混搭圖</button>
       <button class="btn btn-s" onclick="openGalleryPicker('blendPreview')">從圖庫指定預覽</button>
       <button class="btn btn-s btn-out" onclick="closeBlendDetailModal()">關閉</button>
@@ -1521,6 +1528,8 @@ async function dbDeleteArtist(id) {
 async function dbSaveBlend(b) {
   const db = await getDB();
   return dbOp(db,'artist_blends','readwrite', s => s.add({
+    name: b.name || '',
+    artistEntries: b.artistEntries || [],
     artistIds: b.artistIds||[], artistTags: b.artistTags||[],
     artistNames: b.artistNames||[], notes: b.notes||'',
     previewImageId: b.previewImageId??null, timestamp: Date.now()
@@ -1539,11 +1548,114 @@ async function dbUpdateBlend(id, fields) {
 async function dbGetBlends() {
   const db = await getDB();
   const all = await dbOp(db,'artist_blends','readonly', s => s.getAll());
-  return all.sort((a,b) => b.timestamp - a.timestamp);
+  return all.map(normalizeBlendRecord).sort((a,b) => b.timestamp - a.timestamp);
 }
 async function dbDeleteBlend(id) {
   const db = await getDB();
   return dbOp(db,'artist_blends','readwrite', s => s.delete(id));
+}
+
+function formatBlendWeight(weight) {
+  const num = Number(weight);
+  if (!Number.isFinite(num) || num <= 0) return '1';
+  return num.toFixed(2).replace(/\.?0+$/, '');
+}
+
+function createBlendEntryFromArtist(artist, index = 0) {
+  return {
+    artistId: artist?.id ?? null,
+    artistName: artist?.name || artist?.artistTag || `Artist ${index + 1}`,
+    artistTag: artist?.artistTag || '',
+    weight: 1,
+    enabled: true,
+    order: index
+  };
+}
+
+function normalizeBlendEntry(entry, index = 0) {
+  return {
+    artistId: entry?.artistId ?? null,
+    artistName: String(entry?.artistName || entry?.artistTag || `Entry ${index + 1}`),
+    artistTag: String(entry?.artistTag || '').trim(),
+    weight: Number(entry?.weight) > 0 ? Number(entry.weight) : 1,
+    enabled: entry?.enabled !== false,
+    order: Number.isFinite(entry?.order) ? entry.order : index
+  };
+}
+
+function normalizeBlendRecord(record) {
+  if (Array.isArray(record?.artistEntries)) {
+    const artistEntries = record.artistEntries.map((entry, index) => normalizeBlendEntry(entry, index));
+    return {
+      ...record,
+      name: record.name || '',
+      artistEntries
+    };
+  }
+  const legacyNames = Array.isArray(record?.artistNames) ? record.artistNames : [];
+  const legacyTags = Array.isArray(record?.artistTags) ? record.artistTags : [];
+  const legacyIds = Array.isArray(record?.artistIds) ? record.artistIds : [];
+  const count = Math.max(legacyNames.length, legacyTags.length, legacyIds.length);
+  const artistEntries = Array.from({ length: count }, (_, index) => normalizeBlendEntry({
+    artistId: legacyIds[index] ?? null,
+    artistName: legacyNames[index] || legacyTags[index] || `Entry ${index + 1}`,
+    artistTag: legacyTags[index] || '',
+    weight: 1,
+    enabled: true,
+    order: index
+  }, index));
+  return {
+    ...record,
+    name: record.name || '',
+    artistEntries
+  };
+}
+
+function getBlendEntriesSorted(blend) {
+  return (blend?.artistEntries || []).slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+}
+
+function renderBlendPrompt(entries) {
+  return getBlendEntriesSorted({ artistEntries: entries })
+    .filter(entry => entry.enabled !== false && String(entry.artistTag || '').trim())
+    .map(entry => `${formatBlendWeight(entry.weight)}::${String(entry.artistTag).trim()}::`)
+    .join(', ');
+}
+
+function deriveBlendName(blend) {
+  if (blend?.name?.trim()) return blend.name.trim();
+  const names = getBlendEntriesSorted(blend)
+    .filter(entry => entry.enabled !== false)
+    .map(entry => entry.artistName || entry.artistTag)
+    .filter(Boolean);
+  return names.slice(0, 3).join(' × ') || '未命名混搭';
+}
+
+function parseWeightedBlendText(text) {
+  const matches = [...String(text || '').matchAll(/([0-9]*\.?[0-9]+)\s*::\s*(.*?)\s*::/g)];
+  return matches.map((match, index) => {
+    const artistTag = String(match[2] || '').trim();
+    const linked = artistData.find(a => String(a.artistTag || '').trim() === artistTag) || null;
+    return normalizeBlendEntry({
+      artistId: linked?.id ?? null,
+      artistName: linked?.name || artistTag,
+      artistTag,
+      weight: Number(match[1]),
+      enabled: true,
+      order: index
+    }, index);
+  }).filter(entry => entry.artistTag);
+}
+
+async function hydrateBlendPreviewUrls(blends) {
+  for (const b of blends) {
+    if (b.previewImageId && !b._previewUrl) {
+      try {
+        const img = await dbGetImageById(b.previewImageId);
+        if (img) b._previewUrl = URL.createObjectURL(new Blob([img.data], { type: 'image/png' }));
+      } catch (_) {}
+    }
+  }
 }
 
 async function dbGetTags() {
@@ -2775,6 +2887,7 @@ let artistSelected   = new Set();
 let artistEditId     = null;
 let artistEditThumbImageId = null;
 let currentBlendId   = null;   // for blend detail modal
+let currentBlendDraft = null;
 
 // ── Gallery picker routing (extend existing) ──
 // galPickerPurpose also handles: 'artistThumb' | 'blendPreview'
@@ -2791,14 +2904,7 @@ async function loadArtistData() {
       } catch(_) {}
     }
   }
-  for (const b of blendData) {
-    if (b.previewImageId && !b._previewUrl) {
-      try {
-        const img = await dbGetImageById(b.previewImageId);
-        if (img) b._previewUrl = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
-      } catch(_) {}
-    }
-  }
+  await hydrateBlendPreviewUrls(blendData);
   updateArtistLibCount(artistData.length);
 }
 
@@ -2967,6 +3073,7 @@ async function saveArtistEdit() {
   const artistTag = document.getElementById('artist-edit-tag').value.trim();
   if (!name) { toast('請填寫繪師名稱','err'); return; }
   if (!artistTag) { toast('請填寫 Prompt Tag','err'); return; }
+  if (artistTag.includes('::')) { toast('這裡只填 base tag，例如 artist:wol；不要把 weight::tag:: 整串貼進來', 'warn'); return; }
   const tags = dedupeTags(artistEditTagsState);
   for (const tag of tags) await ensureKnownTag(tag);
   const data = {
@@ -3001,18 +3108,38 @@ function artistGenPreview() {
 async function createBlendFromSelected() {
   if (artistSelected.size < 2) { toast('請至少選取 2 位繪師','warn'); return; }
   const selected = [...artistSelected].map(id => artistData.find(a=>a.id===id)).filter(Boolean);
-  const combinedTags = selected.map(a=>a.artistTag).join(', ');
-  const names = selected.map(a=>a.name).join(' × ');
-  const notes = prompt(`混搭備註（可留空）\n繪師：${names}\nTags：${combinedTags}`, '') ?? '';
-  await dbSaveBlend({
-    artistIds: selected.map(a=>a.id),
-    artistTags: selected.map(a=>a.artistTag),
-    artistNames: selected.map(a=>a.name),
-    notes
+  const name = selected.map(a=>a.name).join(' × ');
+  const id = await dbSaveBlend({
+    name,
+    artistEntries: selected.map((artist, index) => createBlendEntryFromArtist(artist, index)),
+    notes: ''
   });
   blendData = await dbGetBlends();
-  toast(`已建立混搭記錄「${names}」`,'ok');
+  await hydrateBlendPreviewUrls(blendData);
+  toast(`已建立混搭記錄「${name}」`,'ok');
   clearArtistSelection();
+  openBlendDetailModal(id);
+}
+
+async function createManualBlend() {
+  const raw = prompt('貼上加權混搭字串\n例如：1.5::artist:wol::, 0.8::artist:foo::', '') ?? '';
+  if (!raw.trim()) return;
+  const parsed = parseWeightedBlendText(raw);
+  if (!parsed.length) {
+    toast('沒有解析到有效的加權條目，請確認格式是 weight::artist:tag::', 'warn');
+    return;
+  }
+  const suggestedName = parsed.map(entry => entry.artistName || entry.artistTag).slice(0, 3).join(' × ');
+  const name = prompt('混搭名稱（可留空）', suggestedName) ?? '';
+  const id = await dbSaveBlend({
+    name: name.trim(),
+    artistEntries: parsed,
+    notes: ''
+  });
+  blendData = await dbGetBlends();
+  await hydrateBlendPreviewUrls(blendData);
+  toast(`已建立手動混搭記錄${name.trim() ? `「${name.trim()}」` : ''}`, 'ok');
+  openBlendDetailModal(id);
 }
 
 function renderBlendGrid() {
@@ -3026,13 +3153,14 @@ function renderBlendGrid() {
     const preview = b._previewUrl
       ? `<img class="blend-preview" src="${b._previewUrl}" alt="">`
       : `<div class="blend-preview-ph">🎨</div>`;
-    const names = (b.artistNames||[]).join(' × ');
+    const names = deriveBlendName(b);
+    const promptStr = renderBlendPrompt(b.artistEntries || []);
     return `<div class="blend-card" onclick="openBlendDetailModal(${b.id})">
       ${preview}
       <div style="padding:7px 9px;">
         <div style="font-size:.78rem;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(names)}</div>
         ${b.notes?`<div class="blend-artists">${esc(b.notes)}</div>`:''}
-        <div class="blend-artists" style="font-family:monospace;margin-top:2px;">${esc((b.artistTags||[]).join(', '))}</div>
+        <div class="blend-artists" style="font-family:monospace;margin-top:2px;">${esc(promptStr)}</div>
       </div>
     </div>`;
   }).join('');
@@ -3042,26 +3170,127 @@ async function openBlendDetailModal(id) {
   currentBlendId = id;
   const b = blendData.find(x=>x.id===id);
   if (!b) return;
-  const names = (b.artistNames||[]).join(' × ');
-  const tagsStr = (b.artistTags||[]).join(', ');
-  const previewHtml = b._previewUrl
-    ? `<img src="${b._previewUrl}" style="width:100%;border-radius:8px;margin-bottom:8px;">`
-    : `<div style="width:100%;aspect-ratio:4/3;background:var(--bg3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:2rem;margin-bottom:8px;">🎨</div>`;
-  document.getElementById('blend-detail-body').innerHTML = `
-    ${previewHtml}
-    <div><div class="char-field-label">繪師</div><div style="font-size:.85rem;color:var(--txt);margin-top:3px;">${esc(names)}</div></div>
-    <div><div class="char-field-label">合併 Tags</div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
-        <code style="flex:1;font-size:.78rem;background:var(--bg3);padding:6px 10px;border-radius:6px;overflow-x:auto;white-space:nowrap;">${esc(tagsStr)}</code>
-        <button class="btn btn-s" onclick="navigator.clipboard.writeText('${tagsStr.replace(/'/g,"\\'")}').then(()=>toast('已複製','ok'))">複製</button>
-      </div>
-    </div>
-    ${b.notes?`<div><div class="char-field-label">備註</div><div style="font-size:.83rem;color:var(--txt);margin-top:3px;">${esc(b.notes)}</div></div>`:''}
-  `;
+  currentBlendDraft = JSON.parse(JSON.stringify(normalizeBlendRecord(b)));
+  renderBlendDetail();
   document.getElementById('blend-detail-modal').classList.add('open');
 }
 
-function closeBlendDetailModal() { document.getElementById('blend-detail-modal').classList.remove('open'); }
+function renderBlendDetail() {
+  const b = currentBlendDraft;
+  if (!b) return;
+  const promptStr = renderBlendPrompt(b.artistEntries || []);
+  const previewHtml = b._previewUrl
+    ? `<img src="${b._previewUrl}" style="width:100%;border-radius:8px;margin-bottom:8px;">`
+    : `<div style="width:100%;aspect-ratio:4/3;background:var(--bg3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:2rem;margin-bottom:8px;">🎨</div>`;
+  const entryRows = getBlendEntriesSorted(b).map((entry, index) => `
+    <div class="blend-entry">
+      <div class="blend-entry-top">
+        <input class="inp" type="text" value="${esc(entry.artistName || '')}" placeholder="顯示名稱" onchange="updateBlendEntryField(${index}, 'artistName', this.value)">
+        <input class="inp blend-weight-input" type="number" min="0.1" max="3" step="0.05" value="${esc(String(entry.weight ?? 1))}" oninput="updateBlendEntryField(${index}, 'weight', this.value)">
+        <button class="btn btn-d btn-s" onclick="removeBlendEntry(${index})">✕</button>
+      </div>
+      <div>
+        <div class="char-field-label" style="margin-bottom:3px;">Artist Tag</div>
+        <input class="inp" type="text" value="${esc(entry.artistTag || '')}" placeholder="例：artist:wol" onchange="updateBlendEntryField(${index}, 'artistTag', this.value)">
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--txt2);">
+        <input type="checkbox" ${entry.enabled !== false ? 'checked' : ''} onchange="updateBlendEntryField(${index}, 'enabled', this.checked)">
+        啟用這個條目
+      </label>
+    </div>
+  `).join('');
+  document.getElementById('blend-detail-body').innerHTML = `
+    ${previewHtml}
+    <div>
+      <div class="char-field-label">混搭名稱</div>
+      <input class="inp" type="text" value="${esc(b.name || '')}" placeholder="可留空，會自動用條目名稱組合" onchange="updateBlendDraftField('name', this.value)" style="width:100%;">
+    </div>
+    <div>
+      <div class="char-field-label">條目</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+        ${entryRows || `<div style="font-size:.78rem;color:var(--txt2);">目前沒有條目，請先新增手動條目。</div>`}
+      </div>
+    </div>
+    <div><div class="char-field-label">加權 Prompt 預覽</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+        <code style="flex:1;font-size:.78rem;background:var(--bg3);padding:6px 10px;border-radius:6px;overflow-x:auto;white-space:nowrap;">${esc(promptStr || '（尚無有效條目）')}</code>
+        <button class="btn btn-s" onclick="copyCurrentBlendPrompt()">複製</button>
+      </div>
+    </div>
+    <div>
+      <div class="char-field-label">備註</div>
+      <textarea class="inp" rows="3" style="width:100%;resize:vertical;" onchange="updateBlendDraftField('notes', this.value)">${esc(b.notes || '')}</textarea>
+    </div>
+  `;
+}
+
+function updateBlendDraftField(field, value) {
+  if (!currentBlendDraft) return;
+  currentBlendDraft[field] = value;
+}
+
+function updateBlendEntryField(index, field, value) {
+  if (!currentBlendDraft?.artistEntries?.[index]) return;
+  if (field === 'weight') currentBlendDraft.artistEntries[index][field] = Number(value) > 0 ? Number(value) : 1;
+  else currentBlendDraft.artistEntries[index][field] = value;
+  renderBlendDetail();
+}
+
+function removeBlendEntry(index) {
+  if (!currentBlendDraft) return;
+  currentBlendDraft.artistEntries.splice(index, 1);
+  currentBlendDraft.artistEntries.forEach((entry, idx) => { entry.order = idx; });
+  renderBlendDetail();
+}
+
+function addManualBlendEntry() {
+  if (!currentBlendDraft) return;
+  currentBlendDraft.artistEntries.push(normalizeBlendEntry({
+    artistId: null,
+    artistName: '',
+    artistTag: '',
+    weight: 1,
+    enabled: true,
+    order: currentBlendDraft.artistEntries.length
+  }, currentBlendDraft.artistEntries.length));
+  renderBlendDetail();
+}
+
+function copyCurrentBlendPrompt() {
+  if (!currentBlendDraft) return;
+  const text = renderBlendPrompt(currentBlendDraft.artistEntries || []);
+  if (!text) { toast('目前沒有可複製的加權 prompt', 'warn'); return; }
+  navigator.clipboard.writeText(text).then(() => toast('已複製','ok'));
+}
+
+async function saveCurrentBlend() {
+  if (!currentBlendId || !currentBlendDraft) return;
+  const artistEntries = getBlendEntriesSorted(currentBlendDraft)
+    .map((entry, index) => normalizeBlendEntry({ ...entry, order: index }, index))
+    .filter(entry => entry.artistTag);
+  if (!artistEntries.length) { toast('至少要保留一個有效條目', 'warn'); return; }
+  if (artistEntries.some(entry => String(entry.artistTag || '').includes('::'))) {
+    toast('Artist Tag 欄位只填 base tag，不要把 weight::tag:: 整串貼進單一欄位', 'warn');
+    return;
+  }
+  await dbUpdateBlend(currentBlendId, {
+    name: String(currentBlendDraft.name || '').trim(),
+    notes: String(currentBlendDraft.notes || '').trim(),
+    artistEntries
+  });
+  blendData = await dbGetBlends();
+  await hydrateBlendPreviewUrls(blendData);
+  const saved = blendData.find(x => x.id === currentBlendId);
+  if (saved) currentBlendDraft = JSON.parse(JSON.stringify(saved));
+  renderBlendGrid();
+  renderBlendDetail();
+  toast('混搭記錄已更新','ok');
+}
+
+function closeBlendDetailModal() {
+  document.getElementById('blend-detail-modal').classList.remove('open');
+  currentBlendDraft = null;
+}
 
 async function deleteCurrentBlend() {
   if (!currentBlendId) return;
@@ -3075,13 +3304,14 @@ async function deleteCurrentBlend() {
 }
 
 function blendGenPreview() {
-  const b = blendData.find(x=>x.id===currentBlendId);
+  const b = currentBlendDraft || blendData.find(x=>x.id===currentBlendId);
   if (!b) return;
-  const tags = (b.artistTags||[]).join(', ');
+  const tags = renderBlendPrompt(b.artistEntries || []);
+  if (!tags) { toast('目前沒有有效的混搭 prompt', 'warn'); return; }
   closeBlendDetailModal();
   document.getElementById('prompt').value = tags;
   showPage('generate');
-  toast('已填入混搭 tags，生圖後可回來指定為預覽圖','info');
+  toast('已填入加權混搭 prompt，生圖後可回來指定為預覽圖','info');
 }
 
 // ═══════════════════════════════════════════
