@@ -1420,10 +1420,21 @@ async function dbDeleteTag(name) {
 }
 
 // ── Vibe Library DB ──
-async function dbSaveVibe(name, base64, thumbUrl, isPreEncoded, infoExtracted, strength, model) {
+function buildVibeThumbUrl(base64, mimeType = 'image/webp') {
+  if (!base64) return '';
+  return `data:${mimeType};base64,${base64}`;
+}
+function normalizeVibeRecord(v) {
+  const thumbMime = v.thumbMime || 'image/webp';
+  const thumbUrl = (typeof v.thumbUrl === 'string' && /^(data:|https?:)/i.test(v.thumbUrl))
+    ? v.thumbUrl
+    : buildVibeThumbUrl(v.base64, thumbMime);
+  return { ...v, thumbMime, thumbUrl };
+}
+async function dbSaveVibe(name, base64, thumbMime, isPreEncoded, infoExtracted, strength, model) {
   const db = await getDB();
   return dbOp(db,'vibe_library','readwrite', s => s.add({
-    name, base64, thumbUrl, isPreEncoded: !!isPreEncoded,
+    name, base64, thumbMime: thumbMime || 'image/webp', isPreEncoded: !!isPreEncoded,
     infoExtracted: infoExtracted ?? 1.0,
     strength: strength ?? 0.6,
     model: model || '',
@@ -1448,7 +1459,7 @@ async function dbUpdateVibe(id, fields) {
 async function dbGetVibes() {
   const db = await getDB();
   const all = await dbOp(db,'vibe_library','readonly', s => s.getAll());
-  return all.sort((a,b) => b.timestamp - a.timestamp);
+  return all.map(normalizeVibeRecord).sort((a,b) => b.timestamp - a.timestamp);
 }
 async function dbDeleteVibe(id) {
   const db = await getDB();
@@ -3896,16 +3907,14 @@ async function loadVibeFileToLibrary() {
         const text = await file.text();
         const json = JSON.parse(text);
         if (json.identifier !== 'novelai-vibe-transfer' || !json.image) continue;
-        const bytes = Uint8Array.from(atob(json.image), c => c.charCodeAt(0));
-        const blob = new Blob([bytes], { type: 'image/webp' });
-        const thumbUrl = URL.createObjectURL(blob);
+        const thumbMime = 'image/webp';
         const name = file.name.replace(/\.naiv4vibe$/i, '');
         // Read values from importInfo (NAI stores them in the file)
         const info = json.importInfo || {};
         const ie = info.information_extracted ?? 1.0;
         const strength = info.strength ?? 0.6;
         const model = info.model || '';
-        await dbSaveVibe(name, json.image, thumbUrl, true, ie, strength, model);
+        await dbSaveVibe(name, json.image, thumbMime, true, ie, strength, model);
         loaded++;
       } catch(err) { toast(`「${file.name}」讀取失敗`, 'err'); }
     }
