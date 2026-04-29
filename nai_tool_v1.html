@@ -812,6 +812,8 @@
 
   <!-- ── PROMPT 筆記本 PAGE ── -->
   <div id="page-notes" class="page">
+    <!-- View tabs -->
+    <div class="gal-views-bar" id="notes-views-bar"></div>
     <div class="gallery-toolbar">
       <span style="font-size:.9rem;font-weight:700;">Prompt 筆記本</span>
       <button class="btn btn-p" onclick="openNoteEditModal(null)">＋ 新增筆記</button>
@@ -874,13 +876,21 @@
         </div>
         <div>
           <div class="char-field-label">標籤</div>
-          <div style="position:relative;">
-            <input id="note-edit-tag-in" class="inp" type="text" placeholder="輸入後按 Enter..." style="width:100%;"
-              autocomplete="off">
-            <div class="tag-dropdown" id="note-tag-dd" style="top:100%;left:0;right:0;position:absolute;z-index:200;"></div>
+          <div style="display:flex;gap:6px;">
+            <div style="position:relative;flex:1;">
+              <input id="note-edit-tag-in" class="inp" type="text" placeholder="輸入後按 Enter..." autocomplete="off" style="width:100%;">
+              <div class="tag-dropdown" id="note-tag-dd" style="top:100%;left:0;right:0;position:absolute;z-index:200;"></div>
+            </div>
+            <button class="btn btn-s" type="button" onclick="openNoteTagsPicker()">選擇標籤</button>
           </div>
           <div id="note-edit-tag-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;"></div>
         </div>
+      </div>
+      <!-- 示意圖 section -->
+      <div>
+        <div class="char-field-label">示意圖</div>
+        <div id="note-edit-previews" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;"></div>
+        <button class="btn btn-s btn-out" type="button" onclick="openGalleryPicker('noteImage')">＋ 從圖庫新增示意圖</button>
       </div>
     </div>
     <div class="char-modal-ft">
@@ -939,10 +949,14 @@
       <div>
         <div class="char-field-label">標籤</div>
         <div class="tag-mini-editor">
-          <div class="tag-mini-list" id="artist-edit-tags-display"></div>
-          <div class="tag-mini-actions">
+          <div style="display:flex;gap:6px;margin-bottom:6px;">
+            <div style="position:relative;flex:1;">
+              <input id="artist-edit-tag-in" class="inp" type="text" placeholder="輸入後按 Enter..." autocomplete="off" style="width:100%;">
+              <div class="tag-dropdown" id="artist-tag-dd" style="top:100%;left:0;right:0;position:absolute;z-index:200;"></div>
+            </div>
             <button class="btn btn-s" type="button" onclick="openArtistTagsPicker()">選擇標籤</button>
           </div>
+          <div class="tag-mini-list" id="artist-edit-tags-display"></div>
         </div>
       </div>
       <div>
@@ -1009,10 +1023,14 @@
       <div>
         <div class="char-field-label">標籤</div>
         <div class="tag-mini-editor">
-          <div class="tag-mini-list" id="char-edit-tags-display"></div>
-          <div class="tag-mini-actions">
+          <div style="display:flex;gap:6px;margin-bottom:6px;">
+            <div style="position:relative;flex:1;">
+              <input id="char-edit-tag-in" class="inp" type="text" placeholder="輸入後按 Enter..." autocomplete="off" style="width:100%;">
+              <div class="tag-dropdown" id="char-tag-dd" style="top:100%;left:0;right:0;position:absolute;z-index:200;"></div>
+            </div>
             <button class="btn btn-s" type="button" onclick="openCharTagsPicker()">選擇標籤</button>
           </div>
+          <div class="tag-mini-list" id="char-edit-tags-display"></div>
         </div>
       </div>
       <div>
@@ -1099,6 +1117,37 @@
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
       <button class="btn btn-s btn-out" onclick="closeGalViewPopup()">取消</button>
       <button class="btn btn-p" onclick="confirmAddGalView()">新增</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ADD NOTES VIEW POPUP ── -->
+<div class="gal-view-popup-overlay" id="notes-view-popup" onclick="closeNotesViewPopup(event)">
+  <div class="gal-view-popup" onclick="event.stopPropagation()">
+    <h3>新增筆記本分頁</h3>
+    <div class="fg">
+      <label>分頁名稱</label>
+      <input type="text" id="notes-view-name" placeholder="例：正向技巧" style="width:100%;">
+    </div>
+    <div class="fg">
+      <div class="gal-view-filter-block">
+        <div class="gal-view-filter-title">顯示這些 tag</div>
+        <div class="gal-view-filter-help">筆記至少要包含其中一個 tag，才會出現在這個分頁。不選 = 不限制。</div>
+        <input type="search" id="notes-view-include-search" placeholder="搜尋要顯示的 tag..." oninput="renderNotesViewTagPicker('include')"
+          style="width:100%;margin-bottom:0;">
+        <div class="gal-view-tag-list" id="notes-view-include-list"></div>
+      </div>
+      <div class="gal-view-filter-block">
+        <div class="gal-view-filter-title">隱藏這些 tag</div>
+        <div class="gal-view-filter-help">只要筆記含有其中任一個 tag，就會被排除。隱藏條件優先。</div>
+        <input type="search" id="notes-view-exclude-search" placeholder="搜尋要隱藏的 tag..." oninput="renderNotesViewTagPicker('exclude')"
+          style="width:100%;margin-bottom:0;">
+        <div class="gal-view-tag-list" id="notes-view-exclude-list"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+      <button class="btn btn-s btn-out" onclick="closeNotesViewPopup()">取消</button>
+      <button class="btn btn-p" onclick="confirmAddNotesView()">新增</button>
     </div>
   </div>
 </div>
@@ -2180,6 +2229,7 @@ async function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   loadGalViews();
+  loadNotesViews();
   await refreshAllKnownTags();
   await loadGallery();
   renderGalViewTabs();
@@ -2398,6 +2448,71 @@ function removeCharEditTag(tag) {
   renderCharEditTags();
 }
 
+// ── Shared inline tag input binding ──
+function bindInlineTagInput({ inputId, ddId, getTags, addTag, removeLastTag }) {
+  const tagIn = document.getElementById(inputId);
+  const dd    = document.getElementById(ddId);
+  if (!tagIn || !dd) return;
+  tagIn.value = '';
+  dd.style.display = 'none';
+
+  tagIn.oninput = function() {
+    const val = tagIn.value.trim();
+    if (!val) { dd.style.display = 'none'; return; }
+    const current = getTags();
+    const matches = allKnownTags
+      .filter(t => normalizeTagName(t.name).includes(normalizeTagName(val)) && !current.includes(t.name))
+      .slice(0, 8);
+    if (!matches.length) { dd.style.display = 'none'; return; }
+    dd.innerHTML = '';
+    matches.forEach(t => {
+      const item = document.createElement('div');
+      item.className = 'tag-dd-item';
+      item.textContent = t.name;
+      item.addEventListener('mousedown', () => {
+        addTag(t.name);
+        tagIn.value = '';
+        dd.style.display = 'none';
+      });
+      dd.appendChild(item);
+    });
+    dd.style.display = 'block';
+  };
+
+  tagIn.onkeydown = function(e) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const val = tagIn.value.trim().replace(/,$/, '');
+      if (!val) return;
+      const match = allKnownTags.find(t => normalizeTagName(t.name) === normalizeTagName(val));
+      if (match) {
+        addTag(match.name);
+        tagIn.value = '';
+        dd.style.display = 'none';
+      } else {
+        dd.innerHTML = '';
+        const newItem = document.createElement('div');
+        newItem.className = 'tag-dd-item tag-dd-new';
+        newItem.textContent = `＋ 建立新 tag「${val}」`;
+        newItem.addEventListener('mousedown', () => {
+          addTag(val);
+          dbSaveTag(val).then(() => refreshAllKnownTags());
+          tagIn.value = '';
+          dd.style.display = 'none';
+        });
+        dd.appendChild(newItem);
+        dd.style.display = 'block';
+      }
+      return;
+    }
+    if (e.key === 'Backspace' && !tagIn.value && removeLastTag) {
+      removeLastTag();
+    }
+  };
+
+  tagIn.onblur = () => setTimeout(() => { dd.style.display = 'none'; }, 150);
+}
+
 function openArtistTagsPicker() {
   openTagPicker({
     title: '選擇繪師標籤',
@@ -2424,6 +2539,21 @@ function openCharTagsPicker() {
     onConfirm: tags => {
       charEditTagsState = dedupeTags(tags);
       renderCharEditTags();
+    }
+  });
+}
+
+function openNoteTagsPicker() {
+  openTagPicker({
+    title: '選擇筆記標籤',
+    help: '用既有 tag 分類 Prompt 筆記，方便後續在分頁中篩選。',
+    initialTags: noteEditTags,
+    multi: true,
+    allowCreate: true,
+    createLabel: '建立新的筆記標籤',
+    onConfirm: tags => {
+      noteEditTags = dedupeTags(tags);
+      renderNoteEditTagChips();
     }
   });
 }
@@ -3167,6 +3297,23 @@ async function openArtistEditModal(id) {
     renderArtistEditTags();
     renderArtistEditThumb(null);
   }
+  bindInlineTagInput({
+    inputId: 'artist-edit-tag-in',
+    ddId: 'artist-tag-dd',
+    getTags: () => artistEditTagsState,
+    addTag: name => {
+      name = name.trim();
+      if (!name || artistEditTagsState.includes(name)) return;
+      artistEditTagsState = dedupeTags([...artistEditTagsState, name]);
+      renderArtistEditTags();
+    },
+    removeLastTag: () => {
+      if (artistEditTagsState.length) {
+        artistEditTagsState = artistEditTagsState.slice(0, -1);
+        renderArtistEditTags();
+      }
+    }
+  });
   document.getElementById('artist-edit-modal').classList.add('open');
 }
 
@@ -3667,6 +3814,23 @@ async function openCharEditModal(id) {
     renderCharEditThumb(null);
   }
   renderCharEditRefList();
+  bindInlineTagInput({
+    inputId: 'char-edit-tag-in',
+    ddId: 'char-tag-dd',
+    getTags: () => charEditTagsState,
+    addTag: name => {
+      name = name.trim();
+      if (!name || charEditTagsState.includes(name)) return;
+      charEditTagsState = dedupeTags([...charEditTagsState, name]);
+      renderCharEditTags();
+    },
+    removeLastTag: () => {
+      if (charEditTagsState.length) {
+        charEditTagsState = charEditTagsState.slice(0, -1);
+        renderCharEditTags();
+      }
+    }
+  });
   document.getElementById('char-edit-modal').classList.add('open');
 }
 
@@ -3833,6 +3997,13 @@ async function onGalPickerSelect(imgId) {
       }
     }
     toast('已從圖庫載入精確參考圖','ok');
+  } else if (galPickerPurpose === 'noteImage') {
+    if (!noteEditPreviewImageIds.includes(imgId)) {
+      noteEditPreviewImageIds.push(imgId);
+      renderNoteEditPreviews();
+    } else {
+      toast('這張圖已在示意圖清單中','warn');
+    }
   } else if (galPickerCallback) {
     galPickerCallback(img);
   }
@@ -4738,7 +4909,7 @@ function openModal(id, url) {
   if (!img) return;
   modalImageId = id;
   modalMeta = img.metadata || {};
-
+  if (!url) url = URL.createObjectURL(new Blob([img.data], { type:'image/png' }));
   document.getElementById('modal-img').src = url;
   const meta = modalMeta;
   const tags = (img.tags||[]);
@@ -4948,11 +5119,139 @@ async function dbDeleteNote(id) {
   return dbOp(db,'prompt_notes','readwrite', s => s.delete(id));
 }
 
+// ═══════════════════════════════════════════
+// NOTES VIEW TABS
+// ═══════════════════════════════════════════
+const NOTES_VIEWS_KEY = 'nai_notes_views_v1';
+let notesViews = [];          // [{id, name, includeTags:[], excludeTags:[]}]
+let activeNotesViewId = 'all';
+let notesViewIncludeTags = new Set();
+let notesViewExcludeTags = new Set();
+
+function loadNotesViews() {
+  try {
+    const raw = localStorage.getItem(NOTES_VIEWS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    notesViews = Array.isArray(parsed) ? parsed.map(v => ({
+      id: v.id,
+      name: v.name,
+      includeTags: Array.isArray(v.includeTags) ? v.includeTags : [],
+      excludeTags: Array.isArray(v.excludeTags) ? v.excludeTags : []
+    })).filter(v => v.id && v.name) : [];
+  } catch { notesViews = []; }
+}
+
+function saveNotesViews() {
+  localStorage.setItem(NOTES_VIEWS_KEY, JSON.stringify(notesViews));
+}
+
+function applyNotesViewFilter(note, view) {
+  if (!view) return true;
+  const noteTags = note.tags || [];
+  const hasExclude = view.excludeTags?.length && view.excludeTags.some(t => noteTags.includes(t));
+  if (hasExclude) return false;
+  if (view.includeTags?.length) return view.includeTags.some(t => noteTags.includes(t));
+  return true;
+}
+
+function renderNotesViewTabs() {
+  const bar = document.getElementById('notes-views-bar');
+  if (!bar) return;
+  const allActive = activeNotesViewId === 'all';
+  let html = `<button class="gal-view-tab ${allActive?'active':''}" onclick="switchNotesView('all')">全部</button>`;
+  notesViews.forEach(v => {
+    const active = activeNotesViewId === v.id;
+    const modeIcon = (v.excludeTags?.length && !v.includeTags?.length) ? '🚫 ' : '';
+    html += `<button class="gal-view-tab ${active?'active':''}" onclick="switchNotesView('${v.id}')">
+      ${modeIcon}${esc(v.name)}
+      <span class="gal-view-tab-del" onclick="event.stopPropagation();deleteNotesView('${v.id}')" title="刪除">×</span>
+    </button>`;
+  });
+  html += `<button class="gal-view-add-btn" onclick="openNotesViewPopup()" title="新增筆記本分頁">＋</button>`;
+  bar.innerHTML = html;
+}
+
+function switchNotesView(id) {
+  activeNotesViewId = id;
+  renderNotesViewTabs();
+  renderNotesPage();
+}
+
+function deleteNotesView(id) {
+  notesViews = notesViews.filter(v => v.id !== id);
+  saveNotesViews();
+  if (activeNotesViewId === id) activeNotesViewId = 'all';
+  renderNotesViewTabs();
+  renderNotesPage();
+}
+
+function openNotesViewPopup() {
+  document.getElementById('notes-view-name').value = '';
+  notesViewIncludeTags = new Set();
+  notesViewExcludeTags = new Set();
+  document.getElementById('notes-view-include-search').value = '';
+  document.getElementById('notes-view-exclude-search').value = '';
+  renderNotesViewTagPicker('include');
+  renderNotesViewTagPicker('exclude');
+  document.getElementById('notes-view-popup').classList.add('open');
+}
+
+function closeNotesViewPopup(e) {
+  if (e && e.target !== document.getElementById('notes-view-popup')) return;
+  document.getElementById('notes-view-popup').classList.remove('open');
+}
+
+function toggleNotesViewTag(kind, tag) {
+  const targetSet = kind === 'exclude' ? notesViewExcludeTags : notesViewIncludeTags;
+  const otherSet  = kind === 'exclude' ? notesViewIncludeTags : notesViewExcludeTags;
+  if (targetSet.has(tag)) targetSet.delete(tag);
+  else { targetSet.add(tag); otherSet.delete(tag); }
+  renderNotesViewTagPicker(kind === 'exclude' ? 'include' : 'exclude');
+  renderNotesViewTagPicker(kind);
+}
+
+function renderNotesViewTagPicker(kind) {
+  const isExclude = kind === 'exclude';
+  const q = (document.getElementById(isExclude ? 'notes-view-exclude-search' : 'notes-view-include-search').value||'').toLowerCase();
+  const allTags = [...new Set(notesData.flatMap(n => n.tags||[]))].sort();
+  const filtered = allTags.filter(t => !q || t.toLowerCase().includes(q));
+  const list = document.getElementById(isExclude ? 'notes-view-exclude-list' : 'notes-view-include-list');
+  const selected = isExclude ? notesViewExcludeTags : notesViewIncludeTags;
+  if (!filtered.length) {
+    list.innerHTML = `<span style="font-size:.75rem;color:var(--txt2);">${allTags.length?'沒有符合的 tag':'筆記目前沒有 tag'}</span>`;
+    return;
+  }
+  list.innerHTML = filtered.map(t => {
+    const sel = selected.has(t);
+    return `<span class="gal-view-tag-chip ${sel?'sel':''}" data-tag="${esc(t)}" onclick="toggleNotesViewTag('${kind}', this.dataset.tag)">${esc(t)}</span>`;
+  }).join('');
+}
+
+function confirmAddNotesView() {
+  const name = document.getElementById('notes-view-name').value.trim();
+  if (!name) { toast('請輸入分頁名稱','warn'); return; }
+  const includeTags = [...notesViewIncludeTags];
+  const excludeTags = [...notesViewExcludeTags];
+  const id = 'nv_' + Date.now();
+  notesViews.push({ id, name, includeTags, excludeTags });
+  saveNotesViews();
+  document.getElementById('notes-view-popup').classList.remove('open');
+  activeNotesViewId = id;
+  renderNotesViewTabs();
+  renderNotesPage();
+  const parts = [];
+  if (includeTags.length) parts.push(`顯示 ${includeTags.length} 個 tag`);
+  if (excludeTags.length) parts.push(`隱藏 ${excludeTags.length} 個 tag`);
+  const tagLabel = parts.length ? `（${parts.join('，')}）` : '（顯示全部）';
+  toast(`分頁「${name}」已新增 ${tagLabel}`, 'ok');
+}
+
 // ── State ──
 let notesData = [];
 let notesActiveCategory = '';
 let noteEditId = null;
 let noteEditTags = [];
+let noteEditPreviewImageIds = [];
 
 async function loadNotesData() {
   notesData = await dbGetNotes();
@@ -4965,15 +5264,18 @@ function updateNotesCount(n) {
 
 // ── Render ──
 function renderNotesPage() {
+  renderNotesViewTabs();
   buildNotesCategoryFilter();
   const q = (document.getElementById('notes-search')?.value||'').toLowerCase();
+  const activeView = notesViews.find(v => v.id === activeNotesViewId);
   const filtered = notesData.filter(n => {
     const matchQ = !q ||
       n.fragment.toLowerCase().includes(q) ||
       (n.description||'').toLowerCase().includes(q) ||
       (n.tags||[]).some(t => t.toLowerCase().includes(q));
     const matchCat = !notesActiveCategory || n.category === notesActiveCategory;
-    return matchQ && matchCat;
+    const matchView = applyNotesViewFilter(n, activeView);
+    return matchQ && matchCat && matchView;
   });
 
   const grid = document.getElementById('notes-grid');
@@ -4991,6 +5293,17 @@ function renderNotesPage() {
     const tags = (n.tags||[]).map(t => `<span class="char-card-tag">${esc(t)}</span>`).join('');
     const fragEsc = esc(n.fragment);
     const fragJs  = n.fragment.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const previewIds = n.previewImageIds || [];
+    const thumbsHtml = previewIds.length
+      ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">${
+          previewIds.map(imgId => {
+            const gi = galleryData.find(i => i.id === imgId);
+            if (!gi) return '';
+            const thumbUrl = URL.createObjectURL(new Blob([gi.data], { type:'image/png' }));
+            return `<img src="${thumbUrl}" style="width:56px;height:56px;object-fit:cover;border-radius:5px;border:1px solid var(--border);cursor:pointer;" onclick="openModal(${imgId})" title="點擊放大">`;
+          }).join('')
+        }</div>`
+      : '';
     return `<div class="note-card">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
         <span class="note-cat-badge ${catClass}">${catLabel}</span>
@@ -5001,6 +5314,7 @@ function renderNotesPage() {
         <button class="note-fragment-copy" onclick="navigator.clipboard.writeText('${fragJs}').then(()=>toast('已複製','ok'))" title="複製">⎘</button>
       </div>
       ${n.description ? `<div class="note-desc">${esc(n.description)}</div>` : ''}
+      ${thumbsHtml}
       <div class="note-insert-row">
         <button class="note-ins-pos" onclick="insertNoteToPrompt(${n.id},'pos')" title="插入到正向 prompt">＋ 正向</button>
         <button class="note-ins-neg" onclick="insertNoteToPrompt(${n.id},'neg')" title="插入到負向 prompt">＋ 負向</button>
@@ -5051,6 +5365,7 @@ function insertNoteToPrompt(noteId, target) {
 function openNoteEditModal(id) {
   noteEditId = id;
   noteEditTags = [];
+  noteEditPreviewImageIds = [];
   if (id) {
     const n = notesData.find(x => x.id === id);
     if (!n) return;
@@ -5059,6 +5374,7 @@ function openNoteEditModal(id) {
     document.getElementById('note-edit-desc').value = n.description||'';
     document.getElementById('note-edit-category').value = n.category||'effect';
     noteEditTags = [...(n.tags||[])];
+    noteEditPreviewImageIds = [...(n.previewImageIds||[])];
   } else {
     document.getElementById('note-edit-title').textContent = '新增筆記';
     document.getElementById('note-edit-fragment').value = '';
@@ -5066,15 +5382,22 @@ function openNoteEditModal(id) {
     document.getElementById('note-edit-category').value = 'effect';
   }
   renderNoteEditTagChips();
+  renderNoteEditPreviews();
   document.getElementById('note-edit-modal').classList.add('open');
-  // bind tag input
-  const tagIn = document.getElementById('note-edit-tag-in');
-  tagIn.value = '';
-  tagIn.oninput = onNoteTagInput;
-  tagIn.onkeydown = onNoteTagKeydown;
-  tagIn.onblur = () => setTimeout(() => {
-    document.getElementById('note-tag-dd').style.display='none';
-  }, 150);
+  bindInlineTagInput({
+    inputId: 'note-edit-tag-in',
+    ddId: 'note-tag-dd',
+    getTags: () => noteEditTags,
+    addTag: name => {
+      name = name.trim();
+      if (!name || noteEditTags.includes(name)) return;
+      noteEditTags.push(name);
+      renderNoteEditTagChips();
+    },
+    removeLastTag: () => {
+      if (noteEditTags.length) { noteEditTags.pop(); renderNoteEditTagChips(); }
+    }
+  });
 }
 
 function closeNoteEditModal() {
@@ -5087,6 +5410,26 @@ function renderNoteEditTagChips() {
     noteEditTags.map(t =>
       `<span class="tag-chip">${esc(t)}<button class="tag-chip-x" onclick="removeNoteEditTag('${esc(t)}')">×</button></span>`
     ).join('');
+}
+
+function renderNoteEditPreviews() {
+  const wrap = document.getElementById('note-edit-previews');
+  if (!wrap) return;
+  if (!noteEditPreviewImageIds.length) { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = noteEditPreviewImageIds.map(imgId => {
+    const img = galleryData.find(i => i.id === imgId);
+    if (!img) return '';
+    const url = URL.createObjectURL(new Blob([img.data], { type: 'image/png' }));
+    return `<div style="position:relative;width:72px;height:72px;flex-shrink:0;">
+      <img src="${url}" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">
+      <button class="char-ref-remove" onclick="removeNotePreviewImage(${imgId})" title="移除">×</button>
+    </div>`;
+  }).join('');
+}
+
+function removeNotePreviewImage(imgId) {
+  noteEditPreviewImageIds = noteEditPreviewImageIds.filter(id => id !== imgId);
+  renderNoteEditPreviews();
 }
 
 function removeNoteEditTag(name) {
@@ -5148,6 +5491,7 @@ async function saveNoteEdit() {
     description: document.getElementById('note-edit-desc').value.trim(),
     category: document.getElementById('note-edit-category').value,
     tags: [...noteEditTags],
+    previewImageIds: [...noteEditPreviewImageIds],
     timestamp: Date.now()
   };
   if (noteEditId) {
