@@ -1645,7 +1645,7 @@ function renderSimpleTagList(containerId, tags, emptyText, removeFnName) {
     el.innerHTML = `<span class="tag-mini-empty">${esc(emptyText)}</span>`;
     return;
   }
-  el.innerHTML = tags.map(t => `<span class="tag-chip" style="${getTagChipStyle(t)}">${esc(t)}${removeFnName ? `<button class="tag-chip-x" style="color:${getTagColor(t)}" onclick="${removeFnName}(${JSON.stringify(t)})">×</button>` : ''}</span>`).join('');
+  el.innerHTML = tags.map(t => `<span class="tag-chip" style="${getTagChipStyle(t)}">${esc(t)}${removeFnName ? `<button class="tag-chip-x" data-tag="${esc(t)}" style="color:${getTagColor(t)}" onclick="${removeFnName}(this.dataset.tag)">×</button>` : ''}</span>`).join('');
 }
 
 function openTagPicker(options) {
@@ -1679,7 +1679,7 @@ function renderTagPicker() {
   const selected = [...tagPickerState.selected];
   const selectedEl = document.getElementById('tag-picker-selected');
   selectedEl.innerHTML = selected.length
-    ? selected.map(t => `<span class="tag-chip" style="${getTagChipStyle(t)}">${esc(t)}<button class="tag-chip-x" style="color:${getTagColor(t)}" onclick="toggleTagPickerSelection(${JSON.stringify(t)})">×</button></span>`).join('')
+    ? selected.map(t => `<span class="tag-chip" style="${getTagChipStyle(t)}">${esc(t)}<button class="tag-chip-x" data-tag="${esc(t)}" style="color:${getTagColor(t)}" onclick="toggleTagPickerSelection(this.dataset.tag)">×</button></span>`).join('')
     : `<span class="tag-mini-empty">尚未選擇 tag</span>`;
 
   const matches = allKnownTags.filter(t => {
@@ -1689,7 +1689,7 @@ function renderTagPicker() {
   }).slice(0, 120);
   const listEl = document.getElementById('tag-picker-list');
   listEl.innerHTML = matches.length
-    ? matches.map(t => `<span class="tag-picker-chip" style="${getTagChipStyle(t.name)}" onclick="toggleTagPickerSelection(${JSON.stringify(t.name)})">${esc(t.name)}<small>×${t.count}</small></span>`).join('')
+    ? matches.map(t => `<span class="tag-picker-chip" data-tag="${esc(t.name)}" style="${getTagChipStyle(t.name)}" onclick="toggleTagPickerSelection(this.dataset.tag)">${esc(t.name)}<small>×${t.count}</small></span>`).join('')
     : `<span class="tag-mini-empty">${allKnownTags.length ? '沒有符合的既有 tag' : '目前還沒有任何既有 tag'}</span>`;
 
   const createEl = document.getElementById('tag-picker-create');
@@ -1807,11 +1807,11 @@ function renderTagManager() {
       </div>
       <div class="tag-manager-actions">
         <label style="font-size:.75rem;color:var(--txt2);display:flex;align-items:center;gap:6px;">顏色
-          <input class="tag-color-input" type="color" value="${esc(normalizeHexColor(meta.color))}" onchange="updateTagColor(${JSON.stringify(name)}, this.value)">
+          <input class="tag-color-input" type="color" data-tag="${esc(name)}" value="${esc(normalizeHexColor(meta.color))}" onchange="updateTagColor(this.dataset.tag, this.value)">
         </label>
       </div>
       <div class="tag-manager-actions">
-        <button class="btn btn-d btn-s" onclick="deleteTagEverywhere(${JSON.stringify(name)})">刪除</button>
+        <button class="btn btn-d btn-s" data-tag="${esc(name)}" onclick="deleteTagEverywhere(this.dataset.tag)">刪除</button>
       </div>
     </div>`;
   }).join('');
@@ -2114,11 +2114,11 @@ function renderTagDD(matches, input) {
   const dd = document.getElementById('tag-dd');
   if (!matches.length && !input) { dd.style.display='none'; return; }
   const items = matches.map(t =>
-    `<div class="tag-dd-item" onmousedown="addTag(${JSON.stringify(t.name)});document.getElementById('tag-text-in').value='';document.getElementById('tag-dd').style.display='none'">${esc(t.name)} <small style="color:var(--txt2)">×${t.count}</small></div>`
+    `<div class="tag-dd-item" data-tag="${esc(t.name)}" onmousedown="addTag(this.dataset.tag);document.getElementById('tag-text-in').value='';document.getElementById('tag-dd').style.display='none'">${esc(t.name)} <small style="color:var(--txt2)">×${t.count}</small></div>`
   );
   if (input && !findExistingTag(input)) {
     const similar = findSimilarTags(input);
-    items.push(`<div class="tag-dd-item tag-dd-new" onmousedown="openGenerateTagPicker(${JSON.stringify(input)});document.getElementById('tag-dd').style.display='none'">＋ 建立/選擇「${esc(input)}」${similar.length ? ` <small style="color:var(--warn);">（有相近 tag）</small>` : ''}</div>`);
+    items.push(`<div class="tag-dd-item tag-dd-new" data-tag="${esc(input)}" onmousedown="openGenerateTagPicker(this.dataset.tag);document.getElementById('tag-dd').style.display='none'">＋ 建立/選擇「${esc(input)}」${similar.length ? ` <small style="color:var(--warn);">（有相近 tag）</small>` : ''}</div>`);
   }
   dd.innerHTML = items.join('');
   dd.style.display = 'block';
@@ -4316,7 +4316,7 @@ function openModal(id, url) {
     <div>
       <div class="modal-section-title">Tags</div>
       <div class="modal-tag-wrap" id="modal-tags">
-        ${tags.map(t=>`<span class="modal-tag" style="${getTagChipStyle(t, 0.12)}" onclick="removeModalTag(${JSON.stringify(t)})" title="點擊移除">${esc(t)} ×</span>`).join('')}
+        ${tags.map(t=>`<span class="modal-tag" data-tag="${esc(t)}" style="${getTagChipStyle(t, 0.12)}" onclick="removeModalTag(this.dataset.tag)" title="點擊移除">${esc(t)} ×</span>`).join('')}
         <button class="btn btn-s btn-icon" onclick="addModalTag()" title="新增 tag" style="font-size:.75rem;padding:3px 8px;">＋</button>
       </div>
     </div>
