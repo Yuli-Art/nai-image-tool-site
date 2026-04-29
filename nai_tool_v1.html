@@ -342,15 +342,16 @@
       display:none;align-items:center;justify-content:center;}
     .gal-view-popup-overlay.open{display:flex;}
     .gal-view-popup{background:var(--bg2);border:1px solid var(--border);border-radius:12px;
-      padding:20px;width:320px;max-width:90vw;}
+      padding:20px;width:340px;max-width:92vw;}
     .gal-view-popup h3{font-size:.9rem;font-weight:700;margin-bottom:14px;}
-    .gal-view-cat-list{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 14px;}
-    .gal-view-cat-chip{background:var(--bg3);border:1px solid var(--border);border-radius:6px;
-      padding:4px 10px;font-size:.78rem;cursor:pointer;transition:background .15s,border-color .15s;}
-    .gal-view-cat-chip.sel{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
-    /* imageCategory badge in gallery modal */
-    .img-cat-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:600;
-      background:var(--bg3);color:var(--txt2);}
+    .gal-view-mode-row{display:flex;gap:6px;margin-top:4px;}
+    .gal-view-mode-btn{background:var(--bg3);border:1px solid var(--border);border-radius:6px;
+      color:var(--txt2);font-size:.78rem;padding:5px 10px;cursor:pointer;transition:background .15s,border-color .15s;}
+    .gal-view-mode-btn.active{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
+    .gal-view-tag-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;max-height:120px;overflow-y:auto;padding:2px;}
+    .gal-view-tag-chip{background:var(--bg3);border:1px solid var(--border);border-radius:5px;
+      padding:3px 9px;font-size:.75rem;cursor:pointer;transition:background .15s,border-color .15s;}
+    .gal-view-tag-chip.sel{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
 
     /* Precise Reference */
     .pref-dropzone{border:1.5px dashed var(--border);border-radius:10px;padding:22px 12px;text-align:center;
@@ -923,19 +924,22 @@
     <h3>新增圖庫分頁</h3>
     <div class="fg">
       <label>分頁名稱</label>
-      <input type="text" id="gal-view-name" placeholder="例：一般生圖" style="width:100%;">
+      <input type="text" id="gal-view-name" placeholder="例：繪師參考" style="width:100%;">
     </div>
     <div class="fg">
-      <label>只顯示以下類別 <span style="font-size:.7rem;color:var(--txt2);">（不選 = 顯示全部）</span></label>
-      <div class="gal-view-cat-list" id="gal-view-cat-list">
-        <span class="gal-view-cat-chip" data-cat="general">一般生圖</span>
-        <span class="gal-view-cat-chip" data-cat="artist_preview">繪師參考</span>
-        <span class="gal-view-cat-chip" data-cat="char_preview">角色縮圖</span>
-        <span class="gal-view-cat-chip" data-cat="char_ref">角色 Ref</span>
-        <span class="gal-view-cat-chip" data-cat="blend_preview">混搭預覽</span>
+      <label>篩選模式</label>
+      <div class="gal-view-mode-row">
+        <button class="gal-view-mode-btn active" id="gal-view-mode-include" onclick="setGalViewMode('include')">只顯示</button>
+        <button class="gal-view-mode-btn" id="gal-view-mode-exclude" onclick="setGalViewMode('exclude')">隱藏</button>
       </div>
     </div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;">
+    <div class="fg">
+      <label>以下 tag 的圖 <span style="font-size:.7rem;color:var(--txt2);">（不選 = 顯示全部）</span></label>
+      <input type="search" id="gal-view-tag-search" placeholder="搜尋 tag..." oninput="renderGalViewTagPicker()"
+        style="width:100%;margin-bottom:0;">
+      <div class="gal-view-tag-list" id="gal-view-tag-list"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
       <button class="btn btn-s btn-out" onclick="closeGalViewPopup()">取消</button>
       <button class="btn btn-p" onclick="confirmAddGalView()">新增</button>
     </div>
@@ -2086,16 +2090,9 @@ function renderVibeList() {
 // GALLERY VIEW TABS
 // ═══════════════════════════════════════════
 const GAL_VIEWS_KEY = 'nai_gal_views_v1';
-let galViews = [];          // [{id, name, includeCategories:[]}]
+let galViews = [];          // [{id, name, filterMode:'include'|'exclude', filterTags:[]}]
 let activeGalViewId = 'all';
-
-const CAT_LABELS = {
-  general:        '一般生圖',
-  artist_preview: '繪師參考',
-  char_preview:   '角色縮圖',
-  char_ref:       '角色 Ref',
-  blend_preview:  '混搭預覽'
-};
+let galViewMode = 'include';  // current popup mode
 
 function loadGalViews() {
   try {
@@ -2114,8 +2111,9 @@ function renderGalViewTabs() {
   let html = `<button class="gal-view-tab ${allActive?'active':''}" onclick="switchGalView('all')">全部</button>`;
   galViews.forEach(v => {
     const active = activeGalViewId === v.id;
+    const modeIcon = v.filterMode === 'exclude' ? '🚫 ' : '';
     html += `<button class="gal-view-tab ${active?'active':''}" onclick="switchGalView('${v.id}')">
-      ${esc(v.name)}
+      ${modeIcon}${esc(v.name)}
       <span class="gal-view-tab-x" onclick="event.stopPropagation();deleteGalView('${v.id}')" title="刪除">×</span>
     </button>`;
   });
@@ -2137,9 +2135,18 @@ function deleteGalView(id) {
   filterGallery();
 }
 
+function setGalViewMode(mode) {
+  galViewMode = mode;
+  document.getElementById('gal-view-mode-include').classList.toggle('active', mode==='include');
+  document.getElementById('gal-view-mode-exclude').classList.toggle('active', mode==='exclude');
+}
+
 function openGalViewPopup() {
   document.getElementById('gal-view-name').value = '';
-  document.querySelectorAll('.gal-view-cat-chip').forEach(c => c.classList.remove('sel'));
+  galViewMode = 'include';
+  setGalViewMode('include');
+  document.getElementById('gal-view-tag-search').value = '';
+  renderGalViewTagPicker();
   document.getElementById('gal-view-popup').classList.add('open');
 }
 
@@ -2148,26 +2155,38 @@ function closeGalViewPopup(e) {
   document.getElementById('gal-view-popup').classList.remove('open');
 }
 
+function renderGalViewTagPicker() {
+  const q = (document.getElementById('gal-view-tag-search').value||'').toLowerCase();
+  const allTags = [...new Set(galleryData.flatMap(img => img.tags||[]))].sort();
+  const filtered = allTags.filter(t => !q || t.toLowerCase().includes(q));
+  const list = document.getElementById('gal-view-tag-list');
+  // Preserve currently selected tags before re-render
+  const alreadySel = new Set([...list.querySelectorAll('.gal-view-tag-chip.sel')].map(c => c.dataset.tag));
+  if (!filtered.length) {
+    list.innerHTML = `<span style="font-size:.75rem;color:var(--txt2);">${allTags.length?'沒有符合的 tag':'圖庫目前沒有 tag'}</span>`;
+    return;
+  }
+  list.innerHTML = filtered.map(t => {
+    const sel = alreadySel.has(t);
+    return `<span class="gal-view-tag-chip ${sel?'sel':''}" data-tag="${esc(t)}" onclick="this.classList.toggle('sel')">${esc(t)}</span>`;
+  }).join('');
+}
+
 function confirmAddGalView() {
   const name = document.getElementById('gal-view-name').value.trim();
   if (!name) { toast('請輸入分頁名稱','warn'); return; }
-  const cats = [...document.querySelectorAll('.gal-view-cat-chip.sel')].map(c => c.dataset.cat);
+  const tags = [...document.querySelectorAll('#gal-view-tag-list .gal-view-tag-chip.sel')].map(c => c.dataset.tag);
   const id = 'v_' + Date.now();
-  galViews.push({ id, name, includeCategories: cats });
+  galViews.push({ id, name, filterMode: galViewMode, filterTags: tags });
   saveGalViews();
   document.getElementById('gal-view-popup').classList.remove('open');
   activeGalViewId = id;
   renderGalViewTabs();
   filterGallery();
-  toast(`分頁「${name}」已新增`, 'ok');
+  const modeLabel = galViewMode === 'include' ? '只顯示' : '隱藏';
+  const tagLabel = tags.length ? `（${modeLabel} ${tags.length} 個 tag）` : '（顯示全部）';
+  toast(`分頁「${name}」已新增 ${tagLabel}`, 'ok');
 }
-
-// Toggle category chips in popup
-document.addEventListener('click', e => {
-  if (e.target.classList.contains('gal-view-cat-chip')) {
-    e.target.classList.toggle('sel');
-  }
-});
 
 // ═══════════════════════════════════════════
 // ARTIST STYLE LIBRARY
@@ -3528,7 +3547,6 @@ function toggleTagFilter(tag) {
 function filterGallery() {
   const q = (document.getElementById('gal-search').value||'').toLowerCase();
   const activeView = galViews.find(v => v.id === activeGalViewId);
-  const allowedCats = activeView?.includeCategories?.length ? activeView.includeCategories : null;
   filteredData = galleryData.filter(img => {
     const meta = img.metadata || {};
     const matchSearch = !q ||
@@ -3536,11 +3554,17 @@ function filterGallery() {
       (img.tags||[]).some(t => t.toLowerCase().includes(q));
     const matchTags = activeTagFilters.size === 0 ||
       [...activeTagFilters].every(t => (img.tags||[]).includes(t));
-    const matchView = !allowedCats ||
-      allowedCats.includes(img.imageCategory || 'general');
+    const matchView = applyGalViewFilter(img, activeView);
     return matchSearch && matchTags && matchView;
   });
   renderGallery();
+}
+
+function applyGalViewFilter(img, view) {
+  if (!view || !view.filterTags?.length) return true;
+  const imgTags = img.tags || [];
+  const hasAny = view.filterTags.some(t => imgTags.includes(t));
+  return view.filterMode === 'exclude' ? !hasAny : hasAny;
 }
 
 function renderGallery() {
@@ -3576,7 +3600,6 @@ function renderGallery() {
 function filterGallery_noRender() {
   const q = (document.getElementById('gal-search').value||'').toLowerCase();
   const activeView = galViews.find(v => v.id === activeGalViewId);
-  const allowedCats = activeView?.includeCategories?.length ? activeView.includeCategories : null;
   filteredData = galleryData.filter(img => {
     const meta = img.metadata || {};
     const matchSearch = !q ||
@@ -3584,8 +3607,7 @@ function filterGallery_noRender() {
       (img.tags||[]).some(t => t.toLowerCase().includes(q));
     const matchTags = activeTagFilters.size===0 ||
       [...activeTagFilters].every(t=>(img.tags||[]).includes(t));
-    const matchView = !allowedCats ||
-      allowedCats.includes(img.imageCategory || 'general');
+    const matchView = applyGalViewFilter(img, activeView);
     return matchSearch && matchTags && matchView;
   });
 }
