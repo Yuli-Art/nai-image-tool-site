@@ -59,6 +59,8 @@
     .btn-s:hover:not(:disabled){border-color:var(--accent);background:var(--accent-l);}
     .btn-d{background:rgba(239,68,68,.15);color:var(--err);border:1px solid rgba(239,68,68,.3);}
     .btn-d:hover{background:rgba(239,68,68,.25);}
+    .btn-warn{background:rgba(245,158,11,.15);color:var(--warn);border:1px solid rgba(245,158,11,.3);}
+    .btn-warn:hover{background:rgba(245,158,11,.25);}
     .btn-full{width:100%;}
     .btn-gen{padding:13px;font-size:1rem;letter-spacing:.03em;}
     .btn-icon{padding:6px 10px;font-size:1rem;}
@@ -327,6 +329,51 @@
     .artist-quick-btn{background:none;border:1px solid var(--border);border-radius:6px;color:var(--txt2);font-size:.7rem;padding:3px 7px;cursor:pointer;white-space:nowrap;transition:background .15s;}
     .artist-quick-btn:hover{background:var(--bg3);color:var(--txt);}
 
+    /* ── BATCH PAGE ── */
+    .batch-task-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;
+      display:flex;align-items:flex-start;gap:12px;transition:border-color .2s,background .2s;}
+    .batch-task-card.bt-running{border-color:var(--accent);background:var(--accent-l);}
+    .batch-task-card.bt-done{opacity:.55;}
+    .batch-task-num{width:26px;height:26px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);
+      display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;flex-shrink:0;margin-top:2px;}
+    .batch-task-num.bt-done-num{background:rgba(16,185,129,.2);border-color:rgba(16,185,129,.4);color:#10b981;}
+    .batch-task-num.bt-run-num{background:var(--accent-l);border-color:var(--accent);color:var(--accent);animation:blink 1s infinite;}
+    @keyframes blink{0%,100%{opacity:1;}50%{opacity:.4;}}
+    .batch-task-body{flex:1;min-width:0;}
+    .batch-task-name{font-weight:600;font-size:.88rem;margin-bottom:3px;}
+    .batch-task-preview{font-size:.75rem;color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:monospace;}
+    .batch-task-meta{font-size:.72rem;color:var(--txt2);margin-top:5px;display:flex;gap:10px;flex-wrap:wrap;}
+    .batch-task-actions{display:flex;gap:6px;flex-shrink:0;align-items:flex-start;}
+    .batch-progress-wrap{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 16px;display:none;}
+    .batch-progress-wrap.visible{display:block;}
+    .batch-progress-bar-outer{background:var(--bg3);border-radius:4px;height:7px;margin-top:7px;overflow:hidden;}
+    .batch-progress-bar-inner{background:var(--accent);border-radius:4px;height:7px;transition:width .35s;}
+    .bt-params-body{padding-top:10px;display:flex;flex-direction:column;gap:10px;}
+    .bt-source-tag{display:inline-flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border);
+      border-radius:12px;padding:3px 10px;font-size:.75rem;cursor:pointer;transition:background .15s;}
+    .bt-source-tag:hover{background:var(--accent-l);border-color:var(--accent);}
+    .bt-source-tag.sel{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
+    .bt-note-item{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer;}
+    .bt-note-item:last-child{border-bottom:none;}
+    .bt-note-item:hover{background:var(--bg3);border-radius:6px;padding-left:4px;}
+    .bt-note-check{width:16px;height:16px;flex-shrink:0;margin-top:2px;accent-color:var(--accent);}
+    .batch-ab-btn{background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.3);color:#8b5cf6;
+      border-radius:6px;font-size:.75rem;padding:4px 10px;cursor:pointer;transition:background .15s;}
+    .batch-ab-btn:hover{background:rgba(139,92,246,.22);}
+    .batch-task-card.bt-selected{border-color:var(--accent);background:var(--accent-l);}
+    .batch-task-cb{width:18px;height:18px;flex-shrink:0;margin-top:4px;accent-color:var(--accent);cursor:pointer;}
+
+    /* ── BATCH PRESETS MODAL ── */
+    .batch-presets-overlay{position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;align-items:center;justify-content:center;z-index:1100;padding:16px;}
+    .batch-presets-overlay.open{display:flex;}
+    .batch-presets-box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;width:100%;max-width:520px;max-height:82vh;display:flex;flex-direction:column;overflow:hidden;}
+    .batch-preset-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);cursor:default;transition:background .1s;}
+    .batch-preset-item:last-child{border-bottom:none;}
+    .batch-preset-item:hover{background:var(--bg3);}
+    .batch-preset-meta{flex:1;min-width:0;}
+    .batch-preset-name{font-size:.88rem;font-weight:600;color:var(--txt);}
+    .batch-preset-info{font-size:.74rem;color:var(--txt2);margin-top:2px;}
+
     /* ── PROMPT 筆記本 ── */
     .note-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;
       display:flex;flex-direction:column;transition:box-shadow .15s;}
@@ -435,6 +482,21 @@
     .vibe-saved-name{flex:1;font-size:.8rem;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
     .vibe-lib-empty{font-size:.78rem;color:var(--txt2);text-align:center;padding:10px;}
 
+    /* ── GEN SUB-NAV ── */
+    .gen-sub-nav{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 12px;
+      display:none;align-items:center;gap:0;flex-shrink:0;}
+    .gen-sub-nav.visible{display:flex;}
+    .gen-sub-tab{background:none;border:none;border-bottom:2px solid transparent;color:var(--txt2);
+      cursor:pointer;padding:8px 16px;font-size:.82rem;font-weight:500;white-space:nowrap;
+      transition:color .15s,border-color .15s;}
+    .gen-sub-tab:hover{color:var(--txt);}
+    .gen-sub-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+    /* ── BATCH INSERT PICKER ── */
+    .bt-insert-item{padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .1s;}
+    .bt-insert-item:last-child{border-bottom:none;}
+    .bt-insert-item:hover{background:var(--bg3);}
+
     /* ── MOBILE ── */
     @media(max-width:768px){
       #page-generate.active{flex-direction:column;}
@@ -493,6 +555,12 @@
     </div>
   </nav>
 
+  <!-- ── GEN SUB-NAV ── -->
+  <div class="gen-sub-nav visible" id="gen-sub-nav">
+    <button class="gen-sub-tab active" id="gen-sub-gen" onclick="showPage('generate')">生圖</button>
+    <button class="gen-sub-tab" id="gen-sub-batch" onclick="showPage('batch')">批次排程</button>
+  </div>
+
   <!-- ── GENERATE PAGE ── -->
   <div id="page-generate" class="page active">
     <div class="left-panel">
@@ -532,14 +600,24 @@
       <div class="card">
         <div class="card-title">Prompt</div>
         <div class="fg">
-          <label>正向 Prompt <span id="db-status" style="font-size:.7rem;color:var(--txt2);font-weight:400;"></span></label>
+          <label style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
+            <span>正向 Prompt <span id="db-status" style="font-size:.7rem;color:var(--txt2);font-weight:400;"></span></span>
+            <div style="display:flex;gap:4px;">
+              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('char', this, 'prompt')">👤 角色</button>
+              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('style', this, 'prompt')">🎨 風格</button>
+              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('note', this, 'prompt')">📝 片段</button>
+            </div>
+          </label>
           <div class="prompt-dd-wrap">
             <textarea id="prompt" rows="5" placeholder="1girl, blue eyes, long hair..."></textarea>
             <div id="prompt-dd" class="prompt-dd"></div>
           </div>
         </div>
         <div class="fg">
-          <label>負向 Prompt（Undesired Content）</label>
+          <label style="display:flex;align-items:center;justify-content:space-between;">
+            <span>負向 Prompt（Undesired Content）</span>
+            <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('note', this, 'neg-prompt')">📝 片段</button>
+          </label>
           <textarea id="neg-prompt" rows="3" placeholder="lowres, bad anatomy..."></textarea>
         </div>
       </div>
@@ -843,7 +921,55 @@
     <div class="gallery-grid" id="vibe-page-grid"></div>
   </div>
 
+  <!-- ── BATCH PAGE ── -->
+  <div id="page-batch" class="page">
+    <div class="batch-progress-wrap" id="batch-progress-wrap">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <span id="batch-progress-text" style="font-size:.82rem;color:var(--txt);font-weight:500;">準備中...</span>
+        <span id="batch-progress-count" style="font-size:.78rem;color:var(--txt2);">0 / 0 張</span>
+      </div>
+      <div class="batch-progress-bar-outer">
+        <div class="batch-progress-bar-inner" id="batch-progress-bar" style="width:0%;"></div>
+      </div>
+    </div>
+    <div class="gallery-toolbar">
+      <span style="font-size:.9rem;font-weight:700;">批次排程</span>
+      <button class="btn btn-p" onclick="openBatchTaskModal(null)">＋ 新增任務</button>
+      <button class="btn btn-s" id="batch-run-btn" onclick="startBatch()">▶ 開始生圖</button>
+      <button class="btn btn-warn" id="batch-pause-btn" onclick="batchTogglePause()" style="display:none;">⏸ 暫停</button>
+      <button class="btn btn-d" id="batch-stop-btn" onclick="batchStop()" style="display:none;">■ 停止</button>
+      <div style="flex:1;"></div>
+      <button class="btn btn-s btn-out" onclick="clearDoneBatchTasks()">清除完成</button>
+      <button class="btn btn-s btn-out" onclick="saveCurrentAsPreset()">💾 存記錄</button>
+      <button class="btn btn-s btn-out" onclick="openBatchPresetsModal()">📂 記錄庫</button>
+      <button class="btn btn-s" id="batch-sel-mode-btn" onclick="toggleBatchSelectMode()">多選</button>
+    </div>
+    <div class="gallery-actions" id="batch-select-actions">
+      <span class="gallery-sel-count" id="batch-sel-count">已選 0 個</span>
+      <button class="btn btn-d" onclick="deleteSelectedBatchTasks()">🗑 刪除選取</button>
+      <button class="btn btn-s" onclick="clearBatchSelection()">取消選取</button>
+    </div>
+    <div style="padding:12px;display:flex;flex-direction:column;gap:8px;" id="batch-task-list"></div>
+  </div>
+
 </div><!-- /app -->
+
+<!-- ── BATCH PRESETS MODAL ── -->
+<div class="batch-presets-overlay" id="batch-presets-modal" onclick="closeBatchPresetsModal(event)">
+  <div class="batch-presets-box" onclick="event.stopPropagation()">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <div>
+        <div style="font-weight:700;font-size:.94rem;">📂 記錄庫</div>
+        <div style="font-size:.74rem;color:var(--txt2);margin-top:2px;">點「附加」把記錄中的任務加入目前清單</div>
+      </div>
+      <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeBatchPresetsModal()">✕</button>
+    </div>
+    <div id="batch-presets-list" style="overflow-y:auto;flex:1;padding:4px 0;min-height:60px;"></div>
+    <div style="padding:10px 14px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;">
+      <button class="btn btn-s btn-out" onclick="closeBatchPresetsModal()">關閉</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── PROMPT NOTE EDIT MODAL ── -->
 <div class="char-modal-overlay" id="note-edit-modal">
@@ -1119,6 +1245,134 @@
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
       <button class="btn btn-s btn-out" onclick="closeGalViewPopup()">取消</button>
       <button class="btn btn-p" onclick="confirmAddGalView()">新增</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── BATCH INSERT PICKER (floating) ── -->
+<div id="bt-insert-picker" style="display:none;position:fixed;z-index:500;background:var(--bg2);border:1px solid var(--border);
+  border-radius:10px;min-width:260px;max-width:380px;max-height:360px;overflow:hidden;
+  box-shadow:0 6px 24px rgba(0,0,0,.5);display:none;flex-direction:column;">
+</div>
+
+<!-- ── BATCH TASK EDIT MODAL ── -->
+<div class="char-modal-overlay" id="batch-task-modal">
+  <div class="char-modal-box" onclick="event.stopPropagation()" style="max-width:600px;max-height:90vh;overflow-y:auto;">
+    <div class="char-modal-hd">
+      <span id="bt-modal-title">新增任務</span>
+      <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeBatchTaskModal()">✕</button>
+    </div>
+    <div class="char-modal-body">
+      <!-- 名稱 -->
+      <div>
+        <div class="char-field-label">任務名稱</div>
+        <input id="bt-name" class="inp" type="text" placeholder="例：繪師 A 測試" style="width:100%;">
+      </div>
+      <!-- Prompt -->
+      <div>
+        <div class="char-field-label" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>正向 Prompt</span>
+          <div style="display:flex;gap:5px;">
+            <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openBtInsertPicker('char', this)">👤 插入角色</button>
+            <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openBtInsertPicker('style', this)">🎨 插入風格</button>
+            <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openBtInsertPicker('note', this)">📝 插入片段</button>
+          </div>
+        </div>
+        <textarea id="bt-prompt" class="inp" rows="5"
+          placeholder="完整正向 prompt&#10;&#10;用上方按鈕從角色庫、風格庫、筆記本插入內容到游標位置。"
+          style="width:100%;resize:vertical;font-family:monospace;font-size:.83rem;"></textarea>
+      </div>
+      <div>
+        <div class="char-field-label" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>負向 Prompt</span>
+          <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openBtInsertPicker('note', this, 'bt-neg')">📝 插入片段</button>
+        </div>
+        <textarea id="bt-neg" class="inp" rows="3" placeholder="負向 prompt..." style="width:100%;resize:vertical;font-family:monospace;font-size:.83rem;"></textarea>
+      </div>
+      <!-- Parameters (collapsible) -->
+      <div>
+        <div class="coll-hd" onclick="toggleBtParams()" style="cursor:pointer;padding:6px 0;border-bottom:1px solid var(--border);margin-bottom:0;">
+          <div class="char-field-label" style="margin-bottom:0;">參數設定</div>
+          <span id="bt-params-arrow" class="coll-arrow closed">▼</span>
+        </div>
+        <div class="coll-body closed bt-params-body" id="bt-params-body">
+          <div style="display:flex;justify-content:flex-end;margin-top:6px;">
+            <button class="btn btn-s btn-out" onclick="btImportGenParams()" style="font-size:.75rem;">⬇ 使用目前生圖頁參數</button>
+          </div>
+          <div class="row2">
+            <div class="fg">
+              <label>模型</label>
+              <select id="bt-model" class="sel">
+                <option value="nai-diffusion-4-5-full">V4.5 Full</option>
+                <option value="nai-diffusion-4-5">V4.5</option>
+                <option value="nai-diffusion-4">V4</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label>解析度</label>
+              <select id="bt-res" class="sel">
+                <option value="832x1216">832×1216（直向）</option>
+                <option value="1216x832">1216×832（橫向）</option>
+                <option value="1024x1024">1024×1024（正方形）</option>
+                <option value="1024x1536">1024×1536（大直向）</option>
+                <option value="1536x1024">1536×1024（大橫向）</option>
+              </select>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="fg">
+              <label>Steps</label>
+              <input id="bt-steps" class="inp" type="number" value="28" min="1" max="50" style="width:100%;">
+            </div>
+            <div class="fg">
+              <label>CFG Scale</label>
+              <input id="bt-cfg" class="inp" type="number" value="5" min="1" max="10" step="0.1" style="width:100%;">
+            </div>
+          </div>
+          <div class="row2">
+            <div class="fg">
+              <label>Sampler</label>
+              <select id="bt-sampler" class="sel">
+                <option value="k_euler_ancestral">Euler Ancestral</option>
+                <option value="k_euler">Euler</option>
+                <option value="k_dpmpp_2s_ancestral">DPM++ 2S a</option>
+                <option value="k_dpmpp_2m_sde">DPM++ 2M SDE</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label>Noise Schedule</label>
+              <select id="bt-noise-sch" class="sel">
+                <option value="karras">Karras</option>
+                <option value="exponential">Exponential</option>
+                <option value="polyexponential">Poly Exponential</option>
+              </select>
+            </div>
+          </div>
+          <div class="fg">
+            <label>Seed（-1 = 每張隨機）</label>
+            <input id="bt-seed" class="inp" type="number" value="-1" style="width:100%;">
+          </div>
+        </div>
+      </div>
+      <!-- Count & tags -->
+      <div class="row2">
+        <div class="fg">
+          <label>生幾張</label>
+          <input id="bt-count" class="inp" type="number" value="1" min="1" max="20" style="width:100%;">
+        </div>
+        <div class="fg">
+          <label>自動加 tag（圖庫）</label>
+          <div style="position:relative;">
+            <input id="bt-tag-in" class="inp" type="text" placeholder="新增 tag..." autocomplete="off" style="width:100%;">
+            <div class="tag-dropdown" id="bt-tag-dd" style="top:100%;left:0;right:0;position:absolute;z-index:300;"></div>
+          </div>
+          <div id="bt-tags-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="char-modal-ft">
+      <button class="btn btn-s btn-out" onclick="closeBatchTaskModal()">取消</button>
+      <button class="btn btn-p" onclick="saveBatchTask()">儲存任務</button>
     </div>
   </div>
 </div>
@@ -2232,6 +2486,7 @@ async function showApp() {
   document.getElementById('app').style.display = 'flex';
   loadGalViews();
   loadNotesViews();
+  loadBatchTasks();
   await refreshAllKnownTags();
   await loadGallery();
   renderGalViewTabs();
@@ -2316,33 +2571,40 @@ function setGenerating(on) {
 }
 
 function showPage(page) {
-  ['page-generate','page-gallery','page-vibe','page-characters','page-artists','page-notes'].forEach(id =>
-    document.getElementById(id).classList.remove('active'));
-  ['tab-gen','tab-gal','tab-vibe-page','tab-char-page','tab-artist-page','tab-notes-page'].forEach(id =>
-    document.getElementById(id).classList.remove('active'));
+  ['page-generate','page-gallery','page-vibe','page-characters','page-artists','page-notes','page-batch'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.classList.remove('active');
+  });
+  ['tab-gen','tab-gal','tab-vibe-page','tab-char-page','tab-artist-page','tab-notes-page'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.classList.remove('active');
+  });
+  const show = id => { const el = document.getElementById(id); if (el) el.classList.add('active'); };
+  const activateTab = id => { const el = document.getElementById(id); if (el) el.classList.add('active'); };
+
+  // Gen sub-nav: visible on generate + batch pages
+  const subNav = document.getElementById('gen-sub-nav');
+  const onGenPage = page === 'generate' || page === 'batch';
+  if (subNav) subNav.classList.toggle('visible', onGenPage);
+  ['gen-sub-gen','gen-sub-batch'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.classList.remove('active');
+  });
+
   if (page === 'generate') {
-    document.getElementById('page-generate').classList.add('active');
-    document.getElementById('tab-gen').classList.add('active');
+    show('page-generate'); activateTab('tab-gen');
+    const el = document.getElementById('gen-sub-gen'); if (el) el.classList.add('active');
   } else if (page === 'gallery') {
-    document.getElementById('page-gallery').classList.add('active');
-    document.getElementById('tab-gal').classList.add('active');
-    renderGallery();
+    show('page-gallery'); activateTab('tab-gal'); renderGallery();
   } else if (page === 'vibe') {
-    document.getElementById('page-vibe').classList.add('active');
-    document.getElementById('tab-vibe-page').classList.add('active');
-    renderVibePage();
+    show('page-vibe'); activateTab('tab-vibe-page'); renderVibePage();
   } else if (page === 'characters') {
-    document.getElementById('page-characters').classList.add('active');
-    document.getElementById('tab-char-page').classList.add('active');
-    renderCharPage();
+    show('page-characters'); activateTab('tab-char-page'); renderCharPage();
   } else if (page === 'artists') {
-    document.getElementById('page-artists').classList.add('active');
-    document.getElementById('tab-artist-page').classList.add('active');
-    renderArtistPage();
+    show('page-artists'); activateTab('tab-artist-page'); renderArtistPage();
   } else if (page === 'notes') {
-    document.getElementById('page-notes').classList.add('active');
-    document.getElementById('tab-notes-page').classList.add('active');
-    renderNotesPage();
+    show('page-notes'); activateTab('tab-notes-page'); renderNotesPage();
+  } else if (page === 'batch') {
+    show('page-batch'); activateTab('tab-gen');
+    const el = document.getElementById('gen-sub-batch'); if (el) el.classList.add('active');
+    renderBatchPage();
   }
 }
 
@@ -5525,6 +5787,691 @@ function toast(msg, type='info') {
 // ═══════════════════════════════════════════
 function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
+
+// ═══════════════════════════════════════════
+// PHASE 4 — BATCH GENERATION
+// ═══════════════════════════════════════════
+
+const BATCH_TASKS_KEY   = 'nai_batch_tasks_v1';
+const BATCH_PRESETS_KEY = 'nai_batch_presets_v1';
+
+// ── State ──
+let batchTasks = [];
+let batchRunning = false;
+let batchPaused = false;
+let batchShouldStop = false;
+let batchCurrentAbort = null;
+let batchTotalImages = 0;
+let batchDoneImages  = 0;
+
+// ── Select mode state ──
+let batchSelectMode = false;
+let batchSelected   = new Set();
+
+// ── Presets state ──
+let batchPresets = [];
+
+// ── Batch task edit modal state ──
+let btEditId = null;
+let btTags   = [];
+
+// ── Storage ──
+function loadBatchTasks() {
+  try {
+    const raw = localStorage.getItem(BATCH_TASKS_KEY);
+    batchTasks = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(batchTasks)) batchTasks = [];
+  } catch { batchTasks = []; }
+}
+function saveBatchTasks() {
+  localStorage.setItem(BATCH_TASKS_KEY, JSON.stringify(batchTasks));
+}
+function loadBatchPresets() {
+  try {
+    const raw = localStorage.getItem(BATCH_PRESETS_KEY);
+    batchPresets = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(batchPresets)) batchPresets = [];
+  } catch { batchPresets = []; }
+}
+function saveBatchPresets() {
+  localStorage.setItem(BATCH_PRESETS_KEY, JSON.stringify(batchPresets));
+}
+
+// ── Prompt composition ──
+function composeBatchPrompt(task) {
+  // New format uses task.prompt; fall back to legacy task.basePrompt
+  return task.prompt || task.basePrompt || '';
+}
+
+// ── Core API (no Vibe / PreciseRef / img2img — batch only) ──
+async function callGenerateSimple({ prompt, negPrompt, model, width, height, steps, scale, cfgR, sampler, noiseSch, seed }) {
+  if (!apiToken) throw new Error('未登入');
+  const isV4 = model.startsWith('nai-diffusion-4');
+  const params = {
+    width, height, scale, sampler, steps,
+    params_version: 3, n_samples: 1, ucPreset: 0, qualityToggle: true,
+    autoSmea: false, dynamic_thresholding: false, controlnet_strength: 1,
+    legacy: false, add_original_image: false,
+    cfg_rescale: cfgR || 0, noise_schedule: noiseSch || 'karras',
+    legacy_v3_extend: false, deliberate_euler_ancestral_bug: false,
+    prefer_brownian: true, skip_cfg_above_sigma: 58,
+    inpaintImg2ImgStrength: 1, image_format: 'png',
+    legacy_uc: false, seed, negative_prompt: negPrompt
+  };
+  if (isV4) {
+    params.v4_prompt = { caption: { base_caption: prompt, char_captions: [] }, use_coords: false, use_order: false };
+    params.v4_negative_prompt = { caption: { base_caption: negPrompt, char_captions: [] }, legacy_uc: false };
+  } else {
+    params.sm = false; params.sm_dyn = false;
+  }
+  const body = { input: prompt, model, action: 'generate', parameters: params };
+  const TIMEOUT = 120000, MAX_RETRY = 2;
+  let resp = null;
+  for (let attempt = 0; attempt <= MAX_RETRY; attempt++) {
+    if (batchShouldStop) throw new Error('stopped');
+    const ctrl = new AbortController();
+    batchCurrentAbort = ctrl;
+    const tid = setTimeout(() => ctrl.abort(), TIMEOUT);
+    try {
+      resp = await fetch('https://image.novelai.net/ai/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiToken}`, 'Accept': 'application/x-msgpack' },
+        body: JSON.stringify(body), signal: ctrl.signal
+      });
+      clearTimeout(tid);
+      if ((resp.status === 429 || (resp.status >= 500 && resp.status <= 599)) && attempt < MAX_RETRY) {
+        const wait = resp.status === 429 ? 3000 * (attempt + 1) : 1500 * (attempt + 1);
+        await sleep(wait); continue;
+      }
+      break;
+    } catch (e) {
+      clearTimeout(tid);
+      if (e.name === 'AbortError' || e.message === 'stopped') throw e;
+      if (attempt < MAX_RETRY) { await sleep(1500 * (attempt + 1)); continue; }
+      throw e;
+    }
+  }
+  if (!resp || !resp.ok) throw new Error(`HTTP ${resp?.status || '?'}`);
+  return await parseNaiResponse(resp);
+}
+
+// ── Batch runner ──
+async function batchRun() {
+  if (batchRunning) return;
+  if (!batchTasks.length) { toast('沒有任務', 'warn'); return; }
+  const pending = batchTasks.filter(t => !t.done);
+  if (!pending.length) { toast('所有任務已完成，請清除完成狀態後重新執行', 'warn'); return; }
+
+  batchRunning = true; batchPaused = false; batchShouldStop = false;
+  batchTotalImages = batchTasks.reduce((s, t) => s + (t.count || 1), 0);
+  batchDoneImages  = batchTasks.filter(t => t.done).reduce((s, t) => s + (t.count || 1), 0);
+
+  document.getElementById('batch-run-btn').style.display   = 'none';
+  document.getElementById('batch-pause-btn').style.display = '';
+  document.getElementById('batch-stop-btn').style.display  = '';
+  document.getElementById('batch-progress-wrap').classList.add('visible');
+
+  for (let ti = 0; ti < batchTasks.length; ti++) {
+    const task = batchTasks[ti];
+    if (task.done) continue;
+    if (batchShouldStop) break;
+
+    batchSetTaskStatus(ti, 'running');
+    const composedPrompt = composeBatchPrompt(task);
+    if (!composedPrompt) {
+      toast(`任務「${task.name || ti + 1}」沒有 Prompt，跳過`, 'warn');
+      batchSetTaskStatus(ti, '');
+      continue;
+    }
+
+    const [w, h] = (task.res || '832x1216').split('x').map(Number);
+    const count = task.count || 1;
+
+    for (let i = 0; i < count; i++) {
+      // Handle pause
+      while (batchPaused && !batchShouldStop) await sleep(300);
+      if (batchShouldStop) break;
+
+      const seed = (task.seed ?? -1) === -1
+        ? Math.floor(Math.random() * 9999999999)
+        : (task.seed + i);
+
+      batchUpdateProgress(
+        `任務 ${ti + 1}／${batchTasks.length}：${esc(task.name || '未命名')}（第 ${i + 1}／${count} 張）`,
+        batchDoneImages, batchTotalImages
+      );
+
+      try {
+        const ab = await callGenerateSimple({
+          prompt: composedPrompt,
+          negPrompt: task.negPrompt || '',
+          model:  task.model    || 'nai-diffusion-4-5-full',
+          width: w, height: h,
+          steps:  task.steps   || 28,
+          scale:  task.scale   || 5,
+          cfgR:   task.cfgR    || 0,
+          sampler:  task.sampler   || 'k_euler_ancestral',
+          noiseSch: task.noiseSch  || 'karras',
+          seed
+        });
+        const meta = extractPNGMeta(ab);
+        if (!meta.prompt) meta.prompt = composedPrompt;
+        if (!meta.seed) meta.seed = seed;
+        if (!meta.model) meta.model = task.model || 'nai-diffusion-4-5-full';
+        const autoTags = [...(task.tags || [])];
+        if (task.name) autoTags.push(task.name);
+        const id = await dbSaveImage(ab, meta, dedupeTags(autoTags));
+        galleryData.unshift({ id, timestamp: Date.now(), data: ab, metadata: meta, tags: dedupeTags(autoTags) });
+        updateGalCount();
+        batchDoneImages++;
+        batchUpdateProgress(
+          `任務 ${ti + 1}／${batchTasks.length}：${esc(task.name || '未命名')}（第 ${i + 1}／${count} 張）`,
+          batchDoneImages, batchTotalImages
+        );
+      } catch (e) {
+        if (e.message === 'stopped' || e.name === 'AbortError') break;
+        toast(`任務「${task.name || ti + 1}」第 ${i + 1} 張失敗：${e.message}`, 'err');
+        await sleep(2000);
+      }
+    }
+
+    if (!batchShouldStop) {
+      batchTasks[ti].done = true;
+      saveBatchTasks();
+      batchSetTaskStatus(ti, 'done');
+    } else {
+      batchSetTaskStatus(ti, '');
+    }
+  }
+
+  batchRunning = false;
+  document.getElementById('batch-run-btn').style.display   = '';
+  document.getElementById('batch-pause-btn').style.display = 'none';
+  document.getElementById('batch-stop-btn').style.display  = 'none';
+
+  if (batchShouldStop) {
+    toast('批次已停止', 'warn');
+    document.getElementById('batch-progress-wrap').classList.remove('visible');
+  } else {
+    batchUpdateProgress('✓ 批次完成', batchTotalImages, batchTotalImages);
+    toast('批次生圖全部完成！', 'ok');
+  }
+  renderBatchPage();
+}
+
+function batchTogglePause() {
+  batchPaused = !batchPaused;
+  document.getElementById('batch-pause-btn').textContent = batchPaused ? '▶ 繼續' : '⏸ 暫停';
+  if (batchPaused) toast('已暫停，點「繼續」恢復', 'warn');
+}
+
+function batchStop() {
+  batchShouldStop = true;
+  batchPaused = false;
+  if (batchCurrentAbort) { batchCurrentAbort.abort(); batchCurrentAbort = null; }
+}
+
+function batchSetTaskStatus(idx, status) {
+  const cards = document.querySelectorAll('.batch-task-card');
+  const numEl = document.querySelectorAll('.batch-task-num');
+  if (!cards[idx]) return;
+  cards[idx].classList.remove('bt-running','bt-done');
+  numEl[idx].classList.remove('bt-run-num','bt-done-num');
+  if (status === 'running') { cards[idx].classList.add('bt-running'); numEl[idx].classList.add('bt-run-num'); }
+  if (status === 'done')    { cards[idx].classList.add('bt-done');    numEl[idx].classList.add('bt-done-num'); }
+}
+
+function batchUpdateProgress(text, done, total) {
+  document.getElementById('batch-progress-text').textContent = text;
+  document.getElementById('batch-progress-count').textContent = `${done} / ${total} 張`;
+  document.getElementById('batch-progress-bar').style.width = total ? `${Math.round(done / total * 100)}%` : '0%';
+}
+
+// ── Batch page render ──
+function renderBatchPage() {
+  loadBatchTasks();
+  const list = document.getElementById('batch-task-list');
+  if (!batchTasks.length) {
+    list.innerHTML = `<div class="batch-empty">
+      <div style="font-size:1.8rem;margin-bottom:10px;">📋</div>
+      <div>還沒有任務，點「＋ 新增任務」開始建立批次生圖排程</div>
+    </div>`;
+    return;
+  }
+  list.innerHTML = batchTasks.map((t, i) => {
+    const preview = composeBatchPrompt(t);
+    const meta = [
+      t.model ? t.model.replace('nai-diffusion-','V').replace('-full',' Full') : 'V4.5 Full',
+      t.res || '832×1216',
+      `×${t.count || 1} 張`,
+    ];
+    if (t.characterId) {
+      const c = characterData.find(x => x.id === t.characterId);
+      if (c) meta.push(`👤 ${esc(c.name)}`);
+    }
+    if (t.styleType) {
+      if (t.styleType === 'artist') {
+        const a = artistData.find(x => x.id === t.styleId);
+        if (a) meta.push(`🎨 ${esc(a.name)}`);
+      } else {
+        const b = blendData.find(x => x.id === t.styleId);
+        if (b) meta.push(`🎨 ${esc(b.name)}`);
+      }
+    }
+    if (t.noteIds?.length) meta.push(`📝 ×${t.noteIds.length}`);
+    const doneClass = t.done ? ' bt-done' : '';
+    const selClass  = batchSelectMode && batchSelected.has(i) ? ' bt-selected' : '';
+    const numClass  = t.done ? ' bt-done-num' : '';
+    const doneLabel = t.done ? '<span style="color:#10b981;font-size:.72rem;">✓</span>' : (i + 1);
+    const leftEl = batchSelectMode
+      ? `<input type="checkbox" class="batch-task-cb" ${batchSelected.has(i) ? 'checked' : ''} onchange="toggleBatchSelect(${i})" onclick="event.stopPropagation()">`
+      : `<div class="batch-task-num${numClass}">${doneLabel}</div>`;
+    const actions = batchSelectMode ? '' : `
+      ${t.done ? `<button class="btn btn-s btn-out" style="font-size:.73rem;" onclick="batchResetTask(${i})">重設</button>` : ''}
+      <button class="btn btn-s btn-out" style="font-size:.73rem;" onclick="openBatchTaskModal(${i})">編輯</button>
+      <button class="btn btn-s btn-d"   style="font-size:.73rem;" onclick="deleteBatchTask(${i})">刪除</button>`;
+    return `<div class="batch-task-card${doneClass}${selClass}" ${batchSelectMode ? `onclick="toggleBatchSelect(${i})" style="cursor:pointer;"` : ''}>
+      ${leftEl}
+      <div class="batch-task-body">
+        <div class="batch-task-name">${esc(t.name || '未命名任務')}</div>
+        <div class="batch-task-preview">${esc(preview || '（無 Prompt）')}</div>
+        <div class="batch-task-meta">${meta.map(m=>`<span>${m}</span>`).join('')}</div>
+      </div>
+      <div class="batch-task-actions">${actions}</div>
+    </div>`;
+  }).join('');
+}
+
+function deleteBatchTask(idx) {
+  if (!confirm('確定刪除這個任務？')) return;
+  batchTasks.splice(idx, 1);
+  saveBatchTasks();
+  renderBatchPage();
+}
+
+function batchResetTask(idx) {
+  batchTasks[idx].done = false;
+  saveBatchTasks();
+  renderBatchPage();
+}
+
+// ── Task edit modal ──
+function openBatchTaskModal(idx) {
+  btEditId = idx;
+  btTags = [];
+
+  if (idx !== null && batchTasks[idx]) {
+    const t = batchTasks[idx];
+    document.getElementById('bt-modal-title').textContent = '編輯任務';
+    document.getElementById('bt-name').value    = t.name    || '';
+    document.getElementById('bt-prompt').value  = t.prompt || t.basePrompt || '';
+    document.getElementById('bt-neg').value     = t.negPrompt  || '';
+    document.getElementById('bt-model').value   = t.model   || 'nai-diffusion-4-5-full';
+    document.getElementById('bt-res').value     = t.res     || '832x1216';
+    document.getElementById('bt-steps').value   = t.steps   || 28;
+    document.getElementById('bt-cfg').value     = t.scale   || 5;
+    document.getElementById('bt-sampler').value = t.sampler || 'k_euler_ancestral';
+    document.getElementById('bt-noise-sch').value = t.noiseSch || 'karras';
+    document.getElementById('bt-seed').value    = t.seed    ?? -1;
+    document.getElementById('bt-count').value   = t.count   || 1;
+    btTags = [...(t.tags || [])];
+  } else {
+    document.getElementById('bt-modal-title').textContent = '新增任務';
+    document.getElementById('bt-name').value    = '';
+    document.getElementById('bt-prompt').value  = '';
+    document.getElementById('bt-neg').value     = '';
+    document.getElementById('bt-model').value   = 'nai-diffusion-4-5-full';
+    document.getElementById('bt-res').value     = '832x1216';
+    document.getElementById('bt-steps').value   = 28;
+    document.getElementById('bt-cfg').value     = 5;
+    document.getElementById('bt-sampler').value = 'k_euler_ancestral';
+    document.getElementById('bt-noise-sch').value = 'karras';
+    document.getElementById('bt-seed').value    = -1;
+    document.getElementById('bt-count').value   = 1;
+  }
+
+  renderBtTagChips();
+
+  // Bind inline tag input
+  bindInlineTagInput({
+    inputId: 'bt-tag-in', ddId: 'bt-tag-dd',
+    getTags: () => btTags,
+    addTag: name => {
+      name = name.trim();
+      if (!name || btTags.includes(name)) return;
+      btTags.push(name);
+      renderBtTagChips();
+    },
+    removeLastTag: () => { if (btTags.length) { btTags.pop(); renderBtTagChips(); } }
+  });
+
+  document.getElementById('batch-task-modal').classList.add('open');
+}
+
+function closeBatchTaskModal() {
+  document.getElementById('batch-task-modal').classList.remove('open');
+}
+
+function toggleBtParams() {
+  const body  = document.getElementById('bt-params-body');
+  const arrow = document.getElementById('bt-params-arrow');
+  body.classList.toggle('closed');
+  arrow.classList.toggle('closed');
+}
+
+// ── Insert-at-cursor helper ──
+function insertAtCursor(el, text) {
+  const start = el.selectionStart ?? el.value.length;
+  const end   = el.selectionEnd   ?? el.value.length;
+  const before = el.value.slice(0, start);
+  const after  = el.value.slice(end);
+  const sep = (before.length && !before.match(/[,\n]\s*$/)) ? ', ' : '';
+  el.value = before + sep + text + after;
+  const newPos = start + sep.length + text.length;
+  el.setSelectionRange(newPos, newPos);
+  el.focus();
+}
+
+// ── Floating insert picker ──
+let btPickerCloseHandler = null;
+
+function openBtInsertPicker(type, btnEl, targetId) {
+  targetId = targetId || 'bt-prompt';
+  const picker = document.getElementById('bt-insert-picker');
+
+  // Toggle off if same type + target already open
+  if (picker.style.display !== 'none' && picker._type === type && picker._targetId === targetId) {
+    closeBtInsertPicker(); return;
+  }
+  picker._type     = type;
+  picker._targetId = targetId;
+
+  // Build items list
+  let items = [];
+  if (type === 'char') {
+    items = characterData.map(c => ({
+      label: c.name,
+      sub:   (c.prompt || '').slice(0, 80),
+      text:  c.prompt || c.name
+    }));
+  } else if (type === 'style') {
+    artistData.forEach(a => items.push({
+      label: a.name,
+      sub:   a.artistTag || '',
+      text:  a.artistTag || a.name
+    }));
+    blendData.forEach(b => {
+      if (b.artistEntries) {
+        const str = b.artistEntries
+          .filter(e => e.enabled !== false && e.artistTag)
+          .map(e => `${e.weight}::${e.artistTag}::`)
+          .join(', ');
+        if (str) items.push({ label: b.name + ' 🔀', sub: str.slice(0, 80), text: str });
+      }
+    });
+  } else if (type === 'note') {
+    items = notesData.map(n => ({
+      label: n.fragment.slice(0, 50) + (n.fragment.length > 50 ? '…' : ''),
+      sub:   n.description || '',
+      text:  n.fragment
+    }));
+  }
+
+  if (!items.length) {
+    const msgs = { char: '角色庫是空的', style: '風格庫是空的', note: '筆記本是空的' };
+    toast(msgs[type] || '沒有內容', 'warn'); return;
+  }
+
+  picker._items = items;
+
+  function renderPickerItems(q) {
+    q = (q || '').toLowerCase().trim();
+    const filtered = q
+      ? items.filter(it =>
+          it.label.toLowerCase().includes(q) ||
+          (it.sub  || '').toLowerCase().includes(q) ||
+          it.text.toLowerCase().includes(q))
+      : items;
+    const listEl = document.getElementById('bt-insert-list');
+    if (!listEl) return;
+    if (!filtered.length) {
+      listEl.innerHTML = `<div style="padding:10px 12px;font-size:.78rem;color:var(--txt2);">沒有符合的結果</div>`;
+      return;
+    }
+    listEl.innerHTML = filtered.map(item => {
+      const origIdx = items.indexOf(item);
+      return `<div class="bt-insert-item" onmousedown="event.preventDefault();btPickerInsert(${origIdx})" title="${esc(item.text)}">
+        <div style="font-size:.83rem;font-weight:600;color:var(--txt);line-height:1.4;">${esc(item.label)}</div>
+        ${item.sub ? `<div style="font-size:.72rem;color:var(--txt2);margin-top:1px;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(item.sub)}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  picker._renderPickerItems = renderPickerItems;
+
+  picker.innerHTML = `
+    <div style="padding:6px 8px;border-bottom:1px solid var(--border);flex-shrink:0;">
+      <input type="search" id="bt-picker-search" class="inp"
+        placeholder="搜尋..."
+        style="width:100%;font-size:.8rem;padding:5px 8px;"
+        oninput="document.getElementById('bt-insert-picker')._renderPickerItems(this.value)"
+        onmousedown="event.stopPropagation()"
+        onkeydown="if(event.key==='Escape')closeBtInsertPicker()">
+    </div>
+    <div id="bt-insert-list" style="overflow-y:auto;max-height:280px;"></div>`;
+
+  renderPickerItems('');
+
+  // Position below button
+  const rect = btnEl.getBoundingClientRect();
+  picker.style.top  = (rect.bottom + 4) + 'px';
+  picker.style.left = Math.min(rect.left, window.innerWidth - 390) + 'px';
+  picker.style.display = 'flex';
+
+  // Auto-focus search
+  setTimeout(() => document.getElementById('bt-picker-search')?.focus(), 30);
+
+  if (btPickerCloseHandler) document.removeEventListener('mousedown', btPickerCloseHandler);
+  btPickerCloseHandler = e => {
+    if (!picker.contains(e.target) && e.target !== btnEl) closeBtInsertPicker();
+  };
+  setTimeout(() => document.addEventListener('mousedown', btPickerCloseHandler), 0);
+}
+
+function btPickerInsert(idx) {
+  const picker = document.getElementById('bt-insert-picker');
+  const item = picker._items?.[idx];
+  if (!item) return;
+  insertAtCursor(document.getElementById(picker._targetId || 'bt-prompt'), item.text);
+  closeBtInsertPicker();
+}
+
+function closeBtInsertPicker() {
+  const picker = document.getElementById('bt-insert-picker');
+  if (picker) picker.style.display = 'none';
+  if (btPickerCloseHandler) {
+    document.removeEventListener('mousedown', btPickerCloseHandler);
+    btPickerCloseHandler = null;
+  }
+}
+
+// ── Clear done tasks ──
+function clearDoneBatchTasks() {
+  const before = batchTasks.length;
+  batchTasks = batchTasks.filter(t => !t.done);
+  saveBatchTasks();
+  renderBatchPage();
+  if (batchTasks.length < before) toast('已清除完成的任務', 'ok');
+}
+
+// ── Multi-select ──
+function toggleBatchSelectMode() {
+  batchSelectMode = !batchSelectMode;
+  batchSelected.clear();
+  document.getElementById('batch-sel-mode-btn').textContent = batchSelectMode ? '結束多選' : '多選';
+  document.getElementById('batch-select-actions').classList.toggle('visible', batchSelectMode);
+  renderBatchPage();
+}
+
+function toggleBatchSelect(idx) {
+  batchSelected.has(idx) ? batchSelected.delete(idx) : batchSelected.add(idx);
+  document.getElementById('batch-sel-count').textContent = `已選 ${batchSelected.size} 個`;
+  renderBatchPage();
+}
+
+function deleteSelectedBatchTasks() {
+  if (!batchSelected.size) return;
+  if (!confirm(`確定刪除選取的 ${batchSelected.size} 個任務？`)) return;
+  batchTasks = batchTasks.filter((_, i) => !batchSelected.has(i));
+  batchSelected.clear();
+  saveBatchTasks();
+  clearBatchSelection();
+}
+
+function clearBatchSelection() {
+  batchSelected.clear();
+  batchSelectMode = false;
+  document.getElementById('batch-sel-mode-btn').textContent = '多選';
+  document.getElementById('batch-select-actions').classList.remove('visible');
+  renderBatchPage();
+}
+
+// ── Presets ──
+function saveCurrentAsPreset() {
+  loadBatchTasks();
+  if (!batchTasks.length) { toast('目前沒有任務可儲存', 'warn'); return; }
+  const name = prompt('記錄名稱：', `記錄 ${new Date().toLocaleDateString('zh-TW')}`);
+  if (!name?.trim()) return;
+  loadBatchPresets();
+  batchPresets.push({
+    id:      'bp_' + Date.now(),
+    name:    name.trim(),
+    tasks:   JSON.parse(JSON.stringify(batchTasks)), // deep copy
+    savedAt: Date.now()
+  });
+  saveBatchPresets();
+  toast(`已儲存「${name.trim()}」（${batchTasks.length} 個任務）`, 'ok');
+}
+
+function openBatchPresetsModal() {
+  loadBatchPresets();
+  renderBatchPresetsModal();
+  document.getElementById('batch-presets-modal').classList.add('open');
+}
+
+function closeBatchPresetsModal(e) {
+  if (e && e.target !== document.getElementById('batch-presets-modal')) return;
+  document.getElementById('batch-presets-modal').classList.remove('open');
+}
+
+function renderBatchPresetsModal() {
+  const list = document.getElementById('batch-presets-list');
+  if (!batchPresets.length) {
+    list.innerHTML = `<div style="padding:24px 18px;text-align:center;color:var(--txt2);font-size:.85rem;">
+      還沒有記錄。<br>在批次頁面點「💾 存記錄」儲存目前的任務清單。
+    </div>`;
+    return;
+  }
+  list.innerHTML = [...batchPresets].reverse().map(p => {
+    const date = new Date(p.savedAt).toLocaleDateString('zh-TW', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    return `<div class="batch-preset-item">
+      <div class="batch-preset-meta">
+        <div class="batch-preset-name">${esc(p.name)}</div>
+        <div class="batch-preset-info">${p.tasks.length} 個任務・${date}</div>
+      </div>
+      <button class="btn btn-p" style="font-size:.75rem;padding:4px 10px;" onclick="loadPreset('${esc(p.id)}')">附加</button>
+      <button class="btn btn-s btn-out" style="font-size:.75rem;padding:4px 8px;" onclick="renamePreset('${esc(p.id)}')">改名</button>
+      <button class="btn btn-s btn-d"   style="font-size:.75rem;padding:4px 8px;" onclick="deletePreset('${esc(p.id)}')">刪除</button>
+    </div>`;
+  }).join('');
+}
+
+function loadPreset(id) {
+  const preset = batchPresets.find(p => p.id === id);
+  if (!preset) return;
+  loadBatchTasks();
+  // Append with fresh done=false copies
+  const newTasks = preset.tasks.map(t => ({
+    ...t,
+    id:   'bt_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+    done: false
+  }));
+  batchTasks.push(...newTasks);
+  saveBatchTasks();
+  renderBatchPage();
+  toast(`已附加「${preset.name}」的 ${preset.tasks.length} 個任務`, 'ok');
+  document.getElementById('batch-presets-modal').classList.remove('open');
+}
+
+function renamePreset(id) {
+  const preset = batchPresets.find(p => p.id === id);
+  if (!preset) return;
+  const name = prompt('新名稱：', preset.name);
+  if (!name?.trim()) return;
+  preset.name = name.trim();
+  saveBatchPresets();
+  renderBatchPresetsModal();
+  toast('已更名', 'ok');
+}
+
+function deletePreset(id) {
+  const preset = batchPresets.find(p => p.id === id);
+  if (!preset) return;
+  if (!confirm(`確定刪除記錄「${preset.name}」？`)) return;
+  batchPresets = batchPresets.filter(p => p.id !== id);
+  saveBatchPresets();
+  renderBatchPresetsModal();
+  toast('已刪除', 'ok');
+}
+
+function renderBtTagChips() {
+  document.getElementById('bt-tags-chips').innerHTML =
+    btTags.map(t =>
+      `<span class="tag-chip">${esc(t)}<button class="tag-chip-x" onclick="removeBtTag('${esc(t)}')">×</button></span>`
+    ).join('');
+}
+
+function removeBtTag(name) { btTags = btTags.filter(t => t !== name); renderBtTagChips(); }
+
+function btImportGenParams() {
+  document.getElementById('bt-model').value     = document.getElementById('model').value;
+  document.getElementById('bt-res').value       = document.getElementById('res').value;
+  document.getElementById('bt-steps').value     = document.getElementById('steps').value;
+  document.getElementById('bt-cfg').value       = document.getElementById('cfg').value;
+  document.getElementById('bt-sampler').value   = document.getElementById('sampler').value;
+  document.getElementById('bt-noise-sch').value = document.getElementById('noise-sch').value;
+  document.getElementById('bt-seed').value      = seedRandom ? -1 : (document.getElementById('seed').value || -1);
+  toast('已匯入目前生圖頁參數', 'ok');
+}
+
+function saveBatchTask() {
+  const task = {
+    id:       btEditId !== null ? (batchTasks[btEditId]?.id || ('bt_' + Date.now())) : ('bt_' + Date.now()),
+    name:     document.getElementById('bt-name').value.trim() || '未命名任務',
+    prompt:   document.getElementById('bt-prompt').value.trim(),
+    negPrompt:document.getElementById('bt-neg').value.trim(),
+    model:    document.getElementById('bt-model').value,
+    res:      document.getElementById('bt-res').value,
+    steps:    parseInt(document.getElementById('bt-steps').value) || 28,
+    scale:    parseFloat(document.getElementById('bt-cfg').value) || 5,
+    cfgR:     0,
+    sampler:  document.getElementById('bt-sampler').value,
+    noiseSch: document.getElementById('bt-noise-sch').value,
+    seed:     parseInt(document.getElementById('bt-seed').value) ?? -1,
+    count:    parseInt(document.getElementById('bt-count').value) || 1,
+    tags:     [...btTags],
+    done:     false
+  };
+
+  if (btEditId !== null) batchTasks[btEditId] = task;
+  else batchTasks.push(task);
+
+  saveBatchTasks();
+  closeBatchTaskModal();
+  renderBatchPage();
+  toast(btEditId !== null ? '任務已更新' : '任務已新增', 'ok');
+}
+
 </script>
 </body>
 </html>
