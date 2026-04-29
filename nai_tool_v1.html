@@ -1361,7 +1361,10 @@
           <input id="bt-count" class="inp" type="number" value="1" min="1" max="20" style="width:100%;">
         </div>
         <div class="fg">
-          <label>自動加 tag（圖庫）</label>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px;">
+            <label style="margin-bottom:0;">自動加 tag（圖庫）</label>
+            <button class="btn btn-s" type="button" onclick="openBtTagsPicker()">選擇標籤</button>
+          </div>
           <div style="position:relative;">
             <input id="bt-tag-in" class="inp" type="text" placeholder="新增 tag..." autocomplete="off" style="width:100%;">
             <div class="tag-dropdown" id="bt-tag-dd" style="top:100%;left:0;right:0;position:absolute;z-index:300;"></div>
@@ -2818,6 +2821,21 @@ function openNoteTagsPicker() {
     onConfirm: tags => {
       noteEditTags = dedupeTags(tags);
       renderNoteEditTagChips();
+    }
+  });
+}
+
+function openBtTagsPicker() {
+  openTagPicker({
+    title: '選擇任務標籤',
+    help: '這些 tag 會在批次生成完成後自動加到圖庫圖片上。優先沿用既有 tag，避免排程大量生圖時把相似標籤越分越細。',
+    initialTags: btTags,
+    multi: true,
+    allowCreate: true,
+    createLabel: '建立新的任務標籤',
+    onConfirm: tags => {
+      btTags = dedupeTags(tags);
+      renderBtTagChips();
     }
   });
 }
@@ -6128,6 +6146,7 @@ function openBatchTaskModal(idx) {
     document.getElementById('bt-noise-sch').value = 'karras';
     document.getElementById('bt-seed').value    = -1;
     document.getElementById('bt-count').value   = 1;
+    btTags = [];
   }
 
   renderBtTagChips();
@@ -6427,7 +6446,7 @@ function deletePreset(id) {
 function renderBtTagChips() {
   document.getElementById('bt-tags-chips').innerHTML =
     btTags.map(t =>
-      `<span class="tag-chip">${esc(t)}<button class="tag-chip-x" onclick="removeBtTag('${esc(t)}')">×</button></span>`
+      `<span class="tag-chip" style="${getTagChipStyle(t)}">${esc(t)}<button class="tag-chip-x" data-tag="${esc(t)}" style="color:${getTagColor(t)}" onclick="removeBtTag(this.dataset.tag)">×</button></span>`
     ).join('');
 }
 
