@@ -370,6 +370,19 @@
     .tag-picker-create strong{color:var(--accent);}
     .tag-picker-similar{font-size:.74rem;color:var(--warn);line-height:1.45;}
     .tag-picker-ft{padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
+    .tag-manager-overlay{position:fixed;inset:0;background:rgba(0,0,0,.62);display:none;align-items:center;justify-content:center;z-index:1210;padding:16px;}
+    .tag-manager-overlay.open{display:flex;}
+    .tag-manager-box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;width:100%;max-width:760px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;}
+    .tag-manager-hd{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;}
+    .tag-manager-body{padding:14px 18px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;}
+    .tag-manager-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+    .tag-manager-list{display:flex;flex-direction:column;gap:10px;}
+    .tag-manager-row{display:grid;grid-template-columns:minmax(0,1.3fr) auto auto;gap:12px;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:10px 12px;}
+    .tag-manager-meta{display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .tag-manager-usage{font-size:.74rem;color:var(--txt2);line-height:1.45;}
+    .tag-manager-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+    .tag-color-input{width:38px;height:30px;border:none;background:none;padding:0;cursor:pointer;}
+    .tag-manager-empty{font-size:.82rem;color:var(--txt2);padding:14px 4px;}
 
     /* Precise Reference */
     .pref-dropzone{border:1.5px dashed var(--border);border-radius:10px;padding:22px 12px;text-align:center;
@@ -607,7 +620,10 @@
       <div class="card">
         <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
           <span>生圖 Tag（套用到本次生圖）</span>
-          <button class="btn btn-s btn-out" type="button" onclick="openGenerateTagPicker()" style="font-size:.74rem;padding:4px 10px;">選 tag</button>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <button class="btn btn-s btn-out" type="button" onclick="openGenerateTagPicker()" style="font-size:.74rem;padding:4px 10px;">選 tag</button>
+            <button class="btn btn-s btn-out" type="button" onclick="openTagManager()" style="font-size:.74rem;padding:4px 10px;">管理</button>
+          </div>
         </div>
         <div class="tag-chip-wrap" id="tag-chip-wrap" onclick="document.getElementById('tag-text-in').focus()">
           <div id="tag-chips-display"></div>
@@ -1025,6 +1041,25 @@
   </div>
 </div>
 
+<!-- ── TAG MANAGER MODAL ── -->
+<div class="tag-manager-overlay" id="tag-manager-modal" onclick="closeTagManager(event)">
+  <div class="tag-manager-box" onclick="event.stopPropagation()">
+    <div class="tag-manager-hd">
+      <div>
+        <div style="font-size:.94rem;font-weight:700;">管理 Tag</div>
+        <div class="tag-picker-help">設定顏色、查看使用情況、刪除整個系統裡的 tag。</div>
+      </div>
+      <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeTagManager()">✕</button>
+    </div>
+    <div class="tag-manager-body">
+      <div class="tag-manager-toolbar">
+        <input type="search" id="tag-manager-search" class="inp" placeholder="搜尋 tag..." style="width:240px;max-width:100%;" oninput="renderTagManager()">
+      </div>
+      <div class="tag-manager-list" id="tag-manager-list"></div>
+    </div>
+  </div>
+</div>
+
 <div id="toast-wrap"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -1041,6 +1076,7 @@ let lastAB = null;       // ArrayBuffer of last generated image
 let lastPrompt = '';
 let isGenerating = false;
 let seedRandom = true;
+const TAG_COLOR_POOL = ['#60a5fa','#f59e0b','#34d399','#f472b6','#a78bfa','#fb7185','#22c55e','#38bdf8','#f97316','#c084fc','#10b981','#eab308'];
 
 // Tag input state
 let currentTags = [];
@@ -1336,8 +1372,37 @@ async function dbSaveTag(name) {
     r.onerror = () => res(null);
   });
   return dbOp(db,'tags','readwrite', s => s.put({
-    name, count: (existing?.count||0)+1, lastUsed: Date.now()
+    name,
+    color: existing?.color || defaultTagColor(name),
+    count: (existing?.count||0)+1,
+    lastUsed: Date.now()
   }));
+}
+
+async function dbUpdateTagMeta(name, fields) {
+  const db = await getDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('tags','readwrite');
+    const store = tx.objectStore('tags');
+    const r = store.get(name);
+    r.onsuccess = () => {
+      const item = Object.assign({
+        name,
+        color: defaultTagColor(name),
+        count: 0,
+        lastUsed: Date.now()
+      }, r.result || {}, fields);
+      const r2 = store.put(item);
+      r2.onsuccess = () => res(item);
+      r2.onerror = () => rej(r2.error);
+    };
+    r.onerror = () => rej(r.error);
+  });
+}
+
+async function dbDeleteTag(name) {
+  const db = await getDB();
+  return dbOp(db,'tags','readwrite', s => s.delete(name));
 }
 
 // ── Vibe Library DB ──
@@ -1482,7 +1547,43 @@ async function dbDeleteBlend(id) {
 async function dbGetTags() {
   const db = await getDB();
   const tags = await dbOp(db,'tags','readonly', s => s.getAll());
-  return tags.sort((a,b) => b.count - a.count);
+  return tags.map(t => ({
+    ...t,
+    color: t.color || defaultTagColor(t.name)
+  })).sort((a,b) => b.count - a.count);
+}
+
+function defaultTagColor(name) {
+  const text = String(name || '');
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0;
+  return TAG_COLOR_POOL[Math.abs(hash) % TAG_COLOR_POOL.length];
+}
+
+function normalizeHexColor(hex) {
+  const clean = String(hex || '').trim();
+  return /^#[0-9a-fA-F]{6}$/.test(clean) ? clean.toLowerCase() : '#60a5fa';
+}
+
+function hexToRgba(hex, alpha) {
+  const clean = normalizeHexColor(hex).slice(1);
+  const r = parseInt(clean.slice(0,2), 16);
+  const g = parseInt(clean.slice(2,4), 16);
+  const b = parseInt(clean.slice(4,6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function getTagMeta(name) {
+  return findExistingTag(name) || { name, color: defaultTagColor(name), count: 0 };
+}
+
+function getTagColor(name) {
+  return normalizeHexColor(getTagMeta(name).color || defaultTagColor(name));
+}
+
+function getTagChipStyle(name, alpha = 0.14) {
+  const color = getTagColor(name);
+  return `background:${hexToRgba(color, alpha)};border-color:${color};color:${color};`;
 }
 
 function normalizeTagName(name) {
@@ -1522,13 +1623,18 @@ function findSimilarTags(name) {
   }).slice(0, 6);
 }
 
+async function refreshAllKnownTags() {
+  allKnownTags = await dbGetTags();
+  return allKnownTags;
+}
+
 async function ensureKnownTag(name) {
   const clean = String(name || '').trim();
   if (!clean) return '';
   const existing = findExistingTag(clean);
   if (existing) return existing.name;
   await dbSaveTag(clean);
-  allKnownTags = await dbGetTags();
+  await refreshAllKnownTags();
   return clean;
 }
 
@@ -1539,7 +1645,7 @@ function renderSimpleTagList(containerId, tags, emptyText, removeFnName) {
     el.innerHTML = `<span class="tag-mini-empty">${esc(emptyText)}</span>`;
     return;
   }
-  el.innerHTML = tags.map(t => `<span class="tag-chip">${esc(t)}${removeFnName ? `<button class="tag-chip-x" onclick="${removeFnName}(${JSON.stringify(t)})">×</button>` : ''}</span>`).join('');
+  el.innerHTML = tags.map(t => `<span class="tag-chip" style="${getTagChipStyle(t)}">${esc(t)}${removeFnName ? `<button class="tag-chip-x" style="color:${getTagColor(t)}" onclick="${removeFnName}(${JSON.stringify(t)})">×</button>` : ''}</span>`).join('');
 }
 
 function openTagPicker(options) {
@@ -1573,7 +1679,7 @@ function renderTagPicker() {
   const selected = [...tagPickerState.selected];
   const selectedEl = document.getElementById('tag-picker-selected');
   selectedEl.innerHTML = selected.length
-    ? selected.map(t => `<span class="tag-chip">${esc(t)}<button class="tag-chip-x" onclick="toggleTagPickerSelection(${JSON.stringify(t)})">×</button></span>`).join('')
+    ? selected.map(t => `<span class="tag-chip" style="${getTagChipStyle(t)}">${esc(t)}<button class="tag-chip-x" style="color:${getTagColor(t)}" onclick="toggleTagPickerSelection(${JSON.stringify(t)})">×</button></span>`).join('')
     : `<span class="tag-mini-empty">尚未選擇 tag</span>`;
 
   const matches = allKnownTags.filter(t => {
@@ -1583,7 +1689,7 @@ function renderTagPicker() {
   }).slice(0, 120);
   const listEl = document.getElementById('tag-picker-list');
   listEl.innerHTML = matches.length
-    ? matches.map(t => `<span class="tag-picker-chip" onclick="toggleTagPickerSelection(${JSON.stringify(t.name)})">${esc(t.name)}<small>×${t.count}</small></span>`).join('')
+    ? matches.map(t => `<span class="tag-picker-chip" style="${getTagChipStyle(t.name)}" onclick="toggleTagPickerSelection(${JSON.stringify(t.name)})">${esc(t.name)}<small>×${t.count}</small></span>`).join('')
     : `<span class="tag-mini-empty">${allKnownTags.length ? '沒有符合的既有 tag' : '目前還沒有任何既有 tag'}</span>`;
 
   const createEl = document.getElementById('tag-picker-create');
@@ -1645,6 +1751,134 @@ function confirmTagPicker() {
   const onConfirm = tagPickerState.onConfirm;
   closeTagPicker();
   onConfirm(selected);
+}
+
+function openTagManager() {
+  document.getElementById('tag-manager-search').value = '';
+  document.getElementById('tag-manager-modal').classList.add('open');
+  renderTagManager();
+}
+
+function closeTagManager(e) {
+  if (e && e.target !== document.getElementById('tag-manager-modal')) return;
+  document.getElementById('tag-manager-modal').classList.remove('open');
+}
+
+function getTagUsageMap() {
+  const usage = {};
+  const ensure = name => {
+    if (!usage[name]) usage[name] = { images: 0, characters: 0, artists: 0, views: 0 };
+    return usage[name];
+  };
+  galleryData.forEach(img => dedupeTags(img.tags || []).forEach(tag => ensure(tag).images++));
+  characterData.forEach(c => dedupeTags(c.tags || []).forEach(tag => ensure(tag).characters++));
+  artistData.forEach(a => dedupeTags(a.tags || []).forEach(tag => ensure(tag).artists++));
+  galViews.forEach(v => {
+    dedupeTags([...(v.includeTags || []), ...(v.excludeTags || [])]).forEach(tag => ensure(tag).views++);
+  });
+  return usage;
+}
+
+function renderTagManager() {
+  const list = document.getElementById('tag-manager-list');
+  const q = normalizeTagName(document.getElementById('tag-manager-search').value || '');
+  const usage = getTagUsageMap();
+  const names = [...new Set([...allKnownTags.map(t => t.name), ...Object.keys(usage)])];
+  const rows = names
+    .filter(name => !q || normalizeTagName(name).includes(q))
+    .sort((a, b) => {
+      const ua = usage[a] || {};
+      const ub = usage[b] || {};
+      const ta = (ua.images || 0) + (ua.characters || 0) + (ua.artists || 0) + (ua.views || 0);
+      const tb = (ub.images || 0) + (ub.characters || 0) + (ub.artists || 0) + (ub.views || 0);
+      return tb - ta || a.localeCompare(b, 'zh-Hant');
+    });
+  if (!rows.length) {
+    list.innerHTML = `<div class="tag-manager-empty">沒有符合條件的 tag</div>`;
+    return;
+  }
+  list.innerHTML = rows.map(name => {
+    const u = usage[name] || { images: 0, characters: 0, artists: 0, views: 0 };
+    const meta = getTagMeta(name);
+    return `<div class="tag-manager-row">
+      <div class="tag-manager-meta">
+        <div><span class="tag-chip" style="${getTagChipStyle(name)}">${esc(name)}</span></div>
+        <div class="tag-manager-usage">圖片 ${u.images} / 角色 ${u.characters} / 繪師 ${u.artists} / 分頁 ${u.views}</div>
+      </div>
+      <div class="tag-manager-actions">
+        <label style="font-size:.75rem;color:var(--txt2);display:flex;align-items:center;gap:6px;">顏色
+          <input class="tag-color-input" type="color" value="${esc(normalizeHexColor(meta.color))}" onchange="updateTagColor(${JSON.stringify(name)}, this.value)">
+        </label>
+      </div>
+      <div class="tag-manager-actions">
+        <button class="btn btn-d btn-s" onclick="deleteTagEverywhere(${JSON.stringify(name)})">刪除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function updateTagColor(name, color) {
+  await dbUpdateTagMeta(name, { color: normalizeHexColor(color) });
+  await refreshAllKnownTags();
+  renderTagManager();
+  renderTagChips();
+  renderArtistEditTags();
+  renderCharEditTags();
+  if (modalImageId) openModal(modalImageId, document.getElementById('modal-img').src);
+  if (document.getElementById('page-gallery').classList.contains('active')) renderGallery();
+  if (document.getElementById('page-characters').classList.contains('active')) renderCharPage();
+  if (document.getElementById('page-artists').classList.contains('active')) renderArtistPage();
+}
+
+async function deleteTagEverywhere(name) {
+  const usage = getTagUsageMap()[name] || { images: 0, characters: 0, artists: 0, views: 0 };
+  const total = usage.images + usage.characters + usage.artists + usage.views;
+  if (!confirm(`確定刪除 tag「${name}」？\n它會從圖片 ${usage.images} 張、角色 ${usage.characters} 個、繪師 ${usage.artists} 個、分頁 ${usage.views} 個位置被移除。`)) return;
+
+  for (const img of galleryData) {
+    if (!(img.tags || []).includes(name)) continue;
+    img.tags = img.tags.filter(t => t !== name);
+    await dbUpdateTags(img.id, img.tags);
+  }
+  for (const c of characterData) {
+    if (!(c.tags || []).includes(name)) continue;
+    c.tags = c.tags.filter(t => t !== name);
+    await dbUpdateCharacter(c.id, { tags: c.tags });
+  }
+  for (const a of artistData) {
+    if (!(a.tags || []).includes(name)) continue;
+    a.tags = a.tags.filter(t => t !== name);
+    await dbUpdateArtist(a.id, { tags: a.tags });
+  }
+
+  galViews = galViews.map(v => ({
+    ...v,
+    includeTags: (v.includeTags || []).filter(t => t !== name),
+    excludeTags: (v.excludeTags || []).filter(t => t !== name)
+  }));
+  saveGalViews();
+
+  currentTags = currentTags.filter(t => t !== name);
+  artistEditTagsState = artistEditTagsState.filter(t => t !== name);
+  charEditTagsState = charEditTagsState.filter(t => t !== name);
+  activeTagFilters.delete(name);
+  artistActiveTags.delete(name);
+  charActiveTags.delete(name);
+
+  await dbDeleteTag(name);
+  await refreshAllKnownTags();
+
+  renderTagChips();
+  renderArtistEditTags();
+  renderCharEditTags();
+  renderGalViewTabs();
+  buildTagFilterList();
+  filterGallery();
+  if (document.getElementById('page-characters').classList.contains('active')) renderCharPage();
+  if (document.getElementById('page-artists').classList.contains('active')) renderArtistPage();
+  if (modalImageId) openModal(modalImageId, document.getElementById('modal-img').src);
+  renderTagManager();
+  toast(total ? `已刪除 tag「${name}」並清理引用` : `已刪除未使用的 tag「${name}」`, 'ok');
 }
 
 // ═══════════════════════════════════════════
@@ -1715,7 +1949,7 @@ async function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   loadGalViews();
-  allKnownTags = await dbGetTags();
+  await refreshAllKnownTags();
   await loadGallery();
   renderGalViewTabs();
   await refreshVibeLibrary();
@@ -2499,7 +2733,7 @@ function renderGalViewTagPicker(kind) {
   }
   list.innerHTML = filtered.map(t => {
     const sel = selected.has(t);
-    return `<span class="gal-view-tag-chip ${sel?'sel':''}" data-tag="${esc(t)}" onclick="toggleGalViewTag('${kind}', this.dataset.tag)">${esc(t)}</span>`;
+    return `<span class="gal-view-tag-chip ${sel?'sel':''}" ${sel ? '' : `style="${getTagChipStyle(t, 0.10)}"`} data-tag="${esc(t)}" onclick="toggleGalViewTag('${kind}', this.dataset.tag)">${esc(t)}</span>`;
   }).join('');
 }
 
@@ -2595,7 +2829,7 @@ async function renderArtistPage() {
         ? `<img class="char-card-thumb" src="${a._previewUrl}" alt="">`
         : `<div class="char-card-thumb-ph">🎨</div>`;
       const styleBadge = a.styleType ? `<span class="style-badge ${STYLE_CLASS[a.styleType]||'sb-other'}">${STYLE_LABELS[a.styleType]||a.styleType}</span>` : '';
-      const tags = (a.tags||[]).slice(0,2).map(t=>`<span class="char-card-tag">${esc(t)}</span>`).join('');
+    const tags = (a.tags||[]).slice(0,2).map(t=>`<span class="char-card-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
       return `<div class="gcard char-card ${sel}" onclick="onArtistCardClick(event,${a.id})">
         ${sel?'<div class="gcard-check">✓</div>':''}
         ${thumb}
@@ -2631,7 +2865,7 @@ function buildArtistFilterRow() {
       <span class="style-badge ${cls}" style="margin:0;">${STYLE_LABELS[s]}</span></span>`;
   });
   Object.entries(tagCount).sort((a,b)=>b[1]-a[1]).forEach(([t]) => {
-    html += `<span class="tag-filter-chip ${artistActiveTags.has(t)?'active':''}" onclick="toggleArtistTag('${esc(t)}')">#${esc(t)}</span>`;
+    html += `<span class="tag-filter-chip ${artistActiveTags.has(t)?'active':''}" ${artistActiveTags.has(t) ? '' : `style="${getTagChipStyle(t, 0.10)}"`} onclick="toggleArtistTag('${esc(t)}')">#${esc(t)}</span>`;
   });
   row.innerHTML = html;
 }
@@ -2909,7 +3143,7 @@ async function renderCharPage() {
     const thumb = c._thumbUrl
       ? `<img class="char-card-thumb" src="${c._thumbUrl}" alt="">`
       : `<div class="char-card-thumb-ph">👤</div>`;
-    const tags = (c.tags||[]).slice(0,3).map(t => `<span class="char-card-tag">${esc(t)}</span>`).join('');
+    const tags = (c.tags||[]).slice(0,3).map(t => `<span class="char-card-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
     const refCount = (c.preciseRefImageIds||[]).length;
     const refBadge = refCount ? `<span class="feat-tag" style="font-size:.65rem;margin-top:3px;">Ref ×${refCount}</span>` : '';
     return `<div class="gcard char-card ${sel}" onclick="onCharCardClick(event,${c.id})">
@@ -2940,7 +3174,7 @@ function buildCharFilterRow() {
     html += `<span class="tag-filter-chip ${charActiveSeries===s?'active':''}" onclick="toggleCharSeries('${esc(s)}')">${esc(s)}</span>`;
   });
   Object.entries(tagCount).sort((a,b)=>b[1]-a[1]).forEach(([t]) => {
-    html += `<span class="tag-filter-chip ${charActiveTags.has(t)?'active':''}" onclick="toggleCharTag('${esc(t)}')">#${esc(t)}</span>`;
+    html += `<span class="tag-filter-chip ${charActiveTags.has(t)?'active':''}" ${charActiveTags.has(t) ? '' : `style="${getTagChipStyle(t, 0.10)}"`} onclick="toggleCharTag('${esc(t)}')">#${esc(t)}</span>`;
   });
   row.innerHTML = html;
 }
@@ -3873,7 +4107,7 @@ function buildTagFilterList() {
   const sorted = Object.entries(tagCount).sort((a,b)=>b[1]-a[1]);
   const list = document.getElementById('tag-filter-list');
   list.innerHTML = sorted.map(([t,c]) =>
-    `<span class="tag-filter-chip ${activeTagFilters.has(t)?'active':''}" onclick="toggleTagFilter('${esc(t)}')">${esc(t)} <small>${c}</small></span>`
+    `<span class="tag-filter-chip ${activeTagFilters.has(t)?'active':''}" ${activeTagFilters.has(t) ? '' : `style="${getTagChipStyle(t, 0.10)}"`} onclick="toggleTagFilter('${esc(t)}')">${esc(t)} <small>${c}</small></span>`
   ).join('');
 }
 
@@ -3926,7 +4160,7 @@ function renderGallery() {
   }
   grid.innerHTML = filteredData.map(img => {
     const url = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
-    const tags = (img.tags||[]).map(t=>`<span class="gcard-tag">${esc(t)}</span>`).join('');
+    const tags = (img.tags||[]).map(t=>`<span class="gcard-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
     const time = new Date(img.timestamp).toLocaleDateString('zh-TW',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
     const sel = selectedIds.has(img.id) ? 'selected' : '';
     return `<div class="gcard ${sel}" data-id="${img.id}" onclick="onCardClick(event,${img.id},'${url}')">
@@ -4082,7 +4316,7 @@ function openModal(id, url) {
     <div>
       <div class="modal-section-title">Tags</div>
       <div class="modal-tag-wrap" id="modal-tags">
-        ${tags.map(t=>`<span class="modal-tag" onclick="removeModalTag(${JSON.stringify(t)})" title="點擊移除">${esc(t)} ×</span>`).join('')}
+        ${tags.map(t=>`<span class="modal-tag" style="${getTagChipStyle(t, 0.12)}" onclick="removeModalTag(${JSON.stringify(t)})" title="點擊移除">${esc(t)} ×</span>`).join('')}
         <button class="btn btn-s btn-icon" onclick="addModalTag()" title="新增 tag" style="font-size:.75rem;padding:3px 8px;">＋</button>
       </div>
     </div>
