@@ -882,13 +882,17 @@
       <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeBlendDetailModal()">✕</button>
     </div>
     <div class="char-modal-body" id="blend-detail-body"></div>
-    <div class="char-modal-ft">
-      <button class="btn btn-d btn-s" id="blend-detail-delete" onclick="deleteCurrentBlend()">🗑 刪除</button>
-      <button class="btn btn-s" onclick="addManualBlendEntry()">＋ 手動條目</button>
-      <button class="btn btn-p" onclick="saveCurrentBlend()">儲存</button>
-      <button class="btn btn-s btn-out" onclick="blendGenPreview()" style="margin-left:auto;">⚡ 生混搭圖</button>
-      <button class="btn btn-s" onclick="openGalleryPicker('blendPreview')">從圖庫指定預覽</button>
-      <button class="btn btn-s btn-out" onclick="closeBlendDetailModal()">關閉</button>
+    <div class="char-modal-ft" style="justify-content:space-between;align-items:center;flex-wrap:wrap;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-d btn-s" id="blend-detail-delete" onclick="deleteCurrentBlend()">🗑 刪除</button>
+        <button class="btn btn-s" onclick="addManualBlendEntry()">＋ 手動條目</button>
+        <button class="btn btn-p" onclick="saveCurrentBlend()">儲存</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+        <button class="btn btn-s btn-out" onclick="blendGenPreview()">⚡ 生混搭圖</button>
+        <button class="btn btn-s" onclick="openGalleryPicker('blendPreview')">從圖庫指定預覽</button>
+        <button class="btn btn-s btn-out" onclick="closeBlendDetailModal()">關閉</button>
+      </div>
     </div>
   </div>
 </div>
