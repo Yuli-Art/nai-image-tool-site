@@ -497,6 +497,20 @@
     .bt-insert-item:last-child{border-bottom:none;}
     .bt-insert-item:hover{background:var(--bg3);}
 
+    /* ── A/B TEST PAGE ── */
+    #page-ab.active{display:block;overflow-y:auto;}
+    .ab-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+    .ab-badge{display:inline-flex;align-items:center;gap:5px;font-size:.75rem;font-weight:700;
+      padding:2px 9px;border-radius:8px;letter-spacing:.04em;}
+    .ab-badge-a{background:rgba(59,130,246,.15);color:#3b82f6;border:1px solid rgba(59,130,246,.3);}
+    .ab-badge-b{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.25);}
+    .ab-result-img{width:100%;border-radius:6px;display:block;cursor:pointer;transition:opacity .15s;}
+    .ab-result-img:hover{opacity:.88;}
+    .ab-result-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px;}
+    .ab-result-col{display:flex;flex-direction:column;}
+    .ab-section-head{font-size:.75rem;font-weight:700;color:var(--txt2);text-transform:uppercase;
+      letter-spacing:.05em;margin-bottom:8px;display:flex;align-items:center;gap:7px;}
+
     /* ── MOBILE ── */
     @media(max-width:768px){
       #page-generate.active{flex-direction:column;}
@@ -559,6 +573,7 @@
   <div class="gen-sub-nav visible" id="gen-sub-nav">
     <button class="gen-sub-tab active" id="gen-sub-gen" onclick="showPage('generate')">生圖</button>
     <button class="gen-sub-tab" id="gen-sub-batch" onclick="showPage('batch')">批次排程</button>
+    <button class="gen-sub-tab" id="gen-sub-ab" onclick="showPage('ab')">A/B 比較</button>
   </div>
 
   <!-- ── GENERATE PAGE ── -->
@@ -954,6 +969,187 @@
       <button class="btn btn-s" onclick="clearBatchSelection()">取消選取</button>
     </div>
     <div style="padding:12px;display:flex;flex-direction:column;gap:8px;" id="batch-task-list"></div>
+  </div>
+
+
+  <!-- ── A/B TEST PAGE ── -->
+  <div id="page-ab" class="page">
+    <div style="padding:14px;display:flex;flex-direction:column;gap:12px;">
+
+      <!-- Shared Prompt -->
+      <div class="card">
+        <div class="card-title">共用 Prompt（A 和 B 使用同一份）</div>
+        <div class="fg">
+          <label style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
+            <span>正向 Prompt</span>
+            <div style="display:flex;gap:4px;">
+              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('char',this,'ab-prompt')">👤 角色</button>
+              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('style',this,'ab-prompt')">🎨 風格</button>
+              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('note',this,'ab-prompt')">📝 片段</button>
+            </div>
+          </label>
+          <textarea id="ab-prompt" rows="4" placeholder="1girl, blue eyes, long hair..." style="font-family:monospace;resize:vertical;"></textarea>
+        </div>
+        <div class="fg">
+          <label style="display:flex;align-items:center;justify-content:space-between;">
+            <span>負向 Prompt</span>
+            <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('note',this,'ab-neg')">📝 片段</button>
+          </label>
+          <textarea id="ab-neg" rows="2" placeholder="lowres, bad anatomy..." style="font-family:monospace;resize:vertical;"></textarea>
+        </div>
+      </div>
+
+      <!-- Two-column params -->
+      <div class="ab-cols">
+
+        <!-- A side -->
+        <div class="card">
+          <div class="card-title" style="display:flex;align-items:center;gap:8px;">
+            <span class="ab-badge ab-badge-a">A</span>
+            <span>參數組 A</span>
+            <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;margin-left:auto;" onclick="abImportFromGen('a')">⬇ 從生圖頁匯入</button>
+          </div>
+          <div class="fg">
+            <label>模型</label>
+            <select id="ab-a-model">
+              <option value="nai-diffusion-4-5-full">V4.5 Full</option>
+              <option value="nai-diffusion-4-5">V4.5</option>
+              <option value="nai-diffusion-4">V4</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>解析度</label>
+            <select id="ab-a-res">
+              <option value="832x1216">832×1216</option>
+              <option value="1216x832">1216×832</option>
+              <option value="1024x1024">1024×1024</option>
+              <option value="1024x1536">1024×1536</option>
+              <option value="1536x1024">1536×1024</option>
+            </select>
+          </div>
+          <div class="row2">
+            <div class="fg"><label>Steps</label><input id="ab-a-steps" type="number" value="28" min="1" max="50"></div>
+            <div class="fg"><label>CFG Scale</label><input id="ab-a-cfg" type="number" value="5" step="0.1" min="1" max="10"></div>
+          </div>
+          <div class="row2">
+            <div class="fg">
+              <label>Sampler</label>
+              <select id="ab-a-sampler">
+                <option value="k_euler_ancestral">Euler Ancestral</option>
+                <option value="k_euler">Euler</option>
+                <option value="k_dpmpp_2s_ancestral">DPM++ 2S a</option>
+                <option value="k_dpmpp_2m_sde">DPM++ 2M SDE</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label>Noise Sch.</label>
+              <select id="ab-a-noise-sch">
+                <option value="karras">Karras</option>
+                <option value="exponential">Exponential</option>
+                <option value="polyexponential">Poly Exp.</option>
+              </select>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="fg"><label>Seed（-1 隨機）</label><input id="ab-a-seed" type="number" value="-1"></div>
+            <div class="fg"><label>生幾張</label><input id="ab-a-count" type="number" value="3" min="1" max="20"></div>
+          </div>
+        </div>
+
+        <!-- B side -->
+        <div class="card">
+          <div class="card-title" style="display:flex;align-items:center;gap:8px;">
+            <span class="ab-badge ab-badge-b">B</span>
+            <span>參數組 B</span>
+            <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;margin-left:auto;" onclick="abImportFromGen('b')">⬇ 從生圖頁匯入</button>
+          </div>
+          <div class="fg">
+            <label>模型</label>
+            <select id="ab-b-model">
+              <option value="nai-diffusion-4-5-full">V4.5 Full</option>
+              <option value="nai-diffusion-4-5">V4.5</option>
+              <option value="nai-diffusion-4">V4</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>解析度</label>
+            <select id="ab-b-res">
+              <option value="832x1216">832×1216</option>
+              <option value="1216x832">1216×832</option>
+              <option value="1024x1024">1024×1024</option>
+              <option value="1024x1536">1024×1536</option>
+              <option value="1536x1024">1536×1024</option>
+            </select>
+          </div>
+          <div class="row2">
+            <div class="fg"><label>Steps</label><input id="ab-b-steps" type="number" value="28" min="1" max="50"></div>
+            <div class="fg"><label>CFG Scale</label><input id="ab-b-cfg" type="number" value="5" step="0.1" min="1" max="10"></div>
+          </div>
+          <div class="row2">
+            <div class="fg">
+              <label>Sampler</label>
+              <select id="ab-b-sampler">
+                <option value="k_euler_ancestral">Euler Ancestral</option>
+                <option value="k_euler">Euler</option>
+                <option value="k_dpmpp_2s_ancestral">DPM++ 2S a</option>
+                <option value="k_dpmpp_2m_sde">DPM++ 2M SDE</option>
+              </select>
+            </div>
+            <div class="fg">
+              <label>Noise Sch.</label>
+              <select id="ab-b-noise-sch">
+                <option value="karras">Karras</option>
+                <option value="exponential">Exponential</option>
+                <option value="polyexponential">Poly Exp.</option>
+              </select>
+            </div>
+          </div>
+          <div class="row2">
+            <div class="fg"><label>Seed（-1 隨機）</label><input id="ab-b-seed" type="number" value="-1"></div>
+            <div class="fg"><label>生幾張</label><input id="ab-b-count" type="number" value="3" min="1" max="20"></div>
+          </div>
+        </div>
+
+      </div><!-- /ab-cols params -->
+
+      <!-- Controls -->
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-p" id="ab-run-btn" onclick="startAB()">▶ 開始 A/B 比較</button>
+          <button class="btn btn-d" id="ab-stop-btn" style="display:none;" onclick="stopAB()">■ 停止</button>
+          <button class="btn btn-s btn-out" onclick="clearABResults()">🗑 清除結果</button>
+          <span id="ab-status-text" style="font-size:.82rem;color:var(--txt2);"></span>
+          <div style="flex:1;"></div>
+          <span id="ab-progress-label" style="font-size:.78rem;color:var(--txt2);"></span>
+        </div>
+        <div id="ab-progress-wrap" style="display:none;margin-top:8px;">
+          <div class="batch-progress-bar-outer">
+            <div id="ab-progress-bar" class="batch-progress-bar-inner" style="width:0%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div id="ab-results-wrap" style="display:none;">
+        <div class="ab-cols">
+          <div>
+            <div class="ab-section-head">
+              <span class="ab-badge ab-badge-a">A</span> 結果
+              <span id="ab-a-done-label" style="color:var(--txt2);font-weight:400;font-size:.72rem;"></span>
+            </div>
+            <div id="ab-results-a" class="ab-result-col"></div>
+          </div>
+          <div>
+            <div class="ab-section-head">
+              <span class="ab-badge ab-badge-b">B</span> 結果
+              <span id="ab-b-done-label" style="color:var(--txt2);font-weight:400;font-size:.72rem;"></span>
+            </div>
+            <div id="ab-results-b" class="ab-result-col"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
   </div>
 
 </div><!-- /app -->
@@ -2609,7 +2805,7 @@ function setGenerating(on) {
 }
 
 function showPage(page) {
-  ['page-generate','page-gallery','page-vibe','page-characters','page-artists','page-notes','page-batch'].forEach(id => {
+  ['page-generate','page-gallery','page-vibe','page-characters','page-artists','page-notes','page-batch','page-ab'].forEach(id => {
     const el = document.getElementById(id); if (el) el.classList.remove('active');
   });
   ['tab-gen','tab-gal','tab-vibe-page','tab-char-page','tab-artist-page','tab-notes-page'].forEach(id => {
@@ -2618,11 +2814,11 @@ function showPage(page) {
   const show = id => { const el = document.getElementById(id); if (el) el.classList.add('active'); };
   const activateTab = id => { const el = document.getElementById(id); if (el) el.classList.add('active'); };
 
-  // Gen sub-nav: visible on generate + batch pages
+  // Gen sub-nav: visible on generate + batch + ab pages
   const subNav = document.getElementById('gen-sub-nav');
-  const onGenPage = page === 'generate' || page === 'batch';
+  const onGenPage = page === 'generate' || page === 'batch' || page === 'ab';
   if (subNav) subNav.classList.toggle('visible', onGenPage);
-  ['gen-sub-gen','gen-sub-batch'].forEach(id => {
+  ['gen-sub-gen','gen-sub-batch','gen-sub-ab'].forEach(id => {
     const el = document.getElementById(id); if (el) el.classList.remove('active');
   });
 
@@ -2643,6 +2839,9 @@ function showPage(page) {
     show('page-batch'); activateTab('tab-gen');
     const el = document.getElementById('gen-sub-batch'); if (el) el.classList.add('active');
     renderBatchPage();
+  } else if (page === 'ab') {
+    show('page-ab'); activateTab('tab-gen');
+    const el = document.getElementById('gen-sub-ab'); if (el) el.classList.add('active');
   }
 }
 
@@ -5997,7 +6196,7 @@ function composeBatchPrompt(task) {
 }
 
 // ── Core API (no Vibe / PreciseRef / img2img — batch only) ──
-async function callGenerateSimple({ prompt, negPrompt, model, width, height, steps, scale, cfgR, sampler, noiseSch, seed }) {
+async function callGenerateSimple({ prompt, negPrompt, model, width, height, steps, scale, cfgR, sampler, noiseSch, seed, _stopFn, _abortHolder }) {
   if (!apiToken) throw new Error('未登入');
   const isV4 = model.startsWith('nai-diffusion-4');
   const params = {
@@ -6021,9 +6220,10 @@ async function callGenerateSimple({ prompt, negPrompt, model, width, height, ste
   const TIMEOUT = 120000, MAX_RETRY = 2;
   let resp = null;
   for (let attempt = 0; attempt <= MAX_RETRY; attempt++) {
-    if (batchShouldStop) throw new Error('stopped');
+    if (batchShouldStop || (_stopFn && _stopFn())) throw new Error('stopped');
     const ctrl = new AbortController();
     batchCurrentAbort = ctrl;
+    if (_abortHolder) _abortHolder.ctrl = ctrl;
     const tid = setTimeout(() => ctrl.abort(), TIMEOUT);
     try {
       resp = await fetch('https://image.novelai.net/ai/generate-image', {
@@ -6625,6 +6825,183 @@ function saveBatchTask() {
   closeBatchTaskModal();
   renderBatchPage();
   toast(btEditId !== null ? '任務已更新' : '任務已新增', 'ok');
+}
+
+// ═══════════════════════════════════════════
+// A/B COMPARISON
+// ═══════════════════════════════════════════
+
+let abRunning    = false;
+let abShouldStop = false;
+const abAbortHolder = { ctrl: null };
+let abDoneA = 0, abDoneB = 0, abTotalA = 0, abTotalB = 0;
+
+function abVal(id) {
+  const el = document.getElementById(id);
+  return el ? el.value : '';
+}
+
+async function startAB() {
+  if (abRunning) return;
+  const prompt = abVal('ab-prompt').trim();
+  if (!prompt) { toast('請先填寫 Prompt', 'warn'); return; }
+
+  abTotalA = parseInt(abVal('ab-a-count')) || 3;
+  abTotalB = parseInt(abVal('ab-b-count')) || 3;
+  abDoneA = 0; abDoneB = 0;
+  abRunning = true; abShouldStop = false;
+
+  document.getElementById('ab-run-btn').style.display  = 'none';
+  document.getElementById('ab-stop-btn').style.display = '';
+  document.getElementById('ab-progress-wrap').style.display = '';
+  document.getElementById('ab-results-wrap').style.display  = '';
+  document.getElementById('ab-results-a').innerHTML = '';
+  document.getElementById('ab-results-b').innerHTML = '';
+  document.getElementById('ab-a-done-label').textContent = '';
+  document.getElementById('ab-b-done-label').textContent = '';
+  abUpdateProgress();
+
+  const negPrompt = abVal('ab-neg').trim();
+  const cfgA = { model: abVal('ab-a-model'), res: abVal('ab-a-res'), steps: parseInt(abVal('ab-a-steps'))||28, scale: parseFloat(abVal('ab-a-cfg'))||5, sampler: abVal('ab-a-sampler'), noiseSch: abVal('ab-a-noise-sch'), seed: parseInt(abVal('ab-a-seed')), count: abTotalA };
+  const cfgB = { model: abVal('ab-b-model'), res: abVal('ab-b-res'), steps: parseInt(abVal('ab-b-steps'))||28, scale: parseFloat(abVal('ab-b-cfg'))||5, sampler: abVal('ab-b-sampler'), noiseSch: abVal('ab-b-noise-sch'), seed: parseInt(abVal('ab-b-seed')), count: abTotalB };
+
+  const maxCount = Math.max(abTotalA, abTotalB);
+  for (let i = 0; i < maxCount && !abShouldStop; i++) {
+    // Generate A[i]
+    if (i < abTotalA && !abShouldStop) {
+      const seed = (cfgA.seed ?? -1) === -1 ? Math.floor(Math.random() * 9999999999) : (cfgA.seed + i);
+      const [w, h] = cfgA.res.split('x').map(Number);
+      abUpdateStatus(`生 A 第 ${i + 1}/${abTotalA} 張`);
+      abUpdateProgress();
+      try {
+        const ab = await callGenerateSimple({
+          prompt, negPrompt,
+          model: cfgA.model, width: w, height: h,
+          steps: cfgA.steps, scale: cfgA.scale, cfgR: 0,
+          sampler: cfgA.sampler, noiseSch: cfgA.noiseSch, seed,
+          _stopFn: () => abShouldStop, _abortHolder: abAbortHolder
+        });
+        const meta = extractPNGMeta(ab);
+        if (!meta.prompt) meta.prompt = prompt;
+        if (!meta.seed)   meta.seed   = seed;
+        if (!meta.model)  meta.model  = cfgA.model;
+        const id = await dbSaveImage(ab, meta, dedupeTags(['ab-test','ab-a']));
+        galleryData.unshift({ id, timestamp: Date.now(), data: ab, metadata: meta, tags: ['ab-test','ab-a'] });
+        updateGalCount();
+        abAddResultToGrid('a', ab, id);
+        abDoneA++;
+        abUpdateProgress();
+      } catch (e) {
+        if (e.message === 'stopped' || e.name === 'AbortError') { abShouldStop = true; break; }
+        toast(`A 第 ${i + 1} 張失敗：${e.message}`, 'err');
+        await sleep(2000);
+      }
+    }
+
+    // Generate B[i]
+    if (i < abTotalB && !abShouldStop) {
+      const seed = (cfgB.seed ?? -1) === -1 ? Math.floor(Math.random() * 9999999999) : (cfgB.seed + i);
+      const [w, h] = cfgB.res.split('x').map(Number);
+      abUpdateStatus(`生 B 第 ${i + 1}/${abTotalB} 張`);
+      abUpdateProgress();
+      try {
+        const ab = await callGenerateSimple({
+          prompt, negPrompt,
+          model: cfgB.model, width: w, height: h,
+          steps: cfgB.steps, scale: cfgB.scale, cfgR: 0,
+          sampler: cfgB.sampler, noiseSch: cfgB.noiseSch, seed,
+          _stopFn: () => abShouldStop, _abortHolder: abAbortHolder
+        });
+        const meta = extractPNGMeta(ab);
+        if (!meta.prompt) meta.prompt = prompt;
+        if (!meta.seed)   meta.seed   = seed;
+        if (!meta.model)  meta.model  = cfgB.model;
+        const id = await dbSaveImage(ab, meta, dedupeTags(['ab-test','ab-b']));
+        galleryData.unshift({ id, timestamp: Date.now(), data: ab, metadata: meta, tags: ['ab-test','ab-b'] });
+        updateGalCount();
+        abAddResultToGrid('b', ab, id);
+        abDoneB++;
+        abUpdateProgress();
+      } catch (e) {
+        if (e.message === 'stopped' || e.name === 'AbortError') { abShouldStop = true; break; }
+        toast(`B 第 ${i + 1} 張失敗：${e.message}`, 'err');
+        await sleep(2000);
+      }
+    }
+  }
+
+  abRunning = false;
+  document.getElementById('ab-run-btn').style.display  = '';
+  document.getElementById('ab-stop-btn').style.display = 'none';
+
+  if (abShouldStop) {
+    abUpdateStatus('已停止');
+    document.getElementById('ab-progress-wrap').style.display = 'none';
+    toast('A/B 已停止', 'warn');
+  } else {
+    abUpdateStatus(`完成！A：${abDoneA} 張 / B：${abDoneB} 張`);
+    abUpdateProgress();
+    toast('A/B 比較完成！', 'ok');
+  }
+}
+
+function stopAB() {
+  abShouldStop = true;
+  if (abAbortHolder.ctrl) { abAbortHolder.ctrl.abort(); abAbortHolder.ctrl = null; }
+}
+
+function abAddResultToGrid(side, arrayBuffer, imageId) {
+  const colId = side === 'a' ? 'ab-results-a' : 'ab-results-b';
+  const col = document.getElementById(colId);
+  if (!col) return;
+  const url = URL.createObjectURL(new Blob([arrayBuffer], { type: 'image/png' }));
+  const card = document.createElement('div');
+  card.className = 'ab-result-card';
+  card.innerHTML = `<img class="ab-result-img" src="${url}" onclick="openModal(${imageId},'${url.replace(/'/g,"\\'")}')">`;
+  col.appendChild(card);
+  const labelId = side === 'a' ? 'ab-a-done-label' : 'ab-b-done-label';
+  const count = col.querySelectorAll('.ab-result-card').length;
+  const total = side === 'a' ? abTotalA : abTotalB;
+  document.getElementById(labelId).textContent = `(${count}/${total})`;
+}
+
+function clearABResults() {
+  if (abRunning) { toast('請先停止 A/B 比較', 'warn'); return; }
+  document.getElementById('ab-results-a').innerHTML = '';
+  document.getElementById('ab-results-b').innerHTML = '';
+  document.getElementById('ab-results-wrap').style.display = 'none';
+  document.getElementById('ab-progress-wrap').style.display = 'none';
+  document.getElementById('ab-a-done-label').textContent = '';
+  document.getElementById('ab-b-done-label').textContent = '';
+  abUpdateStatus('');
+  abDoneA = 0; abDoneB = 0;
+}
+
+function abUpdateStatus(msg) {
+  const el = document.getElementById('ab-status-text');
+  if (el) el.textContent = msg || '';
+}
+
+function abUpdateProgress() {
+  const done  = abDoneA + abDoneB;
+  const total = abTotalA + abTotalB;
+  const pct   = total ? Math.round(done / total * 100) : 0;
+  const label = document.getElementById('ab-progress-label');
+  const bar   = document.getElementById('ab-progress-bar');
+  if (label) label.textContent = total ? `${done} / ${total} 張` : '';
+  if (bar)   bar.style.width = pct + '%';
+}
+
+function abImportFromGen(side) {
+  const pfx = 'ab-' + side + '-';
+  document.getElementById(pfx + 'model').value     = document.getElementById('model')?.value     || 'nai-diffusion-4-5-full';
+  document.getElementById(pfx + 'res').value       = document.getElementById('res')?.value       || '832x1216';
+  document.getElementById(pfx + 'steps').value     = document.getElementById('steps')?.value     || 28;
+  document.getElementById(pfx + 'cfg').value       = document.getElementById('cfg')?.value       || 5;
+  document.getElementById(pfx + 'sampler').value   = document.getElementById('sampler')?.value   || 'k_euler_ancestral';
+  document.getElementById(pfx + 'noise-sch').value = document.getElementById('noise-sch')?.value || 'karras';
+  document.getElementById(pfx + 'seed').value      = seedRandom ? -1 : (document.getElementById('seed')?.value || -1);
+  toast(`已從生圖頁匯入參數到 ${side.toUpperCase()} 組`, 'ok');
 }
 
 </script>
