@@ -342,12 +342,11 @@
       display:none;align-items:center;justify-content:center;}
     .gal-view-popup-overlay.open{display:flex;}
     .gal-view-popup{background:var(--bg2);border:1px solid var(--border);border-radius:12px;
-      padding:20px;width:340px;max-width:92vw;}
+      padding:20px;width:380px;max-width:92vw;}
     .gal-view-popup h3{font-size:.9rem;font-weight:700;margin-bottom:14px;}
-    .gal-view-mode-row{display:flex;gap:6px;margin-top:4px;}
-    .gal-view-mode-btn{background:var(--bg3);border:1px solid var(--border);border-radius:6px;
-      color:var(--txt2);font-size:.78rem;padding:5px 10px;cursor:pointer;transition:background .15s,border-color .15s;}
-    .gal-view-mode-btn.active{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
+    .gal-view-filter-block{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px 10px 8px;margin-top:8px;}
+    .gal-view-filter-title{font-size:.8rem;font-weight:700;color:var(--txt);margin-bottom:4px;}
+    .gal-view-filter-help{font-size:.72rem;color:var(--txt2);margin-bottom:8px;line-height:1.45;}
     .gal-view-tag-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;max-height:120px;overflow-y:auto;padding:2px;}
     .gal-view-tag-chip{background:var(--bg3);border:1px solid var(--border);border-radius:5px;
       padding:3px 9px;font-size:.75rem;cursor:pointer;transition:background .15s,border-color .15s;}
@@ -927,17 +926,21 @@
       <input type="text" id="gal-view-name" placeholder="例：繪師參考" style="width:100%;">
     </div>
     <div class="fg">
-      <label>篩選模式</label>
-      <div class="gal-view-mode-row">
-        <button class="gal-view-mode-btn active" id="gal-view-mode-include" onclick="setGalViewMode('include')">只顯示</button>
-        <button class="gal-view-mode-btn" id="gal-view-mode-exclude" onclick="setGalViewMode('exclude')">隱藏</button>
+      <label>以下 tag 的圖</label>
+      <div class="gal-view-filter-block">
+        <div class="gal-view-filter-title">顯示這些 tag</div>
+        <div class="gal-view-filter-help">圖至少要包含其中一個 tag，才會出現在這個分頁。不選 = 不限制。</div>
+        <input type="search" id="gal-view-include-search" placeholder="搜尋要顯示的 tag..." oninput="renderGalViewTagPicker('include')"
+          style="width:100%;margin-bottom:0;">
+        <div class="gal-view-tag-list" id="gal-view-include-list"></div>
       </div>
-    </div>
-    <div class="fg">
-      <label>以下 tag 的圖 <span style="font-size:.7rem;color:var(--txt2);">（不選 = 顯示全部）</span></label>
-      <input type="search" id="gal-view-tag-search" placeholder="搜尋 tag..." oninput="renderGalViewTagPicker()"
-        style="width:100%;margin-bottom:0;">
-      <div class="gal-view-tag-list" id="gal-view-tag-list"></div>
+      <div class="gal-view-filter-block">
+        <div class="gal-view-filter-title">隱藏這些 tag</div>
+        <div class="gal-view-filter-help">只要圖片含有其中任一個 tag，就會被排除。隱藏條件優先。</div>
+        <input type="search" id="gal-view-exclude-search" placeholder="搜尋要隱藏的 tag..." oninput="renderGalViewTagPicker('exclude')"
+          style="width:100%;margin-bottom:0;">
+        <div class="gal-view-tag-list" id="gal-view-exclude-list"></div>
+      </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
       <button class="btn btn-s btn-out" onclick="closeGalViewPopup()">取消</button>
@@ -2090,14 +2093,29 @@ function renderVibeList() {
 // GALLERY VIEW TABS
 // ═══════════════════════════════════════════
 const GAL_VIEWS_KEY = 'nai_gal_views_v1';
-let galViews = [];          // [{id, name, filterMode:'include'|'exclude', filterTags:[]}]
+let galViews = [];          // [{id, name, includeTags:[], excludeTags:[]}]
 let activeGalViewId = 'all';
-let galViewMode = 'include';  // current popup mode
+let galViewIncludeTags = new Set();
+let galViewExcludeTags = new Set();
 
 function loadGalViews() {
   try {
     const raw = localStorage.getItem(GAL_VIEWS_KEY);
-    galViews = raw ? JSON.parse(raw) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    galViews = Array.isArray(parsed) ? parsed.map(v => {
+      const includeTags = Array.isArray(v.includeTags)
+        ? v.includeTags
+        : (v.filterMode === 'include' && Array.isArray(v.filterTags) ? v.filterTags : []);
+      const excludeTags = Array.isArray(v.excludeTags)
+        ? v.excludeTags
+        : (v.filterMode === 'exclude' && Array.isArray(v.filterTags) ? v.filterTags : []);
+      return {
+        id: v.id,
+        name: v.name,
+        includeTags: [...new Set((includeTags || []).filter(Boolean))],
+        excludeTags: [...new Set((excludeTags || []).filter(Boolean))]
+      };
+    }).filter(v => v.id && v.name) : [];
   } catch { galViews = []; }
 }
 
@@ -2111,7 +2129,7 @@ function renderGalViewTabs() {
   let html = `<button class="gal-view-tab ${allActive?'active':''}" onclick="switchGalView('all')">全部</button>`;
   galViews.forEach(v => {
     const active = activeGalViewId === v.id;
-    const modeIcon = v.filterMode === 'exclude' ? '🚫 ' : '';
+    const modeIcon = (v.excludeTags?.length && !v.includeTags?.length) ? '🚫 ' : '';
     html += `<button class="gal-view-tab ${active?'active':''}" onclick="switchGalView('${v.id}')">
       ${modeIcon}${esc(v.name)}
       <span class="gal-view-tab-x" onclick="event.stopPropagation();deleteGalView('${v.id}')" title="刪除">×</span>
@@ -2135,18 +2153,26 @@ function deleteGalView(id) {
   filterGallery();
 }
 
-function setGalViewMode(mode) {
-  galViewMode = mode;
-  document.getElementById('gal-view-mode-include').classList.toggle('active', mode==='include');
-  document.getElementById('gal-view-mode-exclude').classList.toggle('active', mode==='exclude');
+function toggleGalViewTag(kind, tag) {
+  const targetSet = kind === 'exclude' ? galViewExcludeTags : galViewIncludeTags;
+  const otherSet = kind === 'exclude' ? galViewIncludeTags : galViewExcludeTags;
+  if (targetSet.has(tag)) targetSet.delete(tag);
+  else {
+    targetSet.add(tag);
+    otherSet.delete(tag);
+  }
+  renderGalViewTagPicker(kind === 'exclude' ? 'include' : 'exclude');
+  renderGalViewTagPicker(kind);
 }
 
 function openGalViewPopup() {
   document.getElementById('gal-view-name').value = '';
-  galViewMode = 'include';
-  setGalViewMode('include');
-  document.getElementById('gal-view-tag-search').value = '';
-  renderGalViewTagPicker();
+  galViewIncludeTags = new Set();
+  galViewExcludeTags = new Set();
+  document.getElementById('gal-view-include-search').value = '';
+  document.getElementById('gal-view-exclude-search').value = '';
+  renderGalViewTagPicker('include');
+  renderGalViewTagPicker('exclude');
   document.getElementById('gal-view-popup').classList.add('open');
 }
 
@@ -2155,36 +2181,39 @@ function closeGalViewPopup(e) {
   document.getElementById('gal-view-popup').classList.remove('open');
 }
 
-function renderGalViewTagPicker() {
-  const q = (document.getElementById('gal-view-tag-search').value||'').toLowerCase();
+function renderGalViewTagPicker(kind) {
+  const isExclude = kind === 'exclude';
+  const q = (document.getElementById(isExclude ? 'gal-view-exclude-search' : 'gal-view-include-search').value||'').toLowerCase();
   const allTags = [...new Set(galleryData.flatMap(img => img.tags||[]))].sort();
   const filtered = allTags.filter(t => !q || t.toLowerCase().includes(q));
-  const list = document.getElementById('gal-view-tag-list');
-  // Preserve currently selected tags before re-render
-  const alreadySel = new Set([...list.querySelectorAll('.gal-view-tag-chip.sel')].map(c => c.dataset.tag));
+  const list = document.getElementById(isExclude ? 'gal-view-exclude-list' : 'gal-view-include-list');
+  const selected = isExclude ? galViewExcludeTags : galViewIncludeTags;
   if (!filtered.length) {
     list.innerHTML = `<span style="font-size:.75rem;color:var(--txt2);">${allTags.length?'沒有符合的 tag':'圖庫目前沒有 tag'}</span>`;
     return;
   }
   list.innerHTML = filtered.map(t => {
-    const sel = alreadySel.has(t);
-    return `<span class="gal-view-tag-chip ${sel?'sel':''}" data-tag="${esc(t)}" onclick="this.classList.toggle('sel')">${esc(t)}</span>`;
+    const sel = selected.has(t);
+    return `<span class="gal-view-tag-chip ${sel?'sel':''}" data-tag="${esc(t)}" onclick="toggleGalViewTag('${kind}', this.dataset.tag)">${esc(t)}</span>`;
   }).join('');
 }
 
 function confirmAddGalView() {
   const name = document.getElementById('gal-view-name').value.trim();
   if (!name) { toast('請輸入分頁名稱','warn'); return; }
-  const tags = [...document.querySelectorAll('#gal-view-tag-list .gal-view-tag-chip.sel')].map(c => c.dataset.tag);
+  const includeTags = [...galViewIncludeTags];
+  const excludeTags = [...galViewExcludeTags];
   const id = 'v_' + Date.now();
-  galViews.push({ id, name, filterMode: galViewMode, filterTags: tags });
+  galViews.push({ id, name, includeTags, excludeTags });
   saveGalViews();
   document.getElementById('gal-view-popup').classList.remove('open');
   activeGalViewId = id;
   renderGalViewTabs();
   filterGallery();
-  const modeLabel = galViewMode === 'include' ? '只顯示' : '隱藏';
-  const tagLabel = tags.length ? `（${modeLabel} ${tags.length} 個 tag）` : '（顯示全部）';
+  const parts = [];
+  if (includeTags.length) parts.push(`顯示 ${includeTags.length} 個 tag`);
+  if (excludeTags.length) parts.push(`隱藏 ${excludeTags.length} 個 tag`);
+  const tagLabel = parts.length ? `（${parts.join('，')}）` : '（顯示全部）';
   toast(`分頁「${name}」已新增 ${tagLabel}`, 'ok');
 }
 
@@ -3561,10 +3590,13 @@ function filterGallery() {
 }
 
 function applyGalViewFilter(img, view) {
-  if (!view || !view.filterTags?.length) return true;
+  if (!view) return true;
   const imgTags = img.tags || [];
-  const hasAny = view.filterTags.some(t => imgTags.includes(t));
-  return view.filterMode === 'exclude' ? !hasAny : hasAny;
+  const includeTags = Array.isArray(view.includeTags) ? view.includeTags : [];
+  const excludeTags = Array.isArray(view.excludeTags) ? view.excludeTags : [];
+  const matchInclude = includeTags.length === 0 || includeTags.some(t => imgTags.includes(t));
+  const hitExclude = excludeTags.some(t => imgTags.includes(t));
+  return matchInclude && !hitExclude;
 }
 
 function renderGallery() {
