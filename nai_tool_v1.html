@@ -328,9 +328,11 @@
     .artist-quick-btn:hover{background:var(--bg3);color:var(--txt);}
 
     /* ── PROMPT 筆記本 ── */
-    .note-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;
-      display:flex;flex-direction:column;gap:8px;transition:box-shadow .15s;}
+    .note-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;
+      display:flex;flex-direction:column;transition:box-shadow .15s;}
     .note-card:hover{box-shadow:0 0 0 2px var(--accent-l);}
+    .note-card-cover{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;cursor:pointer;flex-shrink:0;}
+    .note-card-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px;flex:1;}
     .note-fragment{font-family:monospace;font-size:.82rem;color:var(--txt);background:var(--bg3);
       border-radius:6px;padding:7px 10px;word-break:break-all;line-height:1.55;position:relative;}
     .note-fragment-copy{position:absolute;top:5px;right:6px;background:none;border:none;
@@ -5294,31 +5296,32 @@ function renderNotesPage() {
     const fragEsc = esc(n.fragment);
     const fragJs  = n.fragment.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     const previewIds = n.previewImageIds || [];
-    const thumbsHtml = previewIds.length
-      ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">${
-          previewIds.map(imgId => {
-            const gi = galleryData.find(i => i.id === imgId);
-            if (!gi) return '';
-            const thumbUrl = URL.createObjectURL(new Blob([gi.data], { type:'image/png' }));
-            return `<img src="${thumbUrl}" style="width:56px;height:56px;object-fit:cover;border-radius:5px;border:1px solid var(--border);cursor:pointer;" onclick="openModal(${imgId})" title="點擊放大">`;
-          }).join('')
-        }</div>`
-      : '';
+    // Build cover image from first preview (if any)
+    let coverHtml = '';
+    if (previewIds.length) {
+      const firstImg = galleryData.find(i => i.id === previewIds[0]);
+      if (firstImg) {
+        const coverUrl = URL.createObjectURL(new Blob([firstImg.data], { type:'image/png' }));
+        coverHtml = `<img class="note-card-cover" src="${coverUrl}" onclick="openModal(${previewIds[0]})" title="點擊放大">`;
+      }
+    }
     return `<div class="note-card">
-      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-        <span class="note-cat-badge ${catClass}">${catLabel}</span>
-        ${tags}
-      </div>
-      <div class="note-fragment">
-        ${fragEsc}
-        <button class="note-fragment-copy" onclick="navigator.clipboard.writeText('${fragJs}').then(()=>toast('已複製','ok'))" title="複製">⎘</button>
-      </div>
-      ${n.description ? `<div class="note-desc">${esc(n.description)}</div>` : ''}
-      ${thumbsHtml}
-      <div class="note-insert-row">
-        <button class="note-ins-pos" onclick="insertNoteToPrompt(${n.id},'pos')" title="插入到正向 prompt">＋ 正向</button>
-        <button class="note-ins-neg" onclick="insertNoteToPrompt(${n.id},'neg')" title="插入到負向 prompt">＋ 負向</button>
-        <button class="note-edit-btn" onclick="openNoteEditModal(${n.id})">編輯</button>
+      ${coverHtml}
+      <div class="note-card-body">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+          <span class="note-cat-badge ${catClass}">${catLabel}</span>
+          ${tags}
+        </div>
+        <div class="note-fragment">
+          ${fragEsc}
+          <button class="note-fragment-copy" onclick="navigator.clipboard.writeText('${fragJs}').then(()=>toast('已複製','ok'))" title="複製">⎘</button>
+        </div>
+        ${n.description ? `<div class="note-desc">${esc(n.description)}</div>` : ''}
+        <div class="note-insert-row">
+          <button class="note-ins-pos" onclick="insertNoteToPrompt(${n.id},'pos')" title="插入到正向 prompt">＋ 正向</button>
+          <button class="note-ins-neg" onclick="insertNoteToPrompt(${n.id},'neg')" title="插入到負向 prompt">＋ 負向</button>
+          <button class="note-edit-btn" onclick="openNoteEditModal(${n.id})">編輯</button>
+        </div>
       </div>
     </div>`;
   }).join('');
