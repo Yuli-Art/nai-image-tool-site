@@ -305,6 +305,22 @@
     .char-ref-picker-overlay:not(.open){display:none;}
     .char-ref-picker-box{background:var(--bg2);border-radius:14px;width:min(96vw,520px);max-height:80vh;display:flex;flex-direction:column;overflow:hidden;}
 
+    /* Artist Library */
+    .style-badge{font-size:.65rem;padding:2px 7px;border-radius:8px;font-weight:600;white-space:nowrap;}
+    .sb-anime{background:rgba(139,92,246,.15);color:#8b5cf6;}
+    .sb-realistic{background:rgba(59,130,246,.15);color:#3b82f6;}
+    .sb-painterly{background:rgba(245,158,11,.15);color:#d97706;}
+    .sb-sketch{background:rgba(107,114,128,.15);color:#6b7280;}
+    .sb-pixel{background:rgba(16,185,129,.15);color:#059669;}
+    .sb-other{background:rgba(156,163,175,.12);color:#9ca3af;}
+    .blend-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;cursor:pointer;transition:box-shadow .15s;}
+    .blend-card:hover{box-shadow:0 0 0 2px var(--accent);}
+    .blend-preview{width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--bg3);display:block;}
+    .blend-preview-ph{width:100%;aspect-ratio:4/3;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:1.4rem;color:var(--txt2);}
+    .blend-artists{font-size:.72rem;color:var(--txt2);margin-top:2px;}
+    .artist-quick-btn{background:none;border:1px solid var(--border);border-radius:6px;color:var(--txt2);font-size:.7rem;padding:3px 7px;cursor:pointer;white-space:nowrap;transition:background .15s;}
+    .artist-quick-btn:hover{background:var(--bg3);color:var(--txt);}
+
     /* Precise Reference */
     .pref-dropzone{border:1.5px dashed var(--border);border-radius:10px;padding:22px 12px;text-align:center;
       cursor:pointer;color:var(--txt2);font-size:.82rem;transition:border-color .2s;}
@@ -365,6 +381,7 @@
       <button class="nav-tab" id="tab-gal" onclick="showPage('gallery')">圖庫 <span id="gal-count" style="font-size:.72rem;opacity:.7;"></span></button>
       <button class="nav-tab" id="tab-vibe-page" onclick="showPage('vibe')">Vibe 庫 <span id="vibe-lib-count" style="font-size:.72rem;opacity:.7;"></span></button>
       <button class="nav-tab" id="tab-char-page" onclick="showPage('characters')">角色庫 <span id="char-lib-count" style="font-size:.72rem;opacity:.7;"></span></button>
+      <button class="nav-tab" id="tab-artist-page" onclick="showPage('artists')">風格庫 <span id="artist-lib-count" style="font-size:.72rem;opacity:.7;"></span></button>
     </div>
     <div class="nav-right">
       <div class="anlas-info">
@@ -655,6 +672,34 @@
     <div class="gallery-grid" id="char-page-grid"></div>
   </div>
 
+  <!-- ── 風格庫 PAGE ── -->
+  <div id="page-artists" class="page">
+    <div class="gallery-toolbar">
+      <span style="font-size:.9rem;font-weight:700;">風格庫</span>
+      <button class="btn btn-p" onclick="openArtistEditModal(null)">＋ 新增繪師</button>
+      <input type="search" class="gallery-search" id="artist-search" placeholder="搜尋名稱 / tag..." oninput="renderArtistPage()" style="max-width:180px;">
+      <div style="flex:1;"></div>
+      <button class="btn btn-s" id="artist-sel-mode-btn" onclick="toggleArtistSelectMode()">多選</button>
+    </div>
+    <div class="gallery-actions" id="artist-page-actions">
+      <span class="gallery-sel-count" id="artist-sel-count">已選 0 個</span>
+      <button class="btn btn-p" onclick="createBlendFromSelected()">🎨 建立混搭</button>
+      <button class="btn btn-d" onclick="deleteSelectedArtists()">🗑 刪除選取</button>
+      <button class="btn btn-s" onclick="clearArtistSelection()">取消選取</button>
+    </div>
+    <!-- Style type filter -->
+    <div style="padding:6px 12px 0;display:flex;gap:6px;flex-wrap:wrap;" id="artist-filter-row"></div>
+    <!-- Artist grid -->
+    <div class="gallery-grid" id="artist-page-grid"></div>
+    <!-- Blends section -->
+    <div style="padding:10px 12px 4px;" id="blend-section-wrap">
+      <div style="font-size:.8rem;font-weight:700;color:var(--txt2);letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px;">
+        混搭記錄 <span id="blend-count" style="font-weight:400;font-size:.72rem;"></span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;" id="blend-grid"></div>
+    </div>
+  </div>
+
   <!-- ── VIBE 庫 PAGE ── -->
   <div id="page-vibe" class="page">
     <div class="gallery-toolbar">
@@ -686,6 +731,78 @@
     <div id="vibe-picker-grid" style="overflow-y:auto;padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;"></div>
     <div style="padding:10px 16px;border-top:1px solid var(--border);flex-shrink:0;">
       <button class="btn btn-s" style="font-size:.8rem;" onclick="closeVibePicker();showPage('vibe');">＋ 管理 Vibe 庫</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── ARTIST EDIT MODAL ── -->
+<div class="char-modal-overlay" id="artist-edit-modal">
+  <div class="char-modal-box" onclick="event.stopPropagation()">
+    <div class="char-modal-hd">
+      <span id="artist-edit-title">新增繪師</span>
+      <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeArtistEditModal()">✕</button>
+    </div>
+    <div class="char-modal-body">
+      <div>
+        <div class="char-field-label">繪師名稱 *</div>
+        <input id="artist-edit-name" class="inp" type="text" placeholder="例：wlop" style="width:100%;">
+      </div>
+      <div>
+        <div class="char-field-label">Prompt Tag *</div>
+        <input id="artist-edit-tag" class="inp" type="text" placeholder="例：wlop, style of wlop" style="width:100%;">
+        <div style="font-size:.72rem;color:var(--txt2);margin-top:3px;">生圖和混搭時使用的 prompt 字串</div>
+      </div>
+      <div>
+        <div class="char-field-label">風格類型</div>
+        <select id="artist-edit-style" class="sel" style="width:100%;">
+          <option value="anime">動漫 (Anime)</option>
+          <option value="realistic">寫實 (Realistic)</option>
+          <option value="painterly">繪畫感 (Painterly)</option>
+          <option value="sketch">線稿 (Sketch)</option>
+          <option value="pixel">像素 (Pixel)</option>
+          <option value="other">其他</option>
+        </select>
+      </div>
+      <div>
+        <div class="char-field-label">標籤（逗號分隔）</div>
+        <input id="artist-edit-tags" class="inp" type="text" placeholder="例：厚塗, 光影強烈" style="width:100%;">
+      </div>
+      <div>
+        <div class="char-field-label">備註</div>
+        <textarea id="artist-edit-notes" class="inp" rows="2" placeholder="風格特色、適合場景..." style="width:100%;resize:vertical;"></textarea>
+      </div>
+      <div>
+        <div class="char-field-label">預覽圖（從圖庫選一張）</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:4px;">
+          <div id="artist-edit-thumb-wrap" style="width:72px;height:72px;border-radius:8px;overflow:hidden;background:var(--bg3);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--txt2);font-size:1.4rem;">🎨</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <button class="btn btn-s" onclick="openGalleryPicker('artistThumb')">從圖庫選預覽圖</button>
+            <button class="btn btn-s btn-out" id="artist-edit-thumb-clear" onclick="artistEditClearThumb()" style="display:none;">清除</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="char-modal-ft">
+      <button class="btn btn-s btn-out" id="artist-gen-preview-btn" onclick="artistGenPreview()" style="margin-right:auto;">⚡ 生預覽圖</button>
+      <button class="btn btn-s btn-out" onclick="closeArtistEditModal()">取消</button>
+      <button class="btn btn-p" onclick="saveArtistEdit()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── BLEND DETAIL MODAL ── -->
+<div class="char-modal-overlay" id="blend-detail-modal">
+  <div class="char-modal-box" onclick="event.stopPropagation()" style="max-width:480px;">
+    <div class="char-modal-hd">
+      <span>混搭記錄</span>
+      <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeBlendDetailModal()">✕</button>
+    </div>
+    <div class="char-modal-body" id="blend-detail-body"></div>
+    <div class="char-modal-ft">
+      <button class="btn btn-d btn-s" id="blend-detail-delete" onclick="deleteCurrentBlend()">🗑 刪除</button>
+      <button class="btn btn-s btn-out" onclick="blendGenPreview()" style="margin-left:auto;">⚡ 生混搭圖</button>
+      <button class="btn btn-s" onclick="openGalleryPicker('blendPreview')">從圖庫指定預覽</button>
+      <button class="btn btn-s btn-out" onclick="closeBlendDetailModal()">關閉</button>
     </div>
   </div>
 </div>
@@ -980,7 +1097,7 @@ let _db = null;
 async function getDB() {
   if (_db) return _db;
   _db = await new Promise((res, rej) => {
-    const r = indexedDB.open('nai_tool', 4);
+    const r = indexedDB.open('nai_tool', 5);
     r.onupgradeneeded = e => {
       const db = e.target.result;
       if (!db.objectStoreNames.contains('images')) {
@@ -998,6 +1115,14 @@ async function getDB() {
         const cs = db.createObjectStore('characters', { keyPath:'id', autoIncrement:true });
         cs.createIndex('by_series','seriesName');
         cs.createIndex('by_time','timestamp');
+      }
+      if (!db.objectStoreNames.contains('artists')) {
+        const as = db.createObjectStore('artists', { keyPath:'id', autoIncrement:true });
+        as.createIndex('by_style','styleType');
+        as.createIndex('by_time','timestamp');
+      }
+      if (!db.objectStoreNames.contains('artist_blends')) {
+        db.createObjectStore('artist_blends', { keyPath:'id', autoIncrement:true });
       }
     };
     r.onsuccess = () => res(r.result);
@@ -1145,6 +1270,65 @@ async function dbDeleteCharacter(id) {
   return dbOp(db,'characters','readwrite', s => s.delete(id));
 }
 
+// ── Artists DB ──
+async function dbSaveArtist(a) {
+  const db = await getDB();
+  return dbOp(db,'artists','readwrite', s => s.add({
+    name: a.name||'', artistTag: a.artistTag||'',
+    styleType: a.styleType||'other', tags: a.tags||[],
+    notes: a.notes||'', previewImageId: a.previewImageId??null,
+    timestamp: Date.now()
+  }));
+}
+async function dbUpdateArtist(id, fields) {
+  const db = await getDB();
+  return new Promise((res,rej) => {
+    const tx = db.transaction('artists','readwrite');
+    const store = tx.objectStore('artists');
+    const r = store.get(id);
+    r.onsuccess = () => { const rec = Object.assign({},r.result,fields); const r2=store.put(rec); r2.onsuccess=()=>res(r2.result); r2.onerror=()=>rej(r2.error); };
+    r.onerror = () => rej(r.error);
+  });
+}
+async function dbGetArtists() {
+  const db = await getDB();
+  const all = await dbOp(db,'artists','readonly', s => s.getAll());
+  return all.sort((a,b) => b.timestamp - a.timestamp);
+}
+async function dbDeleteArtist(id) {
+  const db = await getDB();
+  return dbOp(db,'artists','readwrite', s => s.delete(id));
+}
+
+// ── Artist Blends DB ──
+async function dbSaveBlend(b) {
+  const db = await getDB();
+  return dbOp(db,'artist_blends','readwrite', s => s.add({
+    artistIds: b.artistIds||[], artistTags: b.artistTags||[],
+    artistNames: b.artistNames||[], notes: b.notes||'',
+    previewImageId: b.previewImageId??null, timestamp: Date.now()
+  }));
+}
+async function dbUpdateBlend(id, fields) {
+  const db = await getDB();
+  return new Promise((res,rej) => {
+    const tx = db.transaction('artist_blends','readwrite');
+    const store = tx.objectStore('artist_blends');
+    const r = store.get(id);
+    r.onsuccess = () => { const rec = Object.assign({},r.result,fields); const r2=store.put(rec); r2.onsuccess=()=>res(r2.result); r2.onerror=()=>rej(r2.error); };
+    r.onerror = () => rej(r.error);
+  });
+}
+async function dbGetBlends() {
+  const db = await getDB();
+  const all = await dbOp(db,'artist_blends','readonly', s => s.getAll());
+  return all.sort((a,b) => b.timestamp - a.timestamp);
+}
+async function dbDeleteBlend(id) {
+  const db = await getDB();
+  return dbOp(db,'artist_blends','readwrite', s => s.delete(id));
+}
+
 async function dbGetTags() {
   const db = await getDB();
   const tags = await dbOp(db,'tags','readonly', s => s.getAll());
@@ -1222,6 +1406,7 @@ async function showApp() {
   await loadGallery();
   await refreshVibeLibrary();
   await loadCharacterData();
+  await loadArtistData();
 }
 
 function showLoginErr(msg) {
@@ -1299,9 +1484,9 @@ function setGenerating(on) {
 }
 
 function showPage(page) {
-  ['page-generate','page-gallery','page-vibe','page-characters'].forEach(id =>
+  ['page-generate','page-gallery','page-vibe','page-characters','page-artists'].forEach(id =>
     document.getElementById(id).classList.remove('active'));
-  ['tab-gen','tab-gal','tab-vibe-page','tab-char-page'].forEach(id =>
+  ['tab-gen','tab-gal','tab-vibe-page','tab-char-page','tab-artist-page'].forEach(id =>
     document.getElementById(id).classList.remove('active'));
   if (page === 'generate') {
     document.getElementById('page-generate').classList.add('active');
@@ -1318,6 +1503,10 @@ function showPage(page) {
     document.getElementById('page-characters').classList.add('active');
     document.getElementById('tab-char-page').classList.add('active');
     renderCharPage();
+  } else if (page === 'artists') {
+    document.getElementById('page-artists').classList.add('active');
+    document.getElementById('tab-artist-page').classList.add('active');
+    renderArtistPage();
   }
 }
 
@@ -1816,6 +2005,323 @@ function renderVibeList() {
 }
 
 // ═══════════════════════════════════════════
+// ARTIST STYLE LIBRARY
+// ═══════════════════════════════════════════
+const STYLE_LABELS = { anime:'動漫', realistic:'寫實', painterly:'繪畫感', sketch:'線稿', pixel:'像素', other:'其他' };
+const STYLE_CLASS  = { anime:'sb-anime', realistic:'sb-realistic', painterly:'sb-painterly', sketch:'sb-sketch', pixel:'sb-pixel', other:'sb-other' };
+
+let artistData  = [];   // loaded from DB, with _previewUrl resolved
+let blendData   = [];   // loaded from DB, with _previewUrl resolved
+let artistSelectMode = false;
+let artistSelected   = new Set();
+let artistEditId     = null;
+let artistEditThumbImageId = null;
+let currentBlendId   = null;   // for blend detail modal
+
+// ── Gallery picker routing (extend existing) ──
+// galPickerPurpose also handles: 'artistThumb' | 'blendPreview'
+
+async function loadArtistData() {
+  artistData = await dbGetArtists();
+  blendData  = await dbGetBlends();
+  // resolve preview URLs
+  for (const a of artistData) {
+    if (a.previewImageId && !a._previewUrl) {
+      try {
+        const img = await dbGetImageById(a.previewImageId);
+        if (img) a._previewUrl = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
+      } catch(_) {}
+    }
+  }
+  for (const b of blendData) {
+    if (b.previewImageId && !b._previewUrl) {
+      try {
+        const img = await dbGetImageById(b.previewImageId);
+        if (img) b._previewUrl = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
+      } catch(_) {}
+    }
+  }
+  updateArtistLibCount(artistData.length);
+}
+
+function updateArtistLibCount(n) {
+  document.getElementById('artist-lib-count').textContent = n ? `(${n})` : '';
+}
+
+let artistActiveStyle = '';
+let artistActiveTags  = new Set();
+
+async function renderArtistPage() {
+  if (!artistData.length && !blendData.length) await loadArtistData();
+  updateArtistLibCount(artistData.length);
+  buildArtistFilterRow();
+
+  const q = (document.getElementById('artist-search')?.value||'').toLowerCase();
+  let filtered = artistData.filter(a => {
+    const matchQ = !q || a.name.toLowerCase().includes(q) || (a.artistTag||'').toLowerCase().includes(q);
+    const matchStyle = !artistActiveStyle || a.styleType === artistActiveStyle;
+    const matchTags  = artistActiveTags.size===0 || [...artistActiveTags].every(t=>(a.tags||[]).includes(t));
+    return matchQ && matchStyle && matchTags;
+  });
+
+  const grid = document.getElementById('artist-page-grid');
+  if (!filtered.length) {
+    grid.innerHTML = `<div class="gallery-empty" style="grid-column:1/-1;">
+      <div style="font-size:1.5rem;margin-bottom:8px;">🎨</div>
+      <span>${artistData.length?'沒有符合條件的繪師':'風格庫是空的，點「＋ 新增繪師」開始建立'}</span>
+    </div>`;
+  } else {
+    grid.innerHTML = filtered.map(a => {
+      const sel = artistSelected.has(a.id) ? 'selected' : '';
+      const thumb = a._previewUrl
+        ? `<img class="char-card-thumb" src="${a._previewUrl}" alt="">`
+        : `<div class="char-card-thumb-ph">🎨</div>`;
+      const styleBadge = `<span class="style-badge ${STYLE_CLASS[a.styleType]||'sb-other'}">${STYLE_LABELS[a.styleType]||a.styleType}</span>`;
+      const tags = (a.tags||[]).slice(0,2).map(t=>`<span class="char-card-tag">${esc(t)}</span>`).join('');
+      return `<div class="gcard char-card ${sel}" onclick="onArtistCardClick(event,${a.id})">
+        ${sel?'<div class="gcard-check">✓</div>':''}
+        ${thumb}
+        <div class="char-card-footer">
+          <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:3px;">
+            <div class="char-card-name" style="flex:1;">${esc(a.name)}</div>
+            ${styleBadge}
+          </div>
+          <div class="char-card-series" style="font-family:monospace;">${esc(a.artistTag||'')}</div>
+          <div class="char-card-tags">${tags}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Render blends
+  renderBlendGrid();
+}
+
+function buildArtistFilterRow() {
+  const row = document.getElementById('artist-filter-row');
+  const tagCount = {};
+  artistData.forEach(a => (a.tags||[]).forEach(t => tagCount[t]=(tagCount[t]||0)+1));
+  let html = '';
+  if (artistActiveStyle || artistActiveTags.size) {
+    html += `<span class="tag-filter-chip active" onclick="clearArtistFilters()">✕ 清除篩選</span>`;
+  }
+  Object.keys(STYLE_LABELS).forEach(s => {
+    if (!artistData.some(a=>a.styleType===s)) return;
+    const cls = STYLE_CLASS[s]||'sb-other';
+    html += `<span class="tag-filter-chip ${artistActiveStyle===s?'active':''}" onclick="toggleArtistStyle('${s}')" style="display:inline-flex;align-items:center;gap:4px;">
+      <span class="style-badge ${cls}" style="margin:0;">${STYLE_LABELS[s]}</span></span>`;
+  });
+  Object.entries(tagCount).sort((a,b)=>b[1]-a[1]).forEach(([t]) => {
+    html += `<span class="tag-filter-chip ${artistActiveTags.has(t)?'active':''}" onclick="toggleArtistTag('${esc(t)}')">#${esc(t)}</span>`;
+  });
+  row.innerHTML = html;
+}
+
+function toggleArtistStyle(s) { artistActiveStyle = artistActiveStyle===s?'':s; renderArtistPage(); }
+function toggleArtistTag(t)   { artistActiveTags.has(t)?artistActiveTags.delete(t):artistActiveTags.add(t); renderArtistPage(); }
+function clearArtistFilters() { artistActiveStyle=''; artistActiveTags.clear(); renderArtistPage(); }
+
+function onArtistCardClick(e, id) {
+  if (artistSelectMode) { toggleArtistSelect(id); return; }
+  openArtistEditModal(id);
+}
+
+function toggleArtistSelectMode() {
+  artistSelectMode = !artistSelectMode;
+  artistSelected.clear();
+  document.getElementById('artist-sel-mode-btn').textContent = artistSelectMode?'結束多選':'多選';
+  document.getElementById('artist-page-actions').classList.toggle('visible', artistSelectMode);
+  renderArtistPage();
+}
+
+function toggleArtistSelect(id) {
+  artistSelected.has(id) ? artistSelected.delete(id) : artistSelected.add(id);
+  document.getElementById('artist-sel-count').textContent = `已選 ${artistSelected.size} 個`;
+  renderArtistPage();
+}
+
+function clearArtistSelection() {
+  artistSelected.clear(); artistSelectMode = false;
+  document.getElementById('artist-sel-mode-btn').textContent = '多選';
+  document.getElementById('artist-page-actions').classList.remove('visible');
+  renderArtistPage();
+}
+
+async function deleteSelectedArtists() {
+  if (!artistSelected.size) return;
+  if (!confirm(`確定刪除 ${artistSelected.size} 位繪師？`)) return;
+  for (const id of artistSelected) await dbDeleteArtist(id);
+  artistSelected.clear(); artistSelectMode = false;
+  document.getElementById('artist-sel-mode-btn').textContent = '多選';
+  document.getElementById('artist-page-actions').classList.remove('visible');
+  artistData = await dbGetArtists();
+  updateArtistLibCount(artistData.length);
+  toast('已刪除','ok');
+  renderArtistPage();
+}
+
+// ── Artist Edit Modal ──
+async function openArtistEditModal(id) {
+  artistEditId = id;
+  artistEditThumbImageId = null;
+  if (id) {
+    const a = artistData.find(x=>x.id===id);
+    if (!a) return;
+    document.getElementById('artist-edit-title').textContent = '編輯繪師';
+    document.getElementById('artist-edit-name').value  = a.name||'';
+    document.getElementById('artist-edit-tag').value   = a.artistTag||'';
+    document.getElementById('artist-edit-style').value = a.styleType||'anime';
+    document.getElementById('artist-edit-tags').value  = (a.tags||[]).join(', ');
+    document.getElementById('artist-edit-notes').value = a.notes||'';
+    artistEditThumbImageId = a.previewImageId??null;
+    renderArtistEditThumb(a._previewUrl||null);
+  } else {
+    document.getElementById('artist-edit-title').textContent = '新增繪師';
+    ['artist-edit-name','artist-edit-tag','artist-edit-tags','artist-edit-notes'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('artist-edit-style').value = 'anime';
+    renderArtistEditThumb(null);
+  }
+  document.getElementById('artist-edit-modal').classList.add('open');
+}
+
+function closeArtistEditModal() { document.getElementById('artist-edit-modal').classList.remove('open'); }
+
+function renderArtistEditThumb(url) {
+  const wrap = document.getElementById('artist-edit-thumb-wrap');
+  const clearBtn = document.getElementById('artist-edit-thumb-clear');
+  if (url) {
+    wrap.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`;
+    clearBtn.style.display = '';
+  } else {
+    wrap.innerHTML = '🎨';
+    clearBtn.style.display = 'none';
+  }
+}
+
+function artistEditClearThumb() { artistEditThumbImageId=null; renderArtistEditThumb(null); }
+
+async function saveArtistEdit() {
+  const name = document.getElementById('artist-edit-name').value.trim();
+  const artistTag = document.getElementById('artist-edit-tag').value.trim();
+  if (!name) { toast('請填寫繪師名稱','err'); return; }
+  if (!artistTag) { toast('請填寫 Prompt Tag','err'); return; }
+  const tags = document.getElementById('artist-edit-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  const data = {
+    name, artistTag,
+    styleType: document.getElementById('artist-edit-style').value,
+    tags, notes: document.getElementById('artist-edit-notes').value.trim(),
+    previewImageId: artistEditThumbImageId, timestamp: Date.now()
+  };
+  if (artistEditId) { await dbUpdateArtist(artistEditId, data); toast('已更新','ok'); }
+  else              { await dbSaveArtist(data); toast('繪師已新增','ok'); }
+  closeArtistEditModal();
+  artistData = await dbGetArtists();
+  for (const a of artistData) {
+    if (a.previewImageId && !a._previewUrl) {
+      try { const img=await dbGetImageById(a.previewImageId); if(img) a._previewUrl=URL.createObjectURL(new Blob([img.data],{type:'image/png'})); } catch(_){}
+    }
+  }
+  updateArtistLibCount(artistData.length);
+  renderArtistPage();
+}
+
+function artistGenPreview() {
+  const tag = document.getElementById('artist-edit-tag').value.trim();
+  if (!tag) { toast('請先填寫 Prompt Tag','warn'); return; }
+  closeArtistEditModal();
+  document.getElementById('prompt').value = tag;
+  showPage('generate');
+  toast(`已填入「${tag}」，生圖後可回來指定為預覽圖`, 'info');
+}
+
+// ── Blend ──
+async function createBlendFromSelected() {
+  if (artistSelected.size < 2) { toast('請至少選取 2 位繪師','warn'); return; }
+  const selected = [...artistSelected].map(id => artistData.find(a=>a.id===id)).filter(Boolean);
+  const combinedTags = selected.map(a=>a.artistTag).join(', ');
+  const names = selected.map(a=>a.name).join(' × ');
+  const notes = prompt(`混搭備註（可留空）\n繪師：${names}\nTags：${combinedTags}`, '') ?? '';
+  await dbSaveBlend({
+    artistIds: selected.map(a=>a.id),
+    artistTags: selected.map(a=>a.artistTag),
+    artistNames: selected.map(a=>a.name),
+    notes
+  });
+  blendData = await dbGetBlends();
+  toast(`已建立混搭記錄「${names}」`,'ok');
+  clearArtistSelection();
+}
+
+function renderBlendGrid() {
+  const grid = document.getElementById('blend-grid');
+  const countEl = document.getElementById('blend-count');
+  const wrap = document.getElementById('blend-section-wrap');
+  if (!blendData.length) { wrap.style.display='none'; return; }
+  wrap.style.display='';
+  countEl.textContent = `(${blendData.length})`;
+  grid.innerHTML = blendData.map(b => {
+    const preview = b._previewUrl
+      ? `<img class="blend-preview" src="${b._previewUrl}" alt="">`
+      : `<div class="blend-preview-ph">🎨</div>`;
+    const names = (b.artistNames||[]).join(' × ');
+    return `<div class="blend-card" onclick="openBlendDetailModal(${b.id})">
+      ${preview}
+      <div style="padding:7px 9px;">
+        <div style="font-size:.78rem;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(names)}</div>
+        ${b.notes?`<div class="blend-artists">${esc(b.notes)}</div>`:''}
+        <div class="blend-artists" style="font-family:monospace;margin-top:2px;">${esc((b.artistTags||[]).join(', '))}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function openBlendDetailModal(id) {
+  currentBlendId = id;
+  const b = blendData.find(x=>x.id===id);
+  if (!b) return;
+  const names = (b.artistNames||[]).join(' × ');
+  const tagsStr = (b.artistTags||[]).join(', ');
+  const previewHtml = b._previewUrl
+    ? `<img src="${b._previewUrl}" style="width:100%;border-radius:8px;margin-bottom:8px;">`
+    : `<div style="width:100%;aspect-ratio:4/3;background:var(--bg3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:2rem;margin-bottom:8px;">🎨</div>`;
+  document.getElementById('blend-detail-body').innerHTML = `
+    ${previewHtml}
+    <div><div class="char-field-label">繪師</div><div style="font-size:.85rem;color:var(--txt);margin-top:3px;">${esc(names)}</div></div>
+    <div><div class="char-field-label">合併 Tags</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+        <code style="flex:1;font-size:.78rem;background:var(--bg3);padding:6px 10px;border-radius:6px;overflow-x:auto;white-space:nowrap;">${esc(tagsStr)}</code>
+        <button class="btn btn-s" onclick="navigator.clipboard.writeText('${tagsStr.replace(/'/g,"\\'")}').then(()=>toast('已複製','ok'))">複製</button>
+      </div>
+    </div>
+    ${b.notes?`<div><div class="char-field-label">備註</div><div style="font-size:.83rem;color:var(--txt);margin-top:3px;">${esc(b.notes)}</div></div>`:''}
+  `;
+  document.getElementById('blend-detail-modal').classList.add('open');
+}
+
+function closeBlendDetailModal() { document.getElementById('blend-detail-modal').classList.remove('open'); }
+
+async function deleteCurrentBlend() {
+  if (!currentBlendId) return;
+  if (!confirm('確定刪除此混搭記錄？')) return;
+  await dbDeleteBlend(currentBlendId);
+  blendData = blendData.filter(b=>b.id!==currentBlendId);
+  currentBlendId = null;
+  closeBlendDetailModal();
+  renderBlendGrid();
+  toast('已刪除','ok');
+}
+
+function blendGenPreview() {
+  const b = blendData.find(x=>x.id===currentBlendId);
+  if (!b) return;
+  const tags = (b.artistTags||[]).join(', ');
+  closeBlendDetailModal();
+  document.getElementById('prompt').value = tags;
+  showPage('generate');
+  toast('已填入混搭 tags，生圖後可回來指定為預覽圖','info');
+}
+
+// ═══════════════════════════════════════════
 // CHARACTER LIBRARY
 // ═══════════════════════════════════════════
 let characterData = [];       // {id, name, seriesName, tags, prompt, notes, thumbImageId, preciseRefImageIds, timestamp, _thumbUrl}
@@ -2132,6 +2638,20 @@ async function onGalPickerSelect(imgId) {
       renderCharEditRefList();
     } else {
       toast('這張圖已在參考清單中','warn');
+    }
+  } else if (galPickerPurpose === 'artistThumb') {
+    artistEditThumbImageId = imgId;
+    renderArtistEditThumb(url);
+  } else if (galPickerPurpose === 'blendPreview') {
+    if (currentBlendId) {
+      // update blend previewImageId
+      await dbUpdateBlend(currentBlendId, { previewImageId: imgId });
+      const b = blendData.find(x=>x.id===currentBlendId);
+      if (b) { b.previewImageId = imgId; b._previewUrl = url; }
+      // re-open detail modal to show updated preview
+      openBlendDetailModal(currentBlendId);
+      renderBlendGrid();
+      toast('預覽圖已更新','ok');
     }
   } else if (galPickerPurpose === 'preciseRef') {
     // Load directly into Precise Reference
