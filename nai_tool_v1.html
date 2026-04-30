@@ -1178,11 +1178,12 @@
             <button class="btn btn-s btn-out" type="button" onclick="openTagManager()" style="font-size:.72rem;padding:3px 9px;">管理</button>
           </div>
         </div>
-        <div class="tag-chip-wrap" id="tag-chip-wrap" onclick="document.getElementById('tag-text-in').focus()">
-          <div id="tag-chips-display"></div>
-          <input type="text" id="tag-text-in" class="tag-text-in" placeholder="搜尋既有 tag，Enter 選第一個">
-        </div>
+        <input type="text" id="tag-text-in" class="tag-text-in" placeholder="搜尋既有 tag，Enter 選第一個"
+          style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;
+          padding:7px 10px;font-size:.83rem;outline:none;transition:border-color .15s;font-family:inherit;"
+          onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
         <div class="tag-dropdown" id="tag-dd"></div>
+        <div id="tag-chips-display" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;min-height:0;"></div>
       </div>
 
       <!-- 進階參數 -->
