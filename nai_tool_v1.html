@@ -6,7 +6,7 @@
   <title>NAI 生圖工具</title>
   <script>
     try {
-      document.documentElement.dataset.uiTheme = localStorage.getItem('nai_ui_theme_v1') || 'classic';
+      document.documentElement.dataset.uiTheme = localStorage.getItem('nai_ui_theme_v1') || 'design-md-dark';
     } catch (_) {
       document.documentElement.dataset.uiTheme = 'classic';
     }
@@ -157,6 +157,58 @@
       color:var(--txt);
       margin-bottom:14px;
     }
+    /* ── SETTINGS MODAL ── */
+    .settings-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:900;
+      display:flex;align-items:flex-start;justify-content:flex-end;}
+    .settings-overlay:not(.open){display:none;}
+    .settings-box{background:#181715;border:1px solid #35312d;border-radius:12px;
+      width:360px;max-width:calc(100vw - 24px);margin:12px 12px 0 0;
+      display:flex;flex-direction:column;max-height:calc(100vh - 24px);overflow:hidden;
+      box-shadow:0 18px 44px rgba(0,0,0,.35);}
+    .settings-hd{padding:14px 16px;border-bottom:1px solid #35312d;
+      display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+    .settings-hd-title{font-size:.95rem;font-weight:600;color:#faf9f5;}
+    .settings-body{padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;}
+    .settings-section{display:flex;flex-direction:column;gap:8px;}
+    .settings-section-label{font-size:.72rem;font-weight:600;color:#a09d96;text-transform:uppercase;letter-spacing:.05em;}
+    .settings-help-toggle{background:none;border:none;color:#cc785c;font-size:.75rem;cursor:pointer;
+      padding:0;text-align:left;text-decoration:underline;text-underline-offset:2px;}
+    .settings-help-box{background:#1f1e1b;border:1px solid #35312d;border-radius:8px;
+      padding:10px 12px;font-size:.77rem;color:#a09d96;line-height:1.65;display:none;}
+    .settings-help-box.open{display:block;}
+    .settings-help-box a{color:#cc785c;text-decoration:none;}
+    .settings-help-box a:hover{text-decoration:underline;}
+    .settings-drive-status{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+
+    /* ── DRIVE UPLOAD MODAL ── */
+    .drive-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:800;
+      display:flex;align-items:center;justify-content:center;padding:16px;}
+    .drive-modal-overlay:not(.open){display:none;}
+    .drive-modal-box{background:#181715;border:1px solid #35312d;border-radius:12px;
+      width:440px;max-width:100%;max-height:90vh;display:flex;flex-direction:column;
+      box-shadow:0 18px 44px rgba(0,0,0,.35);overflow:hidden;}
+    .drive-modal-hd{padding:14px 16px;border-bottom:1px solid #35312d;
+      display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+    .drive-modal-title{font-size:.95rem;font-weight:600;color:#faf9f5;}
+    .drive-modal-body{padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;}
+    .drive-modal-ft{padding:10px 16px;border-top:1px solid #35312d;display:flex;align-items:center;
+      justify-content:flex-end;gap:8px;flex-shrink:0;}
+
+    /* ── ONBOARDING TOOLTIP ── */
+    #onboarding-tip{position:fixed;top:60px;right:12px;z-index:950;
+      background:#cc785c;color:#fff;font-size:.8rem;font-weight:500;
+      padding:10px 14px;border-radius:10px;max-width:220px;line-height:1.4;
+      box-shadow:0 4px 16px rgba(0,0,0,.3);cursor:pointer;}
+    #onboarding-tip::before{
+      content:'';position:absolute;top:-6px;right:16px;
+      border-left:6px solid transparent;border-right:6px solid transparent;
+      border-bottom:6px solid #cc785c;}
+    #onboarding-tip.hidden{display:none;}
+    /* ── SETTINGS BUTTON ── */
+    .btn-settings{background:none;border:none;color:var(--txt2);font-size:1.1rem;
+      cursor:pointer;padding:6px 8px;border-radius:8px;line-height:1;transition:color .15s,background .15s;}
+    .btn-settings:hover{color:var(--txt);background:var(--bg3);}
+
     @media(max-width:1380px){
       #page-generate.active{
         --left-pane-width:320px;
@@ -205,7 +257,7 @@
     .btn-icon{padding:6px 10px;font-size:1rem;}
 
     /* ── APP ── */
-    #app{display:none;flex-direction:column;min-height:100vh;height:100vh;overflow:hidden;}
+    #app{display:flex;flex-direction:column;min-height:100vh;height:100vh;overflow:hidden;}
 
     /* Navbar */
     .navbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 16px;
@@ -842,11 +894,6 @@
       letter-spacing:.05em;margin-bottom:8px;display:flex;align-items:center;gap:7px;}
 
     /* ── GOOGLE DRIVE PAGE ── */
-    #page-gdrive.active{display:block;overflow-y:auto;}
-    .gdrive-help-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:.78rem;color:var(--txt2);line-height:1.65;}
-    .gdrive-help-box a{color:var(--accent);text-decoration:none;}
-    .gdrive-help-box a:hover{text-decoration:underline;}
-    .gdrive-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;margin-top:4px;}
     .gdrive-img-item{position:relative;cursor:pointer;border-radius:6px;overflow:hidden;
       border:2px solid transparent;transition:border-color .15s;}
     .gdrive-img-item.sel{border-color:var(--accent);}
@@ -885,26 +932,6 @@
 </head>
 <body>
 
-<!-- ═══════════ LOGIN ═══════════ -->
-<div id="login-screen">
-  <div class="login-card">
-    <div class="login-title">🎨 NAI 生圖工具</div>
-    <div class="login-sub">輸入 NovelAI Access Token 開始使用。<br>Token 只存在你的裝置上。</div>
-    <div class="fg">
-      <label>Access Token</label>
-      <input type="password" id="tok-in" placeholder="輸入 token...">
-    </div>
-    <div class="cb-row">
-      <input type="checkbox" id="rem-tok" checked>
-      <label for="rem-tok">記住 Token（下次自動登入）</label>
-    </div>
-    <div style="margin-top:20px;">
-      <button class="btn btn-p btn-full" id="login-btn" onclick="login()">登入</button>
-    </div>
-    <div id="login-err"></div>
-  </div>
-</div>
-
 <!-- ═══════════ APP ═══════════ -->
 <div id="app">
 
@@ -918,21 +945,13 @@
       <button class="nav-tab" id="tab-char-page" onclick="showPage('characters')">角色庫 <span id="char-lib-count" style="font-size:.72rem;opacity:.7;"></span></button>
       <button class="nav-tab" id="tab-artist-page" onclick="showPage('artists')">風格庫 <span id="artist-lib-count" style="font-size:.72rem;opacity:.7;"></span></button>
       <button class="nav-tab" id="tab-notes-page" onclick="showPage('notes')">筆記本 <span id="notes-count" style="font-size:.72rem;opacity:.7;"></span></button>
-      <button class="nav-tab" id="tab-gdrive-page" onclick="showPage('gdrive')">☁ 雲端</button>
     </div>
     <div class="nav-right">
-      <div class="theme-picker">
-        <span class="theme-picker-label">外觀</span>
-        <select id="ui-theme-sel" class="theme-picker-sel" onchange="setUITheme(this.value)">
-          <option value="classic">經典</option>
-          <option value="design-md-dark">Claude 深色</option>
-        </select>
-      </div>
       <div class="anlas-info">
         <div class="anlas-bal">ANLAS：<b id="anlas-val">---</b></div>
         <div class="anlas-cost" id="cost-row" style="display:none;">上次扣：<b id="cost-val">0</b> 點</div>
       </div>
-      <button class="btn btn-s btn-out" onclick="logout()">登出</button>
+      <button class="btn-settings" id="nav-settings-btn" onclick="openSettingsModal()" title="設定">⚙</button>
     </div>
   </nav>
 
@@ -1245,6 +1264,7 @@
       <button class="btn btn-s" onclick="bulkAddTagsToSelected()">＋ 批次加 tag</button>
       <button class="btn btn-s btn-out" onclick="bulkRemoveTagsFromSelected()">－ 批次刪 tag</button>
       <button class="btn btn-s" onclick="downloadSelected()">⬇ 打包下載</button>
+      <button class="btn btn-s" id="gal-drive-btn" onclick="openDriveUploadModal()">☁ 上傳 Drive</button>
       <button class="btn btn-d" onclick="deleteSelected()">🗑 刪除選取</button>
       <button class="btn btn-s" onclick="clearSelection()">取消選取</button>
     </div>
@@ -1587,91 +1607,118 @@
     </div>
   </div>
 
-  <!-- ── GOOGLE DRIVE PAGE ── -->
-  <div id="page-gdrive" class="page">
-    <div style="padding:14px;display:flex;flex-direction:column;gap:12px;max-width:860px;margin:0 auto;">
 
-      <!-- 設定 + 連線 -->
-      <div class="card">
-        <div class="card-title">☁ Google Drive 上傳設定</div>
-        <div class="fg">
+</div><!-- /app -->
+
+<!-- ── ONBOARDING TOOLTIP ── -->
+<div id="onboarding-tip" onclick="dismissOnboarding()">
+  第一次使用？點這裡填入 NAI Token，開始生圖 👆
+</div>
+
+<!-- ── SETTINGS MODAL ── -->
+<div class="settings-overlay" id="settings-modal" onclick="closeSettingsModal(event)">
+  <div class="settings-box" onclick="event.stopPropagation()">
+    <div class="settings-hd">
+      <span class="settings-hd-title">⚙ 設定</span>
+      <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeSettingsModal()">✕</button>
+    </div>
+    <div class="settings-body">
+
+      <!-- NAI Token -->
+      <div class="settings-section">
+        <div class="settings-section-label">NovelAI Token</div>
+        <div class="fg" style="margin-bottom:0;">
+          <input type="password" id="settings-nai-token" placeholder="輸入 Access Token..." autocomplete="off">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-p" style="flex:1;" onclick="saveNAIToken()">儲存 Token</button>
+          <button class="btn btn-s btn-out" onclick="clearNAIToken()">清除</button>
+        </div>
+        <div id="settings-token-status" style="font-size:.75rem;color:var(--txt2);"></div>
+      </div>
+
+      <!-- Google Drive -->
+      <div class="settings-section">
+        <div class="settings-section-label">Google Drive</div>
+        <div class="fg" style="margin-bottom:6px;">
           <label>OAuth Client ID</label>
           <div style="display:flex;gap:8px;">
-            <input type="text" id="gdrive-client-id-in" placeholder="xxxx.apps.googleusercontent.com" style="flex:1;font-size:.8rem;">
+            <input type="text" id="settings-gdrive-cid" placeholder="xxxx.apps.googleusercontent.com" style="font-size:.8rem;flex:1;">
             <button class="btn btn-s" onclick="gdriveSaveClientId()">儲存</button>
           </div>
         </div>
-        <div class="gdrive-help-box" style="margin-top:4px;">
-          <b>一次性設定（五分鐘搞定）：</b><br>
-          1. 前往 <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a> → 建立或選擇專案<br>
-          2. APIs & Services → Library → 啟用 <b>Google Drive API</b><br>
-          3. APIs & Services → OAuth consent screen → External → 加入自己 email 為測試使用者<br>
-          4. APIs & Services → Credentials → Create OAuth Client ID → <b>Web application</b><br>
-          5. Authorized JavaScript origins 加入本頁網址（例如 <code style="font-size:.75rem;">https://username.github.io</code>）<br>
-          6. 複製 Client ID → 貼上上方欄位 → 儲存
+        <button class="settings-help-toggle" onclick="toggleDriveHelp()">? 如何取得 Client ID</button>
+        <div class="settings-help-box" id="settings-drive-help">
+          <b>一次性設定（5 分鐘）：</b><br>
+          1. <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a> → 建立專案<br>
+          2. APIs &amp; Services → Library → 啟用 <b>Google Drive API</b><br>
+          3. OAuth consent screen → External → 加自己 email 為測試使用者<br>
+          4. Credentials → Create OAuth Client ID → <b>Web application</b><br>
+          5. Authorized JavaScript origins 填本頁網址<br>
+          6. 複製 Client ID → 貼到上方 → 儲存
         </div>
-        <div style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <div id="gdrive-not-connected" style="display:flex;align-items:center;gap:10px;">
-            <span style="font-size:.82rem;color:var(--txt2);">尚未連線</span>
-            <button class="btn btn-p" id="gdrive-connect-btn" onclick="gdriveConnect()" disabled>連線 Google Drive</button>
+        <div class="settings-drive-status" style="margin-top:6px;">
+          <div id="settings-gdrive-not-connected" style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:.8rem;color:var(--txt2);">尚未連線</span>
+            <button class="btn btn-p" id="settings-gdrive-connect-btn" onclick="gdriveConnect()" disabled style="font-size:.8rem;padding:6px 14px;">連線 Drive</button>
           </div>
-          <div id="gdrive-connected" style="display:none;align-items:center;gap:10px;">
-            <span style="font-size:.82rem;color:var(--ok);">✓ 已連線</span>
-            <span id="gdrive-user-email" style="font-size:.82rem;color:var(--txt2);"></span>
-            <button class="btn btn-s btn-out" onclick="gdriveDisconnect()">中斷連線</button>
+          <div id="settings-gdrive-connected" style="display:none;align-items:center;gap:8px;">
+            <span style="font-size:.8rem;color:var(--ok);">✓ 已連線</span>
+            <span id="settings-gdrive-email" style="font-size:.78rem;color:var(--txt2);"></span>
+            <button class="btn btn-s btn-out" style="font-size:.78rem;padding:4px 10px;" onclick="gdriveDisconnect()">中斷</button>
           </div>
         </div>
       </div>
 
-      <!-- 以下區塊僅在連線後顯示 -->
-      <div id="gdrive-upload-area" style="display:none;display:flex;flex-direction:column;gap:12px;">
-
-        <!-- 目標資料夾 -->
-        <div class="card">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-            <span class="card-title" style="margin-bottom:0;">目標資料夾</span>
-            <button class="btn btn-s btn-out" style="font-size:.75rem;" onclick="gdriveFetchFolders()">🔄 重新整理</button>
-            <button class="btn btn-s btn-out" style="font-size:.75rem;" onclick="gdriveCreateFolder()">＋ 新資料夾</button>
-          </div>
-          <select id="gdrive-folder-sel" style="width:100%;">
-            <option value="">（根目錄 My Drive）</option>
-          </select>
-          <div id="gdrive-folder-status" style="font-size:.75rem;color:var(--txt2);margin-top:5px;"></div>
-        </div>
-
-        <!-- 選擇圖片 -->
-        <div class="card">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
-            <span class="card-title" style="margin-bottom:0;">選擇要上傳的圖片</span>
-            <span id="gdrive-sel-count" style="font-size:.8rem;color:var(--txt2);">0 張已選</span>
-            <button class="btn btn-s btn-out" style="font-size:.75rem;" onclick="gdriveSelectAll()">全選</button>
-            <button class="btn btn-s btn-out" style="font-size:.75rem;" onclick="gdriveClearSel()">清除</button>
-          </div>
-          <div id="gdrive-tag-filter" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;"></div>
-          <div id="gdrive-img-grid" class="gdrive-grid"></div>
-          <div id="gdrive-grid-empty" style="font-size:.82rem;color:var(--txt2);padding:10px 0;display:none;">圖庫沒有圖片</div>
-        </div>
-
-        <!-- 上傳控制 -->
-        <div class="card">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-p" id="gdrive-upload-btn" onclick="gdriveUpload()">☁ 上傳所選圖片</button>
-            <span id="gdrive-upload-status" style="font-size:.82rem;color:var(--txt2);"></span>
-          </div>
-          <div id="gdrive-prog-wrap" style="display:none;margin-top:8px;">
-            <div class="batch-progress-bar-outer">
-              <div id="gdrive-prog-bar" class="batch-progress-bar-inner" style="width:0%;"></div>
-            </div>
-            <div id="gdrive-prog-label" style="font-size:.75rem;color:var(--txt2);margin-top:5px;"></div>
-          </div>
-        </div>
-
-      </div><!-- /gdrive-upload-area -->
+      <!-- Theme -->
+      <div class="settings-section">
+        <div class="settings-section-label">外觀主題</div>
+        <select id="ui-theme-sel" class="theme-picker-sel" onchange="setUITheme(this.value)" style="width:100%;border-radius:8px;padding:8px 12px;">
+          <option value="classic">經典深色</option>
+          <option value="design-md-dark">Claude 深色</option>
+        </select>
+      </div>
 
     </div>
   </div>
+</div>
 
-</div><!-- /app -->
+<!-- ── DRIVE UPLOAD MODAL ── -->
+<div class="drive-modal-overlay" id="drive-upload-modal" onclick="closeDriveUploadModal(event)">
+  <div class="drive-modal-box" onclick="event.stopPropagation()">
+    <div class="drive-modal-hd">
+      <span class="drive-modal-title">☁ 上傳到 Google Drive</span>
+      <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeDriveUploadModal()">✕</button>
+    </div>
+    <div class="drive-modal-body">
+      <div style="font-size:.82rem;color:var(--txt2);">已選 <b id="drive-modal-count" style="color:var(--txt);">0</b> 張圖片</div>
+      <!-- Folder -->
+      <div class="fg" style="margin-bottom:0;">
+        <label>目標資料夾</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="gdrive-folder-sel" style="flex:1;">
+            <option value="">（根目錄 My Drive）</option>
+          </select>
+          <button class="btn btn-s btn-out" style="font-size:.75rem;white-space:nowrap;" onclick="gdriveFetchFolders()">🔄</button>
+          <button class="btn btn-s btn-out" style="font-size:.75rem;white-space:nowrap;" onclick="gdriveCreateFolder()">＋ 新增</button>
+        </div>
+        <div id="gdrive-folder-status" style="font-size:.72rem;color:var(--txt2);margin-top:4px;"></div>
+      </div>
+      <!-- Progress -->
+      <div id="gdrive-prog-wrap" style="display:none;">
+        <div class="batch-progress-bar-outer">
+          <div id="gdrive-prog-bar" class="batch-progress-bar-inner" style="width:0%;"></div>
+        </div>
+        <div id="gdrive-prog-label" style="font-size:.75rem;color:var(--txt2);margin-top:5px;"></div>
+      </div>
+      <div id="gdrive-upload-status" style="font-size:.82rem;color:var(--txt2);"></div>
+    </div>
+    <div class="drive-modal-ft">
+      <button class="btn btn-s btn-out" onclick="closeDriveUploadModal()">取消</button>
+      <button class="btn btn-p" id="gdrive-upload-btn" onclick="gdriveUpload()">☁ 開始上傳</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── BATCH PRESETS MODAL ── -->
 <div class="batch-presets-overlay" id="batch-presets-modal" onclick="closeBatchPresetsModal(event)">
@@ -2548,7 +2595,7 @@ const UI_THEME_KEY = 'nai_ui_theme_v1';
 function applyUITheme(theme) {
   const finalTheme = ['design-md-dark', 'classic'].includes(theme)
     ? theme
-    : 'classic';
+    : 'design-md-dark';
   document.documentElement.dataset.uiTheme = finalTheme;
   const sel = document.getElementById('ui-theme-sel');
   if (sel) sel.value = finalTheme;
@@ -2557,7 +2604,7 @@ function applyUITheme(theme) {
 function setUITheme(theme) {
   const finalTheme = ['design-md-dark', 'classic'].includes(theme)
     ? theme
-    : 'classic';
+    : 'design-md-dark';
   applyUITheme(finalTheme);
   try { localStorage.setItem(UI_THEME_KEY, finalTheme); } catch (_) {}
   const msg = finalTheme === 'classic'
@@ -2570,12 +2617,13 @@ function setUITheme(theme) {
 // INIT
 // ═══════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
-  applyUITheme(localStorage.getItem(UI_THEME_KEY) || document.documentElement.dataset.uiTheme || 'classic');
+  applyUITheme(localStorage.getItem(UI_THEME_KEY) || document.documentElement.dataset.uiTheme || 'design-md-dark');
   generateLayoutState = loadGenerateLayoutState();
   applyGenerateLayoutState();
   bindGenerateLayoutResizers();
   const saved = localStorage.getItem('nai_token');
-  if (saved) { apiToken = saved; showApp(); }
+  if (saved) { apiToken = saved; }
+  showApp();
 
   const isMob = window.innerWidth <= 768;
   setAdv(!isMob);
@@ -2624,11 +2672,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'Escape') {
       closeModal();
       document.getElementById('vibe-picker-modal').classList.remove('open');
+      document.getElementById('settings-modal')?.classList.remove('open');
+      document.getElementById('drive-upload-modal')?.classList.remove('open');
     }
   });
-
-  // login enter
-  document.getElementById('tok-in').addEventListener('keydown', e => { if(e.key==='Enter') login(); });
 
   applyDraftState(loadDraftState(), isMob);
   draftSaveReady = true;
@@ -3660,30 +3707,77 @@ function extractPNGMeta(arrayBuffer) {
 }
 
 // ═══════════════════════════════════════════
-// LOGIN / LOGOUT
+// SETTINGS MODAL
 // ═══════════════════════════════════════════
-async function login() {
-  const raw = document.getElementById('tok-in').value.trim();
-  if (!raw) { showLoginErr('請輸入 Token'); return; }
-  apiToken = raw.replace(/^Bearer\s+/i,'');
-  if (apiToken.length < 20) { showLoginErr('Token 格式不正確'); return; }
-  if (document.getElementById('rem-tok').checked) localStorage.setItem('nai_token', apiToken);
-  showApp();
+function openSettingsModal() {
+  const modal = document.getElementById('settings-modal');
+  // Pre-fill NAI token field (masked)
+  const tokenIn = document.getElementById('settings-nai-token');
+  if (tokenIn) tokenIn.value = apiToken ? '••••••••' : '';
+  // Pre-fill gdrive client id
+  const cidIn = document.getElementById('settings-gdrive-cid');
+  if (cidIn) cidIn.value = localStorage.getItem(GDRIVE_CID_KEY) || '';
+  // Update drive connected status
+  gdriveRefreshSettingsStatus();
+  modal.classList.add('open');
+  // Set theme selector to current
+  const sel = document.getElementById('ui-theme-sel');
+  if (sel) sel.value = localStorage.getItem(UI_THEME_KEY) || 'design-md-dark';
+}
+
+function closeSettingsModal(e) {
+  if (e && e.target !== document.getElementById('settings-modal')) return;
+  document.getElementById('settings-modal').classList.remove('open');
+}
+
+function saveNAIToken() {
+  const raw = document.getElementById('settings-nai-token').value.trim();
+  // If user typed dots (masked placeholder), don't overwrite
+  if (raw === '••••••••') {
+    toast('Token 未變更', 'ok'); return;
+  }
+  if (!raw) { toast('請輸入 Token', 'warn'); return; }
+  const tok = raw.replace(/^Bearer\s+/i,'');
+  if (tok.length < 20) { toast('Token 格式不正確', 'err'); return; }
+  apiToken = tok;
+  localStorage.setItem('nai_token', apiToken);
+  document.getElementById('settings-token-status').textContent = '✓ Token 已儲存';
+  document.getElementById('settings-token-status').style.color = 'var(--ok)';
+  toast('Token 已儲存', 'ok');
   fetchAnlasSilent();
 }
 
-function logout() {
+function clearNAIToken() {
   localStorage.removeItem('nai_token');
-  apiToken = ''; anlasBalance = null; lastBlob = null; lastAB = null;
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('tok-in').value = '';
-  document.getElementById('login-err').style.display = 'none';
+  apiToken = '';
+  document.getElementById('settings-nai-token').value = '';
+  const st = document.getElementById('settings-token-status');
+  st.textContent = 'Token 已清除'; st.style.color = 'var(--txt2)';
+  document.getElementById('anlas-val').textContent = '---';
+  toast('Token 已清除', 'ok');
+}
+
+function toggleDriveHelp() {
+  const el = document.getElementById('settings-drive-help');
+  el.classList.toggle('open');
+}
+
+function gdriveRefreshSettingsStatus() {
+  const connected = !!gdriveToken;
+  const notConn = document.getElementById('settings-gdrive-not-connected');
+  const conn    = document.getElementById('settings-gdrive-connected');
+  const btn     = document.getElementById('settings-gdrive-connect-btn');
+  if (!notConn) return;
+  const hasCid = !!(localStorage.getItem(GDRIVE_CID_KEY));
+  if (btn) btn.disabled = !hasCid;
+  if (connected) {
+    notConn.style.display = 'none'; conn.style.display = 'flex';
+  } else {
+    notConn.style.display = 'flex'; conn.style.display = 'none';
+  }
 }
 
 async function showApp() {
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
   loadGalViews();
   loadNotesViews();
   loadBatchTasks();
@@ -3708,11 +3802,75 @@ async function showApp() {
     },
     removeLastTag: () => { if (abTags.length) { abTags.pop(); renderAbTagChips(); } }
   });
+  // Init token fetch if we already have a token
+  if (apiToken) fetchAnlasSilent();
+  // Init GDrive client if client ID saved
+  const savedCid = localStorage.getItem(GDRIVE_CID_KEY);
+  if (savedCid) loadGIS(() => gdriveInitClient(savedCid));
+  // Onboarding tooltip
+  initOnboardingTip();
 }
 
-function showLoginErr(msg) {
-  const el = document.getElementById('login-err');
-  el.textContent = msg; el.style.display = 'block';
+// ── Onboarding tooltip ──
+const ONBOARDED_KEY = 'nai_onboarded_v1';
+function initOnboardingTip() {
+  if (localStorage.getItem(ONBOARDED_KEY)) {
+    document.getElementById('onboarding-tip').classList.add('hidden');
+    return;
+  }
+  // Show tip pointing at ⚙ button
+  const tip = document.getElementById('onboarding-tip');
+  tip.classList.remove('hidden');
+}
+function dismissOnboarding() {
+  localStorage.setItem(ONBOARDED_KEY, '1');
+  document.getElementById('onboarding-tip').classList.add('hidden');
+  openSettingsModal();
+}
+
+// ── Drive upload modal ──
+let driveUploadTargetIds = null; // Set of image DB IDs to upload
+
+function openDriveUploadModal() {
+  if (!selectedIds.size) { toast('請先在圖庫選擇要上傳的圖片', 'warn'); return; }
+  const cid = localStorage.getItem(GDRIVE_CID_KEY);
+  if (!cid) {
+    toast('請先在設定中填入 Google Drive Client ID', 'warn');
+    openSettingsModal();
+    return;
+  }
+  if (!gdriveToken) {
+    // Auto-trigger connect
+    loadGIS(() => {
+      gdriveInitClient(cid);
+      gdriveTokenClient?.requestAccessToken({ prompt: '' });
+    });
+    toast('請完成 Google Drive 授權後再試', 'warn');
+    return;
+  }
+  driveUploadTargetIds = new Set(selectedIds);
+  const countEl = document.getElementById('drive-modal-count');
+  if (countEl) countEl.textContent = driveUploadTargetIds.size;
+  // Reset progress
+  const prog = document.getElementById('gdrive-prog-wrap');
+  if (prog) { prog.style.display = 'none'; }
+  const bar = document.getElementById('gdrive-prog-bar');
+  if (bar) bar.style.width = '0%';
+  const lbl = document.getElementById('gdrive-prog-label');
+  if (lbl) lbl.textContent = '';
+  const st = document.getElementById('gdrive-upload-status');
+  if (st) st.textContent = '';
+  const btn = document.getElementById('gdrive-upload-btn');
+  if (btn) btn.disabled = false;
+  // Fetch folders if connected
+  if (gdriveToken) gdriveFetchFolders();
+  document.getElementById('drive-upload-modal').classList.add('open');
+}
+
+function closeDriveUploadModal(e) {
+  if (e && e.target !== document.getElementById('drive-upload-modal')) return;
+  document.getElementById('drive-upload-modal').classList.remove('open');
+  driveUploadTargetIds = null;
 }
 
 // ═══════════════════════════════════════════
@@ -3785,10 +3943,10 @@ function setGenerating(on) {
 }
 
 function showPage(page) {
-  ['page-generate','page-gallery','page-vibe','page-characters','page-artists','page-notes','page-batch','page-ab','page-gdrive'].forEach(id => {
+  ['page-generate','page-gallery','page-vibe','page-characters','page-artists','page-notes','page-batch','page-ab'].forEach(id => {
     const el = document.getElementById(id); if (el) el.classList.remove('active');
   });
-  ['tab-gen','tab-gal','tab-vibe-page','tab-char-page','tab-artist-page','tab-notes-page','tab-gdrive-page'].forEach(id => {
+  ['tab-gen','tab-gal','tab-vibe-page','tab-char-page','tab-artist-page','tab-notes-page'].forEach(id => {
     const el = document.getElementById(id); if (el) el.classList.remove('active');
   });
   const show = id => { const el = document.getElementById(id); if (el) el.classList.add('active'); };
@@ -3824,9 +3982,6 @@ function showPage(page) {
   } else if (page === 'ab') {
     show('page-ab'); activateTab('tab-gen');
     const el = document.getElementById('gen-sub-ab'); if (el) el.classList.add('active');
-  } else if (page === 'gdrive') {
-    show('page-gdrive'); activateTab('tab-gdrive-page');
-    initGdrivePage();
   }
 }
 
@@ -8460,17 +8615,8 @@ let gdriveUploading   = false;
 let gdriveFilterTag   = '';
 let gdriveGISReady    = false;
 
-// ── Init ──────────────────────────────────
-function initGdrivePage() {
-  const saved = localStorage.getItem(GDRIVE_CID_KEY) || '';
-  document.getElementById('gdrive-client-id-in').value = saved;
-  if (saved) {
-    document.getElementById('gdrive-connect-btn').disabled = false;
-    loadGIS(() => gdriveInitClient(saved));
-  }
-  gdriveRenderTagFilter();
-  gdriveRenderGrid();
-}
+// ── Init (legacy stub kept for safety) ────
+function initGdrivePage() { /* page removed — settings modal handles init */ }
 
 function loadGIS(cb) {
   if (window.google?.accounts?.oauth2) { cb(); return; }
@@ -8495,7 +8641,8 @@ function gdriveInitClient(clientId) {
           headers: { Authorization: 'Bearer ' + gdriveToken }
         });
         const d = await r.json();
-        document.getElementById('gdrive-user-email').textContent = d.email || '';
+        const emailEl = document.getElementById('settings-gdrive-email');
+        if (emailEl) emailEl.textContent = d.email || '';
       } catch { document.getElementById('gdrive-user-email').textContent = ''; }
       gdriveShowConnected();
       gdriveFetchFolders();
@@ -8505,10 +8652,11 @@ function gdriveInitClient(clientId) {
 
 // ── Client ID ─────────────────────────────
 function gdriveSaveClientId() {
-  const v = document.getElementById('gdrive-client-id-in').value.trim();
+  const v = document.getElementById('settings-gdrive-cid').value.trim();
   if (!v) { toast('請先輸入 Client ID', 'warn'); return; }
   localStorage.setItem(GDRIVE_CID_KEY, v);
-  document.getElementById('gdrive-connect-btn').disabled = false;
+  const btn = document.getElementById('settings-gdrive-connect-btn');
+  if (btn) btn.disabled = false;
   loadGIS(() => gdriveInitClient(v));
   toast('Client ID 已儲存', 'ok');
 }
@@ -8517,7 +8665,7 @@ function gdriveSaveClientId() {
 function gdriveConnect() {
   if (!gdriveTokenClient) {
     const cid = localStorage.getItem(GDRIVE_CID_KEY);
-    if (!cid) { toast('請先輸入並儲存 Client ID', 'warn'); return; }
+    if (!cid) { toast('請先輸入並儲存 Client ID', 'warn'); openSettingsModal(); return; }
     loadGIS(() => { gdriveInitClient(cid); gdriveTokenClient?.requestAccessToken({ prompt: '' }); });
     return;
   }
@@ -8525,28 +8673,24 @@ function gdriveConnect() {
 }
 
 function gdriveDisconnect() {
-  if (gdriveToken) { google.accounts.oauth2.revoke(gdriveToken, () => {}); }
+  if (gdriveToken && window.google?.accounts?.oauth2) { google.accounts.oauth2.revoke(gdriveToken, () => {}); }
   gdriveToken = null;
   gdriveShowDisconnected();
   toast('已中斷 Google Drive 連線', 'ok');
 }
 
 function gdriveShowConnected() {
-  document.getElementById('gdrive-not-connected').style.display = 'none';
-  document.getElementById('gdrive-connected').style.display     = 'flex';
-  document.getElementById('gdrive-upload-area').style.display   = 'flex';
+  gdriveRefreshSettingsStatus();
 }
 function gdriveShowDisconnected() {
-  document.getElementById('gdrive-connected').style.display     = 'none';
-  document.getElementById('gdrive-not-connected').style.display = 'flex';
-  document.getElementById('gdrive-upload-area').style.display   = 'none';
+  gdriveRefreshSettingsStatus();
 }
 
 // ── Folders ───────────────────────────────
 async function gdriveFetchFolders() {
   if (!gdriveToken) return;
   const statusEl = document.getElementById('gdrive-folder-status');
-  statusEl.textContent = '讀取中…';
+  if (statusEl) statusEl.textContent = '讀取中…';
   try {
     const q = encodeURIComponent("mimeType='application/vnd.google-apps.folder' and trashed=false");
     const r = await fetch(
@@ -8557,14 +8701,15 @@ async function gdriveFetchFolders() {
     const d = await r.json();
     gdriveFoldersList = d.files || [];
     gdriveRenderFolders();
-    statusEl.textContent = `找到 ${gdriveFoldersList.length} 個資料夾`;
+    if (statusEl) statusEl.textContent = `找到 ${gdriveFoldersList.length} 個資料夾`;
   } catch (e) {
-    statusEl.textContent = '讀取失敗：' + e.message;
+    if (statusEl) statusEl.textContent = '讀取失敗：' + e.message;
   }
 }
 
 function gdriveRenderFolders() {
   const sel = document.getElementById('gdrive-folder-sel');
+  if (!sel) return;
   const cur = sel.value;
   sel.innerHTML = '<option value="">（根目錄 My Drive）</option>';
   gdriveFoldersList.forEach(f => {
@@ -8593,9 +8738,11 @@ async function gdriveCreateFolder() {
     gdriveFoldersList.push({ id: d.id, name: d.name });
     gdriveFoldersList.sort((a, b) => a.name.localeCompare(b.name));
     gdriveRenderFolders();
-    document.getElementById('gdrive-folder-sel').value = d.id;
+    const folderSel = document.getElementById('gdrive-folder-sel');
+    if (folderSel) folderSel.value = d.id;
     toast(`資料夾「${d.name}」已建立`, 'ok');
-    document.getElementById('gdrive-folder-status').textContent = `找到 ${gdriveFoldersList.length} 個資料夾`;
+    const folderStatus = document.getElementById('gdrive-folder-status');
+    if (folderStatus) folderStatus.textContent = `找到 ${gdriveFoldersList.length} 個資料夾`;
   } catch (e) {
     toast('建立失敗：' + e.message, 'err');
   }
@@ -8667,14 +8814,17 @@ function gdriveUpdateSelCount() {
 // ── Upload ────────────────────────────────
 async function gdriveUpload() {
   if (gdriveUploading) return;
-  if (!gdriveToken) { toast('請先連線 Google Drive', 'warn'); return; }
-  if (!gdriveSelectedImgs.size) { toast('請先選擇要上傳的圖片', 'warn'); return; }
+  if (!gdriveToken) { toast('請先連線 Google Drive', 'warn'); openSettingsModal(); return; }
+  const uploadIds = driveUploadTargetIds || gdriveSelectedImgs;
+  if (!uploadIds.size) { toast('沒有選擇圖片', 'warn'); return; }
 
-  const folderId = document.getElementById('gdrive-folder-sel').value || null;
-  const toUpload = galleryData.filter(img => gdriveSelectedImgs.has(img.id));
+  const folderId = document.getElementById('gdrive-folder-sel')?.value || null;
+  const toUpload = galleryData.filter(img => uploadIds.has(img.id));
   gdriveUploading = true;
-  document.getElementById('gdrive-upload-btn').disabled = true;
-  document.getElementById('gdrive-prog-wrap').style.display = 'block';
+  const _uploadBtn = document.getElementById('gdrive-upload-btn');
+  if (_uploadBtn) _uploadBtn.disabled = true;
+  const _progWrap = document.getElementById('gdrive-prog-wrap');
+  if (_progWrap) _progWrap.style.display = 'block';
 
   let done = 0, failed = 0;
   for (const img of toUpload) {
@@ -8697,12 +8847,14 @@ async function gdriveUpload() {
   }
 
   gdriveUploading = false;
-  document.getElementById('gdrive-upload-btn').disabled = false;
+  const uploadBtn = document.getElementById('gdrive-upload-btn');
+  if (uploadBtn) uploadBtn.disabled = false;
   const status = document.getElementById('gdrive-upload-status');
   if (status) status.textContent = '';
   const label = document.getElementById('gdrive-prog-label');
   if (label) label.textContent = failed ? `完成：${done} 張成功，${failed} 張失敗` : `✓ 全部 ${done} 張上傳完成`;
   toast(failed ? `${done} 張完成，${failed} 張失敗` : `☁ ${done} 張全部上傳完成！`, failed ? 'warn' : 'ok');
+  if (!failed) setTimeout(() => closeDriveUploadModal(), 1500);
 }
 
 async function gdriveUploadFile(arrayBuffer, filename, folderId) {
