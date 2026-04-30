@@ -929,7 +929,7 @@
             </select>
           </div>
           <div class="fg">
-            <label>Seed</label>
+            <label>種子</label>
             <div class="seed-row">
               <input type="number" id="seed" value="-1">
               <button class="seed-toggle active" id="seed-toggle" onclick="toggleSeedMode()" title="開啟後每次隨機生圖">🔀 隨機</button>
@@ -1179,7 +1179,7 @@
           </div>
           <div class="row2">
             <div class="fg">
-              <label>Seed</label>
+              <label>種子</label>
               <div class="seed-row">
                 <input type="number" id="ab-a-seed" value="-1" disabled>
                 <button class="seed-toggle active" id="ab-a-seed-toggle" onclick="abToggleSeed('a')">🔀 隨機</button>
@@ -1260,7 +1260,7 @@
           </div>
           <div class="row2">
             <div class="fg">
-              <label>Seed</label>
+              <label>種子</label>
               <div class="seed-row">
                 <input type="number" id="ab-b-seed" value="-1" disabled>
                 <button class="seed-toggle active" id="ab-b-seed-toggle" onclick="abToggleSeed('b')">🔀 隨機</button>
@@ -1836,7 +1836,7 @@
             </div>
           </div>
           <div class="fg">
-            <label>Seed（-1 = 每張隨機）</label>
+            <label>種子（-1 = 每張隨機）</label>
             <input id="bt-seed" class="inp" type="number" value="-1" style="width:100%;">
           </div>
         </div>
@@ -5765,7 +5765,7 @@ function openModal(id, url) {
     <div>
       <div class="modal-section-title">參數</div>
       <div class="meta-grid">
-        <span class="meta-key">Seed</span><span class="meta-val">${meta.seed??'—'}</span>
+        <span class="meta-key">種子</span><span class="meta-val">${meta.seed??'—'}</span>
         <span class="meta-key">Model</span><span class="meta-val">${esc(meta.model||'—')}</span>
         <span class="meta-key">Size</span><span class="meta-val">${meta.width||'?'}×${meta.height||'?'}</span>
         <span class="meta-key">Steps</span><span class="meta-val">${meta.steps??'—'}</span>
