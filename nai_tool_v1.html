@@ -976,39 +976,37 @@
   <div id="page-ab" class="page">
     <div style="padding:14px;display:flex;flex-direction:column;gap:12px;">
 
-      <!-- Shared Prompt -->
-      <div class="card">
-        <div class="card-title">共用 Prompt（A 和 B 使用同一份）</div>
-        <div class="fg">
-          <label style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
-            <span>正向 Prompt</span>
-            <div style="display:flex;gap:4px;">
-              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('char',this,'ab-prompt')">👤 角色</button>
-              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('style',this,'ab-prompt')">🎨 風格</button>
-              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('note',this,'ab-prompt')">📝 片段</button>
-            </div>
-          </label>
-          <textarea id="ab-prompt" rows="4" placeholder="1girl, blue eyes, long hair..." style="font-family:monospace;resize:vertical;"></textarea>
-        </div>
-        <div class="fg">
-          <label style="display:flex;align-items:center;justify-content:space-between;">
-            <span>負向 Prompt</span>
-            <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('note',this,'ab-neg')">📝 片段</button>
-          </label>
-          <textarea id="ab-neg" rows="2" placeholder="lowres, bad anatomy..." style="font-family:monospace;resize:vertical;"></textarea>
-        </div>
-      </div>
-
-      <!-- Two-column params -->
+      <!-- Two-column: each side has its own prompt + params -->
       <div class="ab-cols">
 
         <!-- A side -->
         <div class="card">
-          <div class="card-title" style="display:flex;align-items:center;gap:8px;">
+          <div class="card-title" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
             <span class="ab-badge ab-badge-a">A</span>
-            <span>參數組 A</span>
-            <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;margin-left:auto;" onclick="abImportFromGen('a')">⬇ 從生圖頁匯入</button>
+            <span>組 A</span>
+            <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;margin-left:auto;" onclick="abCopyPrompt('a','b')" title="把 A 的 Prompt 複製到 B">📋→B</button>
+            <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="abImportFromGen('a')">⬇ 生圖頁</button>
           </div>
+          <!-- A Prompt -->
+          <div class="fg">
+            <label style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:3px;">
+              <span>正向 Prompt</span>
+              <div style="display:flex;gap:3px;">
+                <button class="btn btn-s btn-out" style="font-size:.65rem;padding:1px 5px;" onclick="openBtInsertPicker('char',this,'ab-a-prompt')">👤</button>
+                <button class="btn btn-s btn-out" style="font-size:.65rem;padding:1px 5px;" onclick="openBtInsertPicker('style',this,'ab-a-prompt')">🎨</button>
+                <button class="btn btn-s btn-out" style="font-size:.65rem;padding:1px 5px;" onclick="openBtInsertPicker('note',this,'ab-a-prompt')">📝</button>
+              </div>
+            </label>
+            <textarea id="ab-a-prompt" rows="4" placeholder="1girl, blue eyes..." style="font-family:monospace;resize:vertical;"></textarea>
+          </div>
+          <div class="fg">
+            <label style="display:flex;align-items:center;justify-content:space-between;">
+              <span>負向 Prompt</span>
+              <button class="btn btn-s btn-out" style="font-size:.65rem;padding:1px 5px;" onclick="openBtInsertPicker('note',this,'ab-a-neg')">📝</button>
+            </label>
+            <textarea id="ab-a-neg" rows="2" placeholder="lowres, bad anatomy..." style="font-family:monospace;resize:vertical;"></textarea>
+          </div>
+          <!-- A Params -->
           <div class="fg">
             <label>模型</label>
             <select id="ab-a-model">
@@ -1051,18 +1049,45 @@
             </div>
           </div>
           <div class="row2">
-            <div class="fg"><label>Seed（-1 隨機）</label><input id="ab-a-seed" type="number" value="-1"></div>
+            <div class="fg">
+              <label>Seed</label>
+              <div class="seed-row">
+                <input type="number" id="ab-a-seed" value="-1" disabled>
+                <button class="seed-toggle active" id="ab-a-seed-toggle" onclick="abToggleSeed('a')">🔀 隨機</button>
+              </div>
+            </div>
             <div class="fg"><label>生幾張</label><input id="ab-a-count" type="number" value="3" min="1" max="20"></div>
           </div>
         </div>
 
         <!-- B side -->
         <div class="card">
-          <div class="card-title" style="display:flex;align-items:center;gap:8px;">
+          <div class="card-title" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
             <span class="ab-badge ab-badge-b">B</span>
-            <span>參數組 B</span>
-            <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;margin-left:auto;" onclick="abImportFromGen('b')">⬇ 從生圖頁匯入</button>
+            <span>組 B</span>
+            <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;margin-left:auto;" onclick="abCopyPrompt('b','a')" title="把 B 的 Prompt 複製到 A">📋→A</button>
+            <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="abImportFromGen('b')">⬇ 生圖頁</button>
           </div>
+          <!-- B Prompt -->
+          <div class="fg">
+            <label style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:3px;">
+              <span>正向 Prompt</span>
+              <div style="display:flex;gap:3px;">
+                <button class="btn btn-s btn-out" style="font-size:.65rem;padding:1px 5px;" onclick="openBtInsertPicker('char',this,'ab-b-prompt')">👤</button>
+                <button class="btn btn-s btn-out" style="font-size:.65rem;padding:1px 5px;" onclick="openBtInsertPicker('style',this,'ab-b-prompt')">🎨</button>
+                <button class="btn btn-s btn-out" style="font-size:.65rem;padding:1px 5px;" onclick="openBtInsertPicker('note',this,'ab-b-prompt')">📝</button>
+              </div>
+            </label>
+            <textarea id="ab-b-prompt" rows="4" placeholder="1girl, blue eyes..." style="font-family:monospace;resize:vertical;"></textarea>
+          </div>
+          <div class="fg">
+            <label style="display:flex;align-items:center;justify-content:space-between;">
+              <span>負向 Prompt</span>
+              <button class="btn btn-s btn-out" style="font-size:.65rem;padding:1px 5px;" onclick="openBtInsertPicker('note',this,'ab-b-neg')">📝</button>
+            </label>
+            <textarea id="ab-b-neg" rows="2" placeholder="lowres, bad anatomy..." style="font-family:monospace;resize:vertical;"></textarea>
+          </div>
+          <!-- B Params -->
           <div class="fg">
             <label>模型</label>
             <select id="ab-b-model">
@@ -1105,15 +1130,33 @@
             </div>
           </div>
           <div class="row2">
-            <div class="fg"><label>Seed（-1 隨機）</label><input id="ab-b-seed" type="number" value="-1"></div>
+            <div class="fg">
+              <label>Seed</label>
+              <div class="seed-row">
+                <input type="number" id="ab-b-seed" value="-1" disabled>
+                <button class="seed-toggle active" id="ab-b-seed-toggle" onclick="abToggleSeed('b')">🔀 隨機</button>
+              </div>
+            </div>
             <div class="fg"><label>生幾張</label><input id="ab-b-count" type="number" value="3" min="1" max="20"></div>
           </div>
         </div>
 
-      </div><!-- /ab-cols params -->
+      </div><!-- /ab-cols -->
 
       <!-- Controls -->
       <div class="card">
+        <!-- 自訂 Tags -->
+        <div class="fg" style="margin-bottom:12px;">
+          <label>自訂 Tag（套用到所有 A/B 圖片）</label>
+          <div style="position:relative;">
+            <input id="ab-tag-in" type="text" placeholder="新增 tag..." autocomplete="off" style="width:100%;">
+            <div class="tag-dropdown" id="ab-tag-dd" style="top:100%;left:0;right:0;position:absolute;z-index:300;"></div>
+          </div>
+          <div id="ab-tags-chips" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px;"></div>
+          <div style="display:flex;justify-content:flex-end;margin-top:6px;">
+            <button class="btn btn-s" type="button" onclick="openAbTagsPicker()">選擇標籤</button>
+          </div>
+        </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-p" id="ab-run-btn" onclick="startAB()">▶ 開始 A/B 比較</button>
           <button class="btn btn-d" id="ab-stop-btn" style="display:none;" onclick="stopAB()">■ 停止</button>
@@ -2728,6 +2771,18 @@ async function showApp() {
   await loadCharacterData();
   await loadArtistData();
   await loadNotesData();
+  // Bind A/B tag inline input
+  bindInlineTagInput({
+    inputId: 'ab-tag-in', ddId: 'ab-tag-dd',
+    getTags: () => abTags,
+    addTag: name => {
+      name = name.trim();
+      if (!name || abTags.includes(name)) return;
+      abTags.push(name);
+      renderAbTagChips();
+    },
+    removeLastTag: () => { if (abTags.length) { abTags.pop(); renderAbTagChips(); } }
+  });
 }
 
 function showLoginErr(msg) {
@@ -3070,6 +3125,31 @@ function openBtTagsPicker() {
     onConfirm: tags => {
       btTags = dedupeTags(tags);
       renderBtTagChips();
+    }
+  });
+}
+
+function renderAbTagChips() {
+  const el = document.getElementById('ab-tags-chips');
+  if (!el) return;
+  el.innerHTML = abTags.map(t =>
+    `<span class="tag-chip" style="${getTagChipStyle(t)}">${esc(t)}<button class="tag-chip-x" data-tag="${esc(t)}" style="color:${getTagColor(t)}" onclick="removeAbTag(this.dataset.tag)">×</button></span>`
+  ).join('');
+}
+
+function removeAbTag(name) { abTags = abTags.filter(t => t !== name); renderAbTagChips(); }
+
+function openAbTagsPicker() {
+  openTagPicker({
+    title: '選擇 A/B 標籤',
+    help: '這些 tag 會加到本次 A/B 所有生圖上，方便事後在圖庫篩選對比。ab-test/ab-a/ab-b 為自動加入，無需手動選。',
+    initialTags: abTags,
+    multi: true,
+    allowCreate: true,
+    createLabel: '建立新標籤',
+    onConfirm: tags => {
+      abTags = dedupeTags(tags);
+      renderAbTagChips();
     }
   });
 }
@@ -6831,10 +6911,32 @@ function saveBatchTask() {
 // A/B COMPARISON
 // ═══════════════════════════════════════════
 
-let abRunning    = false;
-let abShouldStop = false;
+let abRunning     = false;
+let abShouldStop  = false;
 const abAbortHolder = { ctrl: null };
 let abDoneA = 0, abDoneB = 0, abTotalA = 0, abTotalB = 0;
+let abSeedRandomA = true;
+let abSeedRandomB = true;
+let abTags = [];
+
+function abToggleSeed(side) {
+  if (side === 'a') { abSeedRandomA = !abSeedRandomA; abSetSeedUI('a', abSeedRandomA); }
+  else              { abSeedRandomB = !abSeedRandomB; abSetSeedUI('b', abSeedRandomB); }
+}
+
+function abSetSeedUI(side, random) {
+  const inp = document.getElementById(`ab-${side}-seed`);
+  const btn = document.getElementById(`ab-${side}-seed-toggle`);
+  if (!inp || !btn) return;
+  if (random) {
+    btn.className = 'seed-toggle active'; btn.textContent = '🔀 隨機';
+    inp.value = '-1'; inp.disabled = true;
+  } else {
+    btn.className = 'seed-toggle'; btn.textContent = '🔒 固定';
+    inp.disabled = false;
+    if (!inp.value || inp.value === '-1') inp.value = Math.floor(Math.random() * 9999999999);
+  }
+}
 
 function abVal(id) {
   const el = document.getElementById(id);
@@ -6843,8 +6945,10 @@ function abVal(id) {
 
 async function startAB() {
   if (abRunning) return;
-  const prompt = abVal('ab-prompt').trim();
-  if (!prompt) { toast('請先填寫 Prompt', 'warn'); return; }
+  const promptA = abVal('ab-a-prompt').trim();
+  const promptB = abVal('ab-b-prompt').trim();
+  if (!promptA) { toast('請先填寫 A 的 Prompt', 'warn'); return; }
+  if (!promptB) { toast('請先填寫 B 的 Prompt', 'warn'); return; }
 
   abTotalA = parseInt(abVal('ab-a-count')) || 3;
   abTotalB = parseInt(abVal('ab-b-count')) || 3;
@@ -6861,9 +6965,10 @@ async function startAB() {
   document.getElementById('ab-b-done-label').textContent = '';
   abUpdateProgress();
 
-  const negPrompt = abVal('ab-neg').trim();
-  const cfgA = { model: abVal('ab-a-model'), res: abVal('ab-a-res'), steps: parseInt(abVal('ab-a-steps'))||28, scale: parseFloat(abVal('ab-a-cfg'))||5, sampler: abVal('ab-a-sampler'), noiseSch: abVal('ab-a-noise-sch'), seed: parseInt(abVal('ab-a-seed')), count: abTotalA };
-  const cfgB = { model: abVal('ab-b-model'), res: abVal('ab-b-res'), steps: parseInt(abVal('ab-b-steps'))||28, scale: parseFloat(abVal('ab-b-cfg'))||5, sampler: abVal('ab-b-sampler'), noiseSch: abVal('ab-b-noise-sch'), seed: parseInt(abVal('ab-b-seed')), count: abTotalB };
+  const negPromptA = abVal('ab-a-neg').trim();
+  const negPromptB = abVal('ab-b-neg').trim();
+  const cfgA = { prompt: promptA, negPrompt: negPromptA, model: abVal('ab-a-model'), res: abVal('ab-a-res'), steps: parseInt(abVal('ab-a-steps'))||28, scale: parseFloat(abVal('ab-a-cfg'))||5, sampler: abVal('ab-a-sampler'), noiseSch: abVal('ab-a-noise-sch'), seed: abSeedRandomA ? -1 : (parseInt(abVal('ab-a-seed')) || -1), count: abTotalA };
+  const cfgB = { prompt: promptB, negPrompt: negPromptB, model: abVal('ab-b-model'), res: abVal('ab-b-res'), steps: parseInt(abVal('ab-b-steps'))||28, scale: parseFloat(abVal('ab-b-cfg'))||5, sampler: abVal('ab-b-sampler'), noiseSch: abVal('ab-b-noise-sch'), seed: abSeedRandomB ? -1 : (parseInt(abVal('ab-b-seed')) || -1), count: abTotalB };
 
   const maxCount = Math.max(abTotalA, abTotalB);
   for (let i = 0; i < maxCount && !abShouldStop; i++) {
@@ -6875,18 +6980,18 @@ async function startAB() {
       abUpdateProgress();
       try {
         const ab = await callGenerateSimple({
-          prompt, negPrompt,
+          prompt: cfgA.prompt, negPrompt: cfgA.negPrompt,
           model: cfgA.model, width: w, height: h,
           steps: cfgA.steps, scale: cfgA.scale, cfgR: 0,
           sampler: cfgA.sampler, noiseSch: cfgA.noiseSch, seed,
           _stopFn: () => abShouldStop, _abortHolder: abAbortHolder
         });
         const meta = extractPNGMeta(ab);
-        if (!meta.prompt) meta.prompt = prompt;
+        if (!meta.prompt) meta.prompt = cfgA.prompt;
         if (!meta.seed)   meta.seed   = seed;
         if (!meta.model)  meta.model  = cfgA.model;
-        const id = await dbSaveImage(ab, meta, dedupeTags(['ab-test','ab-a']));
-        galleryData.unshift({ id, timestamp: Date.now(), data: ab, metadata: meta, tags: ['ab-test','ab-a'] });
+        const id = await dbSaveImage(ab, meta, dedupeTags(['ab-test','ab-a', ...abTags]));
+        galleryData.unshift({ id, timestamp: Date.now(), data: ab, metadata: meta, tags: dedupeTags(['ab-test','ab-a', ...abTags]) });
         updateGalCount();
         abAddResultToGrid('a', ab, id);
         abDoneA++;
@@ -6906,18 +7011,18 @@ async function startAB() {
       abUpdateProgress();
       try {
         const ab = await callGenerateSimple({
-          prompt, negPrompt,
+          prompt: cfgB.prompt, negPrompt: cfgB.negPrompt,
           model: cfgB.model, width: w, height: h,
           steps: cfgB.steps, scale: cfgB.scale, cfgR: 0,
           sampler: cfgB.sampler, noiseSch: cfgB.noiseSch, seed,
           _stopFn: () => abShouldStop, _abortHolder: abAbortHolder
         });
         const meta = extractPNGMeta(ab);
-        if (!meta.prompt) meta.prompt = prompt;
+        if (!meta.prompt) meta.prompt = cfgB.prompt;
         if (!meta.seed)   meta.seed   = seed;
         if (!meta.model)  meta.model  = cfgB.model;
-        const id = await dbSaveImage(ab, meta, dedupeTags(['ab-test','ab-b']));
-        galleryData.unshift({ id, timestamp: Date.now(), data: ab, metadata: meta, tags: ['ab-test','ab-b'] });
+        const id = await dbSaveImage(ab, meta, dedupeTags(['ab-test','ab-b', ...abTags]));
+        galleryData.unshift({ id, timestamp: Date.now(), data: ab, metadata: meta, tags: dedupeTags(['ab-test','ab-b', ...abTags]) });
         updateGalCount();
         abAddResultToGrid('b', ab, id);
         abDoneB++;
@@ -6992,16 +7097,45 @@ function abUpdateProgress() {
   if (bar)   bar.style.width = pct + '%';
 }
 
+// Copy prompt (+ neg) from one side to the other
+function abCopyPrompt(from, to) {
+  const fromPrompt = document.getElementById(`ab-${from}-prompt`);
+  const fromNeg    = document.getElementById(`ab-${from}-neg`);
+  const toPrompt   = document.getElementById(`ab-${to}-prompt`);
+  const toNeg      = document.getElementById(`ab-${to}-neg`);
+  if (!fromPrompt || !toPrompt) return;
+  toPrompt.value = fromPrompt.value;
+  if (fromNeg && toNeg) toNeg.value = fromNeg.value;
+  // trigger resize
+  [toPrompt, toNeg].forEach(el => { if (el) { el.style.height='auto'; el.style.height=el.scrollHeight+'px'; } });
+  toast(`已把 ${from.toUpperCase()} 的 Prompt 複製到 ${to.toUpperCase()}`, 'ok');
+}
+
 function abImportFromGen(side) {
   const pfx = 'ab-' + side + '-';
-  document.getElementById(pfx + 'model').value     = document.getElementById('model')?.value     || 'nai-diffusion-4-5-full';
-  document.getElementById(pfx + 'res').value       = document.getElementById('res')?.value       || '832x1216';
-  document.getElementById(pfx + 'steps').value     = document.getElementById('steps')?.value     || 28;
-  document.getElementById(pfx + 'cfg').value       = document.getElementById('cfg')?.value       || 5;
-  document.getElementById(pfx + 'sampler').value   = document.getElementById('sampler')?.value   || 'k_euler_ancestral';
-  document.getElementById(pfx + 'noise-sch').value = document.getElementById('noise-sch')?.value || 'karras';
-  document.getElementById(pfx + 'seed').value      = seedRandom ? -1 : (document.getElementById('seed')?.value || -1);
-  toast(`已從生圖頁匯入參數到 ${side.toUpperCase()} 組`, 'ok');
+  document.getElementById(pfx + 'prompt').value    = document.getElementById('prompt')?.value     || '';
+  document.getElementById(pfx + 'neg').value       = document.getElementById('neg-prompt')?.value || '';
+  document.getElementById(pfx + 'model').value     = document.getElementById('model')?.value      || 'nai-diffusion-4-5-full';
+  document.getElementById(pfx + 'res').value       = document.getElementById('res')?.value        || '832x1216';
+  document.getElementById(pfx + 'steps').value     = document.getElementById('steps')?.value      || 28;
+  document.getElementById(pfx + 'cfg').value       = document.getElementById('cfg')?.value        || 5;
+  document.getElementById(pfx + 'sampler').value   = document.getElementById('sampler')?.value    || 'k_euler_ancestral';
+  document.getElementById(pfx + 'noise-sch').value = document.getElementById('noise-sch')?.value  || 'karras';
+  // Sync seed toggle from main page
+  if (seedRandom) {
+    if (side === 'a') abSeedRandomA = true; else abSeedRandomB = true;
+    abSetSeedUI(side, true);
+  } else {
+    if (side === 'a') abSeedRandomA = false; else abSeedRandomB = false;
+    abSetSeedUI(side, false);
+    document.getElementById(pfx + 'seed').value = document.getElementById('seed')?.value || -1;
+  }
+  // trigger resize on textareas
+  ['prompt','neg'].forEach(f => {
+    const el = document.getElementById(pfx + f);
+    if (el) { el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
+  });
+  toast(`已從生圖頁匯入 Prompt + 參數到 ${side.toUpperCase()} 組`, 'ok');
 }
 
 </script>
