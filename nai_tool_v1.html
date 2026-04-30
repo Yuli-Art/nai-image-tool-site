@@ -5206,18 +5206,18 @@ function renderBlendDetail() {
         <div class="blend-entry-head-fields">
           <div>
             <div class="blend-entry-field-label">顯示名稱（可留空）</div>
-            <input class="inp" type="text" value="${esc(entry.artistName || '')}" placeholder="不填就用 Artist Tag" onchange="updateBlendEntryField(${index}, 'artistName', this.value)">
+            <input class="inp" type="text" value="${esc(entry.artistName || '')}" placeholder="不填就用 Artist Tag" oninput="updateBlendEntryField(${index}, 'artistName', this.value)">
           </div>
           <div>
             <div class="blend-entry-field-label">Weight</div>
-            <input class="inp blend-weight-input" type="number" min="0.01" step="0.05" value="${esc(String(entry.weight ?? 1))}" oninput="updateBlendEntryField(${index}, 'weight', this.value)">
+            <input class="inp blend-weight-input" type="text" inputmode="decimal" value="${esc(String(entry.weight ?? 1))}" placeholder="例：0.1 / 1 / 1.5 / 8" oninput="updateBlendEntryField(${index}, 'weight', this.value)">
           </div>
         </div>
         <button class="btn btn-d btn-s" onclick="removeBlendEntry(${index})">✕</button>
       </div>
       <div>
         <div class="char-field-label" style="margin-bottom:3px;">Artist Tag</div>
-        <input class="inp" type="text" value="${esc(entry.artistTag || '')}" placeholder="例：artist:wol" onchange="updateBlendEntryField(${index}, 'artistTag', this.value)">
+        <input class="inp" type="text" value="${esc(entry.artistTag || '')}" placeholder="例：artist:wol" oninput="updateBlendEntryField(${index}, 'artistTag', this.value)">
       </div>
       <label style="display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--txt2);">
         <input type="checkbox" ${entry.enabled !== false ? 'checked' : ''} onchange="updateBlendEntryField(${index}, 'enabled', this.checked)">
@@ -5249,7 +5249,7 @@ function renderBlendDetail() {
     </div>
     <div><div class="char-field-label">加權 Prompt 預覽</div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
-        <code style="flex:1;font-size:.78rem;background:var(--bg3);padding:6px 10px;border-radius:6px;overflow-x:auto;white-space:nowrap;">${esc(promptStr || '（尚無有效條目）')}</code>
+        <code id="blend-prompt-preview" style="flex:1;font-size:.78rem;background:var(--bg3);padding:6px 10px;border-radius:6px;overflow-x:auto;white-space:nowrap;">${esc(promptStr || '（尚無有效條目）')}</code>
         <button class="btn btn-s" onclick="copyCurrentBlendPrompt()">複製</button>
       </div>
     </div>
@@ -5263,6 +5263,13 @@ function renderBlendDetail() {
 function updateBlendDraftField(field, value) {
   if (!currentBlendDraft) return;
   currentBlendDraft[field] = value;
+}
+
+function refreshBlendPromptPreview() {
+  const el = document.getElementById('blend-prompt-preview');
+  if (!el || !currentBlendDraft) return;
+  const promptStr = renderBlendPrompt(currentBlendDraft.artistEntries || []);
+  el.textContent = promptStr || '（尚無有效條目）';
 }
 
 function importBlendTextIntoDraft() {
@@ -5282,9 +5289,8 @@ function importBlendTextIntoDraft() {
 
 function updateBlendEntryField(index, field, value) {
   if (!currentBlendDraft?.artistEntries?.[index]) return;
-  if (field === 'weight') currentBlendDraft.artistEntries[index][field] = Number(value) > 0 ? Number(value) : 1;
-  else currentBlendDraft.artistEntries[index][field] = value;
-  renderBlendDetail();
+  currentBlendDraft.artistEntries[index][field] = value;
+  refreshBlendPromptPreview();
 }
 
 function removeBlendEntry(index) {
