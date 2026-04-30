@@ -600,6 +600,9 @@
     .prompt-insert-tags{display:flex;flex-wrap:wrap;gap:5px;}
     .prompt-insert-text{width:100%;min-height:120px;max-height:42vh;resize:vertical;overflow:auto;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--txt);padding:10px 12px;font-size:.82rem;line-height:1.6;font-family:monospace;}
     .prompt-insert-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;}
+    .prompt-popout-body{padding:0;gap:0;overflow:hidden;}
+    .prompt-popout-fixed{padding:16px 20px 14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:12px;flex-shrink:0;background:var(--bg2);}
+    .prompt-popout-scroll{padding:14px 20px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;flex:1;min-height:0;}
 
     /* Precise Reference */
     .pref-dropzone{border:1.5px dashed var(--border);border-radius:10px;padding:22px 12px;text-align:center;
@@ -1516,7 +1519,7 @@
 
 <!-- ── NOTE INSERT MODAL ── -->
 <div class="char-modal-overlay" id="note-insert-modal" onclick="closeNoteInsertModal(event)">
-  <div class="char-modal-box" onclick="event.stopPropagation()" style="max-width:960px;">
+  <div class="char-modal-box" onclick="event.stopPropagation()" style="max-width:960px;height:min(92vh,980px);">
     <div class="char-modal-hd">
       <div>
         <div>展開編輯 Prompt</div>
@@ -1524,20 +1527,24 @@
       </div>
       <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeNoteInsertModal()">✕</button>
     </div>
-    <div class="char-modal-body">
-      <div>
+    <div class="char-modal-body prompt-popout-body">
+      <div class="prompt-popout-fixed">
+        <div>
         <div class="char-field-label">目前 Prompt</div>
         <textarea id="note-insert-editor" class="inp prompt-editor" data-manual-resize="true" rows="10" placeholder="在這裡編輯完整 Prompt..." style="width:100%;resize:vertical;font-family:monospace;font-size:.84rem;min-height:220px;"></textarea>
-      </div>
-      <div>
+        </div>
+        <div>
         <div class="char-field-label">搜尋</div>
         <input id="note-insert-search" class="inp" type="search" placeholder="搜尋角色 / 風格 / 混搭 / 片段 / tag..." style="width:100%;" oninput="renderNoteInsertModal()">
-      </div>
-      <div>
+        </div>
+        <div>
         <div class="char-field-label">來源</div>
         <div id="note-insert-cat-row" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+        </div>
       </div>
+      <div class="prompt-popout-scroll">
       <div id="note-insert-list" class="prompt-insert-list"></div>
+      </div>
     </div>
     <div class="char-modal-ft">
       <button class="btn btn-s btn-out" onclick="closeNoteInsertModal()">取消</button>
