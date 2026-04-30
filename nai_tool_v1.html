@@ -565,6 +565,11 @@
     .tag-manager-box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;width:100%;max-width:760px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;}
     .tag-manager-hd{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;}
     .tag-manager-body{padding:14px 18px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;}
+    .tag-manager-tabs{display:flex;gap:6px;flex-wrap:wrap;}
+    .tag-manager-tab{background:var(--bg3);border:1px solid var(--border);border-radius:999px;padding:7px 14px;font-size:.8rem;font-weight:600;color:var(--txt2);cursor:pointer;transition:all .15s;font-family:inherit;}
+    .tag-manager-tab.active{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
+    .tag-manager-pane{display:none;}
+    .tag-manager-pane.active{display:block;}
     .tag-manager-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
     .tag-manager-section{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px;}
     .tag-manager-section-title{font-size:.82rem;font-weight:700;color:var(--txt);margin-bottom:8px;}
@@ -1975,11 +1980,12 @@
       <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeTagManager()">✕</button>
     </div>
     <div class="tag-manager-body">
-      <div class="tag-manager-toolbar">
-        <input type="search" id="tag-manager-search" class="inp" placeholder="搜尋 tag..." style="width:240px;max-width:100%;" oninput="renderTagManager()">
-        <select id="tag-manager-type-filter" class="sel" style="width:180px;max-width:100%;" onchange="renderTagManager()"></select>
+      <div class="tag-manager-tabs">
+        <button class="tag-manager-tab active" id="tag-manager-tab-tags" type="button" onclick="setTagManagerTab('tags')">Tag 清單</button>
+        <button class="tag-manager-tab" id="tag-manager-tab-types" type="button" onclick="setTagManagerTab('types')">Tag 類型</button>
       </div>
-      <div class="tag-manager-section">
+      <div class="tag-manager-pane" id="tag-manager-pane-types">
+        <div class="tag-manager-section">
         <div class="tag-manager-section-title">Tag 類型</div>
         <div class="tag-manager-section-help">內建類型可改名、改色、停用；自訂類型可另外新增與刪除。刪除自訂類型時，底下 tag 會自動改掛到「自訂」。</div>
         <div class="tag-type-create">
@@ -1988,10 +1994,17 @@
         </div>
         <div class="tag-type-list" id="tag-type-manager-list"></div>
       </div>
-      <div class="tag-manager-section">
+      </div>
+      <div class="tag-manager-pane active" id="tag-manager-pane-tags">
+        <div class="tag-manager-toolbar" style="margin-bottom:12px;">
+          <input type="search" id="tag-manager-search" class="inp" placeholder="搜尋 tag..." style="width:240px;max-width:100%;" oninput="renderTagManager()">
+          <select id="tag-manager-type-filter" class="sel" style="width:180px;max-width:100%;" onchange="renderTagManager()"></select>
+        </div>
+        <div class="tag-manager-section">
         <div class="tag-manager-section-title">Tag 清單</div>
         <div class="tag-manager-section-help">可直接改 tag 顏色與類型。之後如果角色 / 繪師越來越多，可以先用上方類型篩選再整理。</div>
         <div class="tag-manager-list" id="tag-manager-list"></div>
+      </div>
       </div>
     </div>
   </div>
@@ -2033,6 +2046,7 @@ let allTagTypes = [];
 let artistEditTagsState = [];
 let charEditTagsState = [];
 let tagPickerState = null;
+let tagManagerTab = 'tags';
 
 // Phase 3: advanced generation state
 let genMode = 'txt2img';      // 'txt2img' | 'img2img' | 'enhance'
@@ -2940,12 +2954,22 @@ function openTagManager() {
   document.getElementById('tag-manager-type-filter').value = '';
   document.getElementById('tag-type-new-name').value = '';
   document.getElementById('tag-manager-modal').classList.add('open');
+  setTagManagerTab('tags');
   renderTagManager();
 }
 
 function closeTagManager(e) {
   if (e && e.target !== document.getElementById('tag-manager-modal')) return;
   document.getElementById('tag-manager-modal').classList.remove('open');
+}
+
+function setTagManagerTab(tab) {
+  tagManagerTab = tab === 'types' ? 'types' : 'tags';
+  const isTags = tagManagerTab === 'tags';
+  document.getElementById('tag-manager-tab-tags')?.classList.toggle('active', isTags);
+  document.getElementById('tag-manager-tab-types')?.classList.toggle('active', !isTags);
+  document.getElementById('tag-manager-pane-tags')?.classList.toggle('active', isTags);
+  document.getElementById('tag-manager-pane-types')?.classList.toggle('active', !isTags);
 }
 
 function renderTagTypeFilterOptions() {
