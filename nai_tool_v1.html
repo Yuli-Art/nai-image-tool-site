@@ -780,7 +780,7 @@
               <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('char', this, 'prompt')">👤 角色</button>
               <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('style', this, 'prompt')">🎨 風格</button>
               <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('note', this, 'prompt')">📝 片段</button>
-              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openNoteInsertModal('prompt')">📚 插入 Prompt</button>
+              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openNoteInsertModal('prompt')">⤢ 展開編輯</button>
             </div>
           </div>
           <div class="prompt-dd-wrap">
@@ -793,7 +793,7 @@
             <span>負向 Prompt（Undesired Content）</span>
             <div style="display:flex;gap:4px;">
               <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('note', this, 'neg-prompt')">📝 片段</button>
-              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openNoteInsertModal('neg-prompt')">📚 插入 Prompt</button>
+              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openNoteInsertModal('neg-prompt')">⤢ 展開編輯</button>
             </div>
           </div>
           <textarea id="neg-prompt" class="prompt-editor-sm" data-manual-resize="true" rows="3" placeholder="lowres, bad anatomy..."></textarea>
@@ -1519,12 +1519,16 @@
   <div class="char-modal-box" onclick="event.stopPropagation()" style="max-width:960px;">
     <div class="char-modal-hd">
       <div>
-        <div>插入 Prompt</div>
-        <div id="note-insert-subtitle" style="font-size:.74rem;color:var(--txt2);font-weight:400;margin-top:2px;">這裡會一起列出角色 Prompt、風格 Prompt、混搭 Prompt、筆記片段，挑中就直接插入目前欄位。</div>
+        <div>展開編輯 Prompt</div>
+        <div id="note-insert-subtitle" style="font-size:.74rem;color:var(--txt2);font-weight:400;margin-top:2px;">先在上方大編輯框整理目前 Prompt。下方會一起列出角色 Prompt、風格 Prompt、混搭 Prompt、筆記片段，按下就插入到這個編輯框。</div>
       </div>
       <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeNoteInsertModal()">✕</button>
     </div>
     <div class="char-modal-body">
+      <div>
+        <div class="char-field-label">目前 Prompt</div>
+        <textarea id="note-insert-editor" class="inp prompt-editor" data-manual-resize="true" rows="10" placeholder="在這裡編輯完整 Prompt..." style="width:100%;resize:vertical;font-family:monospace;font-size:.84rem;min-height:220px;"></textarea>
+      </div>
       <div>
         <div class="char-field-label">搜尋</div>
         <input id="note-insert-search" class="inp" type="search" placeholder="搜尋角色 / 風格 / 混搭 / 片段 / tag..." style="width:100%;" oninput="renderNoteInsertModal()">
@@ -1536,7 +1540,8 @@
       <div id="note-insert-list" class="prompt-insert-list"></div>
     </div>
     <div class="char-modal-ft">
-      <button class="btn btn-s btn-out" onclick="closeNoteInsertModal()">關閉</button>
+      <button class="btn btn-s btn-out" onclick="closeNoteInsertModal()">取消</button>
+      <button class="btn btn-p" onclick="saveNoteInsertModal()">套用回原欄位</button>
     </div>
   </div>
 </div>
@@ -1797,7 +1802,7 @@
             <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openBtInsertPicker('char', this)">👤 插入角色</button>
             <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openBtInsertPicker('style', this)">🎨 插入風格</button>
             <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openBtInsertPicker('note', this)">📝 插入片段</button>
-            <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openNoteInsertModal('bt-prompt')">📚 插入 Prompt</button>
+            <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openNoteInsertModal('bt-prompt')">⤢ 展開編輯</button>
           </div>
         </div>
         <textarea id="bt-prompt" class="inp prompt-editor" rows="5"
@@ -1809,7 +1814,7 @@
           <span>負向 Prompt</span>
           <div style="display:flex;gap:5px;">
             <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openBtInsertPicker('note', this, 'bt-neg')">📝 插入片段</button>
-            <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openNoteInsertModal('bt-neg')">📚 插入 Prompt</button>
+            <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openNoteInsertModal('bt-neg')">⤢ 展開編輯</button>
           </div>
         </div>
         <textarea id="bt-neg" class="inp prompt-editor-sm" rows="3" placeholder="負向 prompt..." style="width:100%;resize:vertical;font-family:monospace;font-size:.83rem;" data-manual-resize="true"></textarea>
@@ -6423,6 +6428,7 @@ let noteEditTags = [];
 let noteEditPreviewImageIds = [];
 let noteInsertTargetId = 'prompt';
 let noteInsertCategory = '';
+let noteInsertDraft = '';
 
 async function loadNotesData() {
   notesData = await dbGetNotes();
@@ -6534,11 +6540,15 @@ function openNoteInsertModal(targetId='prompt') {
   noteInsertCategory = '';
   const searchEl = document.getElementById('note-insert-search');
   if (searchEl) searchEl.value = '';
+  const targetEl = document.getElementById(targetId);
+  noteInsertDraft = targetEl ? targetEl.value || '' : '';
+  const editorEl = document.getElementById('note-insert-editor');
+  if (editorEl) editorEl.value = noteInsertDraft;
   const subtitle = document.getElementById('note-insert-subtitle');
-  if (subtitle) subtitle.textContent = `從角色 Prompt、風格 Prompt、混搭 Prompt、筆記片段中挑一段，再插入到${getNoteInsertTargetLabel(targetId)}。`;
+  if (subtitle) subtitle.textContent = `你正在編輯${getNoteInsertTargetLabel(targetId)}。先在上方整理完整 Prompt，下方來源按下後會直接插入這個編輯框。`;
   renderNoteInsertModal();
   document.getElementById('note-insert-modal').classList.add('open');
-  setTimeout(() => document.getElementById('note-insert-search')?.focus(), 0);
+  setTimeout(() => document.getElementById('note-insert-editor')?.focus(), 0);
 }
 
 function closeNoteInsertModal(e) {
@@ -6552,11 +6562,22 @@ function setNoteInsertCategory(cat) {
 }
 
 function insertPromptItemToTarget(text) {
-  const el = document.getElementById(noteInsertTargetId || 'prompt');
+  const el = document.getElementById('note-insert-editor');
   if (!el) return;
   insertAtCursor(el, text);
+  noteInsertDraft = el.value;
+  toast('已插入到展開編輯框', 'ok');
+}
+
+function saveNoteInsertModal() {
+  const src = document.getElementById('note-insert-editor');
+  const target = document.getElementById(noteInsertTargetId || 'prompt');
+  if (!src || !target) return;
+  target.value = src.value;
+  target.dispatchEvent(new Event('input'));
+  noteInsertDraft = src.value;
   closeNoteInsertModal();
-  toast(`已插入到${getNoteInsertTargetLabel(noteInsertTargetId)}`, 'ok');
+  toast(`已套用到${getNoteInsertTargetLabel(noteInsertTargetId)}`, 'ok');
 }
 
 function getPromptInsertItems() {
