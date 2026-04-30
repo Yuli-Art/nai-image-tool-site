@@ -157,6 +157,18 @@
       color:var(--txt);
       margin-bottom:14px;
     }
+    /* 折疊列標題保持小字、精簡 */
+    html[data-ui-theme^="design-md"] .coll-hd .card-title{
+      font-size:.8rem;
+      font-weight:600;
+      color:var(--txt2);
+      letter-spacing:.01em;
+      text-transform:uppercase;
+      margin-bottom:0;
+    }
+    html[data-ui-theme^="design-md"] .coll-hd{
+      padding:2px 0;
+    }
     /* ── SETTINGS MODAL ── */
     .settings-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:900;
       display:flex;align-items:flex-start;justify-content:flex-end;}
@@ -1663,7 +1675,7 @@
         <div class="fg" style="margin-bottom:6px;">
           <label>OAuth Client ID</label>
           <div style="display:flex;gap:8px;">
-            <input type="text" id="settings-gdrive-cid" placeholder="xxxx.apps.googleusercontent.com" style="font-size:.8rem;flex:1;">
+            <input type="password" id="settings-gdrive-cid" placeholder="xxxx.apps.googleusercontent.com" style="font-size:.8rem;flex:1;" autocomplete="off">
             <button class="btn btn-s" onclick="gdriveSaveClientId()">儲存</button>
           </div>
         </div>
