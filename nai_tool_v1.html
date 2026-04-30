@@ -1030,29 +1030,34 @@
 
       <!-- Prompt -->
       <div class="card">
-        <div class="card-title">Prompt</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <span class="card-title" style="margin-bottom:0;">Prompt</span>
+          <span id="db-status" style="display:none;"></span>
+        </div>
+
+        <!-- 正向 -->
         <div class="fg">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
-            <span>正向 Prompt <span id="db-status" style="font-size:.7rem;color:var(--txt2);font-weight:400;"></span></span>
-            <div style="display:flex;gap:4px;">
-              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('char', this, 'prompt')">👤 角色</button>
-              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('style', this, 'prompt')">🎨 風格</button>
-              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('note', this, 'prompt')">📝 片段</button>
-              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openNoteInsertModal('prompt')">⤢ 展開編輯</button>
-            </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+            <span style="font-size:.72rem;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;">正向</span>
+            <div style="flex:1;"></div>
+            <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('char', this, 'prompt')">👤 角色</button>
+            <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('style', this, 'prompt')">🎨 風格</button>
+            <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('note', this, 'prompt')">📝 片段</button>
+            <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openNoteInsertModal('prompt')">⤢ 展開</button>
           </div>
           <div class="prompt-dd-wrap">
             <textarea id="prompt" class="prompt-editor" data-manual-resize="true" rows="5" placeholder="1girl, blue eyes, long hair..."></textarea>
             <div id="prompt-dd" class="prompt-dd"></div>
           </div>
         </div>
+
+        <!-- 負向 -->
         <div class="fg">
-          <div style="display:flex;align-items:center;justify-content:space-between;">
-            <span>負向 Prompt（Undesired Content）</span>
-            <div style="display:flex;gap:4px;">
-              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('note', this, 'neg-prompt')">📝 片段</button>
-              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openNoteInsertModal('neg-prompt')">⤢ 展開編輯</button>
-            </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+            <span style="font-size:.72rem;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;">負向</span>
+            <div style="flex:1;"></div>
+            <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('note', this, 'neg-prompt')">📝 片段</button>
+            <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openNoteInsertModal('neg-prompt')">⤢ 展開</button>
           </div>
           <textarea id="neg-prompt" class="prompt-editor-sm" data-manual-resize="true" rows="3" placeholder="lowres, bad anatomy..."></textarea>
         </div>
@@ -1286,8 +1291,12 @@
     <div class="gallery-toolbar">
       <input type="search" class="gallery-search" id="gal-search" placeholder="搜尋 prompt..." oninput="filterGallery()">
       <div class="tag-filter-list" id="tag-filter-list"></div>
+      <button class="btn btn-s btn-out" onclick="uploadImagesToGallery()" title="上傳圖片到圖庫">📤 上傳圖片</button>
       <button class="btn btn-s" onclick="toggleSelectMode()" id="sel-mode-btn">多選</button>
     </div>
+    <!-- hidden file input for image upload -->
+    <input type="file" id="gal-upload-input" accept="image/png,image/webp,image/jpeg" multiple style="display:none;"
+      onchange="handleGalleryUpload(this)">
 
     <!-- Selection actions bar -->
     <div class="gallery-actions" id="gal-actions">
@@ -3787,6 +3796,82 @@ function extractPNGMeta(arrayBuffer) {
     width:        c.width ?? '',
     height:       c.height ?? '',
   };
+}
+
+// ═══════════════════════════════════════════
+// GALLERY IMAGE UPLOAD
+// ═══════════════════════════════════════════
+function uploadImagesToGallery() {
+  document.getElementById('gal-upload-input').value = '';
+  document.getElementById('gal-upload-input').click();
+}
+
+async function handleGalleryUpload(input) {
+  const files = Array.from(input.files);
+  if (!files.length) return;
+
+  let added = 0, skipped = 0;
+  const toastId = `upload-${Date.now()}`;
+
+  // Show progress toast
+  const showProgress = (done, total) => {
+    const existing = document.getElementById(toastId);
+    const msg = `上傳中 ${done} / ${total}…`;
+    if (existing) { existing.querySelector('.toast-msg').textContent = msg; return; }
+    const div = document.createElement('div');
+    div.id = toastId;
+    div.className = 'toast toast-info';
+    div.innerHTML = `<span class="toast-msg">${msg}</span>`;
+    div.style.cssText = 'position:fixed;bottom:80px;right:20px;z-index:9999;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 16px;font-size:.83rem;color:var(--txt);box-shadow:0 4px 16px rgba(0,0,0,.25);';
+    document.body.appendChild(div);
+  };
+  const removeProgress = () => {
+    const el = document.getElementById(toastId);
+    if (el) el.remove();
+  };
+
+  for (let i = 0; i < files.length; i++) {
+    showProgress(i, files.length);
+    const file = files[i];
+    try {
+      const ab = await file.arrayBuffer();
+
+      // Validate: must be PNG, WEBP, or JPEG
+      const header = new Uint8Array(ab, 0, 4);
+      const isPng  = header[0]===0x89 && header[1]===0x50;
+      const isWebp = header[0]===0x52 && header[1]===0x49; // RIFF
+      const isJpeg = header[0]===0xFF && header[1]===0xD8;
+      if (!isPng && !isWebp && !isJpeg) { skipped++; continue; }
+
+      // Try to extract NAI metadata (PNG only)
+      const meta = isPng ? extractPNGMeta(ab) : {
+        prompt: file.name.replace(/\.[^.]+$/, ''),
+        negPrompt: '', seed: '', model: '', steps: '', scale: '',
+        cfgRescale: '', sampler: '', noiseSchedule: '', width: '', height: ''
+      };
+
+      // Add a marker so we know this was manually uploaded
+      if (!meta.prompt) meta.prompt = file.name.replace(/\.[^.]+$/, '');
+      meta._uploaded = true;
+
+      const id = await dbSaveImage(ab, meta, []);
+      galleryData.unshift({ id, timestamp: Date.now(), data: ab, metadata: meta, tags: [] });
+      added++;
+    } catch (err) {
+      console.warn('上傳失敗:', file.name, err);
+      skipped++;
+    }
+  }
+
+  removeProgress();
+  updateGalCount();
+
+  if (added > 0) {
+    renderGallery();
+    toast(`已匯入 ${added} 張圖片${skipped ? `，${skipped} 張略過` : ''}`, 'ok');
+  } else {
+    toast('沒有成功匯入的圖片', 'warn');
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -6361,7 +6446,6 @@ const DB_CAT_CLASS = {0:'pdd-general', 1:'pdd-artist', 3:'pdd-copyright', 4:'pdd
 
 async function loadDanbooruTags() {
   const statusEl = document.getElementById('db-status');
-  statusEl.textContent = '（載入 tag 庫中…）';
   try {
     const r = await fetch('./danbooru_tags.csv', { signal: AbortSignal.timeout(30000) });
     if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -6388,7 +6472,7 @@ async function loadDanbooruTags() {
     // Sort alphabetically for binary-search prefix lookup
     danbooruIndex = tags.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
     danbooruLoaded = true;
-    statusEl.textContent = `（${(tags.length/1000).toFixed(0)}k tags）`;
+    // tag count display removed
   } catch(e) {
     statusEl.textContent = '';
     console.log('Danbooru tags unavailable:', e.message);
