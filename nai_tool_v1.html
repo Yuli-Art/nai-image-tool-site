@@ -4366,11 +4366,11 @@ function renderGenerateDockBatch() {
   // Task list
   let tasksHtml;
   if (!batchTasks.length) {
-    tasksHtml = `<div style="padding:36px 16px;text-align:center;color:var(--txt2);font-size:.83rem;">
-      還沒有排程任務<br><br>
-      <button class="btn btn-s" onclick="addCurrentToBatchFromDock()">＋ 加入排程</button>
-    </div>`;
-  } else {
+      tasksHtml = `<div style="padding:36px 16px;text-align:center;color:var(--txt2);font-size:.83rem;">
+        還沒有排程任務<br><br>
+        請用上方「＋ 加入排程」把目前設定加入清單。
+      </div>`;
+    } else {
     const items = batchTasks.map((t, i) => {
       const isDone = t.done;
       const isRunning = batchRunning && !isDone && i === batchTasks.findIndex(x => !x.done);
