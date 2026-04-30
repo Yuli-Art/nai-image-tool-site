@@ -747,7 +747,7 @@
       <div class="card">
         <div class="card-title">Prompt</div>
         <div class="fg">
-          <label style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
             <span>正向 Prompt <span id="db-status" style="font-size:.7rem;color:var(--txt2);font-weight:400;"></span></span>
             <div style="display:flex;gap:4px;">
               <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('char', this, 'prompt')">👤 角色</button>
@@ -755,20 +755,20 @@
               <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('note', this, 'prompt')">📝 片段</button>
               <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openNoteInsertModal('prompt')">📓 選片段</button>
             </div>
-          </label>
+          </div>
           <div class="prompt-dd-wrap">
             <textarea id="prompt" rows="5" placeholder="1girl, blue eyes, long hair..."></textarea>
             <div id="prompt-dd" class="prompt-dd"></div>
           </div>
         </div>
         <div class="fg">
-          <label style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
             <span>負向 Prompt（Undesired Content）</span>
             <div style="display:flex;gap:4px;">
               <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('note', this, 'neg-prompt')">📝 片段</button>
               <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openNoteInsertModal('neg-prompt')">📓 選片段</button>
             </div>
-          </label>
+          </div>
           <textarea id="neg-prompt" rows="3" placeholder="lowres, bad anatomy..."></textarea>
         </div>
       </div>
@@ -1121,21 +1121,21 @@
           </div>
           <!-- A Prompt -->
           <div class="fg">
-            <label style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:3px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:3px;">
               <span>正向 Prompt</span>
               <div style="display:flex;gap:3px;">
                 <button class="btn btn-s btn-out" style="font-size:.65rem;padding:1px 5px;" onclick="openBtInsertPicker('char',this,'ab-a-prompt')">👤</button>
                 <button class="btn btn-s btn-out" style="font-size:.65rem;padding:1px 5px;" onclick="openBtInsertPicker('style',this,'ab-a-prompt')">🎨</button>
                 <button class="btn btn-s btn-out" style="font-size:.65rem;padding:1px 5px;" onclick="openBtInsertPicker('note',this,'ab-a-prompt')">📝</button>
               </div>
-            </label>
+            </div>
             <textarea id="ab-a-prompt" rows="4" placeholder="1girl, blue eyes..." style="font-family:monospace;resize:vertical;"></textarea>
           </div>
           <div class="fg">
-            <label style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
               <span>負向 Prompt</span>
               <button class="btn btn-s btn-out" style="font-size:.65rem;padding:1px 5px;" onclick="openBtInsertPicker('note',this,'ab-a-neg')">📝</button>
-            </label>
+            </div>
             <textarea id="ab-a-neg" rows="2" placeholder="lowres, bad anatomy..." style="font-family:monospace;resize:vertical;"></textarea>
           </div>
           <!-- A Params -->
@@ -1202,21 +1202,21 @@
           </div>
           <!-- B Prompt -->
           <div class="fg">
-            <label style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:3px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:3px;">
               <span>正向 Prompt</span>
               <div style="display:flex;gap:3px;">
                 <button class="btn btn-s btn-out" style="font-size:.65rem;padding:1px 5px;" onclick="openBtInsertPicker('char',this,'ab-b-prompt')">👤</button>
                 <button class="btn btn-s btn-out" style="font-size:.65rem;padding:1px 5px;" onclick="openBtInsertPicker('style',this,'ab-b-prompt')">🎨</button>
                 <button class="btn btn-s btn-out" style="font-size:.65rem;padding:1px 5px;" onclick="openBtInsertPicker('note',this,'ab-b-prompt')">📝</button>
               </div>
-            </label>
+            </div>
             <textarea id="ab-b-prompt" rows="4" placeholder="1girl, blue eyes..." style="font-family:monospace;resize:vertical;"></textarea>
           </div>
           <div class="fg">
-            <label style="display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
               <span>負向 Prompt</span>
               <button class="btn btn-s btn-out" style="font-size:.65rem;padding:1px 5px;" onclick="openBtInsertPicker('note',this,'ab-b-neg')">📝</button>
-            </label>
+            </div>
             <textarea id="ab-b-neg" rows="2" placeholder="lowres, bad anatomy..." style="font-family:monospace;resize:vertical;"></textarea>
           </div>
           <!-- B Params -->
