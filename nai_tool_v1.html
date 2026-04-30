@@ -511,6 +511,24 @@
     .ab-section-head{font-size:.75rem;font-weight:700;color:var(--txt2);text-transform:uppercase;
       letter-spacing:.05em;margin-bottom:8px;display:flex;align-items:center;gap:7px;}
 
+    /* ── GOOGLE DRIVE PAGE ── */
+    #page-gdrive.active{display:block;overflow-y:auto;}
+    .gdrive-help-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:.78rem;color:var(--txt2);line-height:1.65;}
+    .gdrive-help-box a{color:var(--accent);text-decoration:none;}
+    .gdrive-help-box a:hover{text-decoration:underline;}
+    .gdrive-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;margin-top:4px;}
+    .gdrive-img-item{position:relative;cursor:pointer;border-radius:6px;overflow:hidden;
+      border:2px solid transparent;transition:border-color .15s;}
+    .gdrive-img-item.sel{border-color:var(--accent);}
+    .gdrive-img-item img{width:100%;aspect-ratio:1;object-fit:cover;display:block;}
+    .gdrive-img-cb{position:absolute;top:4px;left:4px;width:18px;height:18px;border-radius:4px;
+      background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;
+      color:#fff;font-size:.68rem;transition:background .15s;}
+    .gdrive-img-item.sel .gdrive-img-cb{background:var(--accent);}
+    .gdrive-tag-chip{background:var(--bg3);border:1px solid var(--border);border-radius:999px;
+      padding:3px 10px;font-size:.74rem;cursor:pointer;color:var(--txt2);transition:background .15s,border-color .15s,color .15s;}
+    .gdrive-tag-chip.active{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
+
     /* ── MOBILE ── */
     @media(max-width:768px){
       #page-generate.active{flex-direction:column;}
@@ -559,6 +577,7 @@
       <button class="nav-tab" id="tab-char-page" onclick="showPage('characters')">角色庫 <span id="char-lib-count" style="font-size:.72rem;opacity:.7;"></span></button>
       <button class="nav-tab" id="tab-artist-page" onclick="showPage('artists')">風格庫 <span id="artist-lib-count" style="font-size:.72rem;opacity:.7;"></span></button>
       <button class="nav-tab" id="tab-notes-page" onclick="showPage('notes')">筆記本 <span id="notes-count" style="font-size:.72rem;opacity:.7;"></span></button>
+      <button class="nav-tab" id="tab-gdrive-page" onclick="showPage('gdrive')">☁ 雲端</button>
     </div>
     <div class="nav-right">
       <div class="anlas-info">
@@ -1191,6 +1210,90 @@
           </div>
         </div>
       </div>
+
+    </div>
+  </div>
+
+  <!-- ── GOOGLE DRIVE PAGE ── -->
+  <div id="page-gdrive" class="page">
+    <div style="padding:14px;display:flex;flex-direction:column;gap:12px;max-width:860px;margin:0 auto;">
+
+      <!-- 設定 + 連線 -->
+      <div class="card">
+        <div class="card-title">☁ Google Drive 上傳設定</div>
+        <div class="fg">
+          <label>OAuth Client ID</label>
+          <div style="display:flex;gap:8px;">
+            <input type="text" id="gdrive-client-id-in" placeholder="xxxx.apps.googleusercontent.com" style="flex:1;font-size:.8rem;">
+            <button class="btn btn-s" onclick="gdriveSaveClientId()">儲存</button>
+          </div>
+        </div>
+        <div class="gdrive-help-box" style="margin-top:4px;">
+          <b>一次性設定（五分鐘搞定）：</b><br>
+          1. 前往 <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a> → 建立或選擇專案<br>
+          2. APIs & Services → Library → 啟用 <b>Google Drive API</b><br>
+          3. APIs & Services → OAuth consent screen → External → 加入自己 email 為測試使用者<br>
+          4. APIs & Services → Credentials → Create OAuth Client ID → <b>Web application</b><br>
+          5. Authorized JavaScript origins 加入本頁網址（例如 <code style="font-size:.75rem;">https://username.github.io</code>）<br>
+          6. 複製 Client ID → 貼上上方欄位 → 儲存
+        </div>
+        <div style="margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div id="gdrive-not-connected" style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:.82rem;color:var(--txt2);">尚未連線</span>
+            <button class="btn btn-p" id="gdrive-connect-btn" onclick="gdriveConnect()" disabled>連線 Google Drive</button>
+          </div>
+          <div id="gdrive-connected" style="display:none;align-items:center;gap:10px;">
+            <span style="font-size:.82rem;color:var(--ok);">✓ 已連線</span>
+            <span id="gdrive-user-email" style="font-size:.82rem;color:var(--txt2);"></span>
+            <button class="btn btn-s btn-out" onclick="gdriveDisconnect()">中斷連線</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 以下區塊僅在連線後顯示 -->
+      <div id="gdrive-upload-area" style="display:none;display:flex;flex-direction:column;gap:12px;">
+
+        <!-- 目標資料夾 -->
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+            <span class="card-title" style="margin-bottom:0;">目標資料夾</span>
+            <button class="btn btn-s btn-out" style="font-size:.75rem;" onclick="gdriveFetchFolders()">🔄 重新整理</button>
+            <button class="btn btn-s btn-out" style="font-size:.75rem;" onclick="gdriveCreateFolder()">＋ 新資料夾</button>
+          </div>
+          <select id="gdrive-folder-sel" style="width:100%;">
+            <option value="">（根目錄 My Drive）</option>
+          </select>
+          <div id="gdrive-folder-status" style="font-size:.75rem;color:var(--txt2);margin-top:5px;"></div>
+        </div>
+
+        <!-- 選擇圖片 -->
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+            <span class="card-title" style="margin-bottom:0;">選擇要上傳的圖片</span>
+            <span id="gdrive-sel-count" style="font-size:.8rem;color:var(--txt2);">0 張已選</span>
+            <button class="btn btn-s btn-out" style="font-size:.75rem;" onclick="gdriveSelectAll()">全選</button>
+            <button class="btn btn-s btn-out" style="font-size:.75rem;" onclick="gdriveClearSel()">清除</button>
+          </div>
+          <div id="gdrive-tag-filter" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;"></div>
+          <div id="gdrive-img-grid" class="gdrive-grid"></div>
+          <div id="gdrive-grid-empty" style="font-size:.82rem;color:var(--txt2);padding:10px 0;display:none;">圖庫沒有圖片</div>
+        </div>
+
+        <!-- 上傳控制 -->
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-p" id="gdrive-upload-btn" onclick="gdriveUpload()">☁ 上傳所選圖片</button>
+            <span id="gdrive-upload-status" style="font-size:.82rem;color:var(--txt2);"></span>
+          </div>
+          <div id="gdrive-prog-wrap" style="display:none;margin-top:8px;">
+            <div class="batch-progress-bar-outer">
+              <div id="gdrive-prog-bar" class="batch-progress-bar-inner" style="width:0%;"></div>
+            </div>
+            <div id="gdrive-prog-label" style="font-size:.75rem;color:var(--txt2);margin-top:5px;"></div>
+          </div>
+        </div>
+
+      </div><!-- /gdrive-upload-area -->
 
     </div>
   </div>
@@ -2860,10 +2963,10 @@ function setGenerating(on) {
 }
 
 function showPage(page) {
-  ['page-generate','page-gallery','page-vibe','page-characters','page-artists','page-notes','page-batch','page-ab'].forEach(id => {
+  ['page-generate','page-gallery','page-vibe','page-characters','page-artists','page-notes','page-batch','page-ab','page-gdrive'].forEach(id => {
     const el = document.getElementById(id); if (el) el.classList.remove('active');
   });
-  ['tab-gen','tab-gal','tab-vibe-page','tab-char-page','tab-artist-page','tab-notes-page'].forEach(id => {
+  ['tab-gen','tab-gal','tab-vibe-page','tab-char-page','tab-artist-page','tab-notes-page','tab-gdrive-page'].forEach(id => {
     const el = document.getElementById(id); if (el) el.classList.remove('active');
   });
   const show = id => { const el = document.getElementById(id); if (el) el.classList.add('active'); };
@@ -2897,6 +3000,9 @@ function showPage(page) {
   } else if (page === 'ab') {
     show('page-ab'); activateTab('tab-gen');
     const el = document.getElementById('gen-sub-ab'); if (el) el.classList.add('active');
+  } else if (page === 'gdrive') {
+    show('page-gdrive'); activateTab('tab-gdrive-page');
+    initGdrivePage();
   }
 }
 
@@ -7136,6 +7242,293 @@ function abImportFromGen(side) {
     if (el) { el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
   });
   toast(`已從生圖頁匯入 Prompt + 參數到 ${side.toUpperCase()} 組`, 'ok');
+}
+
+
+// ═══════════════════════════════════════════
+// GOOGLE DRIVE
+// ═══════════════════════════════════════════
+
+const GDRIVE_CID_KEY = 'nai_gdrive_client_id_v1';
+let gdriveToken       = null;     // current access token string
+let gdriveTokenClient = null;     // GIS token client
+let gdriveFoldersList = [];       // [{id,name}]
+let gdriveSelectedImgs = new Set(); // selected image DB IDs
+let gdriveUploading   = false;
+let gdriveFilterTag   = '';
+let gdriveGISReady    = false;
+
+// ── Init ──────────────────────────────────
+function initGdrivePage() {
+  const saved = localStorage.getItem(GDRIVE_CID_KEY) || '';
+  document.getElementById('gdrive-client-id-in').value = saved;
+  if (saved) {
+    document.getElementById('gdrive-connect-btn').disabled = false;
+    loadGIS(() => gdriveInitClient(saved));
+  }
+  gdriveRenderTagFilter();
+  gdriveRenderGrid();
+}
+
+function loadGIS(cb) {
+  if (window.google?.accounts?.oauth2) { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://accounts.google.com/gsi/client';
+  s.onload = () => { gdriveGISReady = true; cb(); };
+  s.onerror = () => toast('Google GIS 載入失敗，請檢查網路', 'err');
+  document.head.appendChild(s);
+}
+
+function gdriveInitClient(clientId) {
+  if (!window.google?.accounts?.oauth2) return;
+  gdriveTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email',
+    callback: async resp => {
+      if (resp.error) { toast('授權失敗：' + resp.error, 'err'); return; }
+      gdriveToken = resp.access_token;
+      // Fetch email
+      try {
+        const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: 'Bearer ' + gdriveToken }
+        });
+        const d = await r.json();
+        document.getElementById('gdrive-user-email').textContent = d.email || '';
+      } catch { document.getElementById('gdrive-user-email').textContent = ''; }
+      gdriveShowConnected();
+      gdriveFetchFolders();
+    }
+  });
+}
+
+// ── Client ID ─────────────────────────────
+function gdriveSaveClientId() {
+  const v = document.getElementById('gdrive-client-id-in').value.trim();
+  if (!v) { toast('請先輸入 Client ID', 'warn'); return; }
+  localStorage.setItem(GDRIVE_CID_KEY, v);
+  document.getElementById('gdrive-connect-btn').disabled = false;
+  loadGIS(() => gdriveInitClient(v));
+  toast('Client ID 已儲存', 'ok');
+}
+
+// ── Connect / Disconnect ──────────────────
+function gdriveConnect() {
+  if (!gdriveTokenClient) {
+    const cid = localStorage.getItem(GDRIVE_CID_KEY);
+    if (!cid) { toast('請先輸入並儲存 Client ID', 'warn'); return; }
+    loadGIS(() => { gdriveInitClient(cid); gdriveTokenClient?.requestAccessToken({ prompt: '' }); });
+    return;
+  }
+  gdriveTokenClient.requestAccessToken({ prompt: '' });
+}
+
+function gdriveDisconnect() {
+  if (gdriveToken) { google.accounts.oauth2.revoke(gdriveToken, () => {}); }
+  gdriveToken = null;
+  gdriveShowDisconnected();
+  toast('已中斷 Google Drive 連線', 'ok');
+}
+
+function gdriveShowConnected() {
+  document.getElementById('gdrive-not-connected').style.display = 'none';
+  document.getElementById('gdrive-connected').style.display     = 'flex';
+  document.getElementById('gdrive-upload-area').style.display   = 'flex';
+}
+function gdriveShowDisconnected() {
+  document.getElementById('gdrive-connected').style.display     = 'none';
+  document.getElementById('gdrive-not-connected').style.display = 'flex';
+  document.getElementById('gdrive-upload-area').style.display   = 'none';
+}
+
+// ── Folders ───────────────────────────────
+async function gdriveFetchFolders() {
+  if (!gdriveToken) return;
+  const statusEl = document.getElementById('gdrive-folder-status');
+  statusEl.textContent = '讀取中…';
+  try {
+    const q = encodeURIComponent("mimeType='application/vnd.google-apps.folder' and trashed=false");
+    const r = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=name&fields=files(id,name)&pageSize=100`,
+      { headers: { Authorization: 'Bearer ' + gdriveToken } }
+    );
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    gdriveFoldersList = d.files || [];
+    gdriveRenderFolders();
+    statusEl.textContent = `找到 ${gdriveFoldersList.length} 個資料夾`;
+  } catch (e) {
+    statusEl.textContent = '讀取失敗：' + e.message;
+  }
+}
+
+function gdriveRenderFolders() {
+  const sel = document.getElementById('gdrive-folder-sel');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">（根目錄 My Drive）</option>';
+  gdriveFoldersList.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f.id; opt.textContent = f.name;
+    sel.appendChild(opt);
+  });
+  if (cur) sel.value = cur;
+}
+
+async function gdriveCreateFolder() {
+  if (!gdriveToken) return;
+  const name = prompt('新資料夾名稱：');
+  if (!name?.trim()) return;
+  try {
+    const r = await fetch('https://www.googleapis.com/drive/v3/files', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + gdriveToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ name: name.trim(), mimeType: 'application/vnd.google-apps.folder' })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    gdriveFoldersList.push({ id: d.id, name: d.name });
+    gdriveFoldersList.sort((a, b) => a.name.localeCompare(b.name));
+    gdriveRenderFolders();
+    document.getElementById('gdrive-folder-sel').value = d.id;
+    toast(`資料夾「${d.name}」已建立`, 'ok');
+    document.getElementById('gdrive-folder-status').textContent = `找到 ${gdriveFoldersList.length} 個資料夾`;
+  } catch (e) {
+    toast('建立失敗：' + e.message, 'err');
+  }
+}
+
+// ── Image grid ────────────────────────────
+function gdriveRenderTagFilter() {
+  const bar = document.getElementById('gdrive-tag-filter');
+  if (!bar) return;
+  const tags = [...new Set(galleryData.flatMap(img => img.tags || []))].sort();
+  bar.innerHTML = `<span class="gdrive-tag-chip${!gdriveFilterTag?' active':''}" onclick="gdriveSetFilter('')">全部</span>` +
+    tags.map(t => `<span class="gdrive-tag-chip${gdriveFilterTag===t?' active':''}" onclick="gdriveSetFilter(${JSON.stringify(t)})">${esc(t)}</span>`).join('');
+}
+
+function gdriveSetFilter(tag) {
+  gdriveFilterTag = tag;
+  gdriveRenderTagFilter();
+  gdriveRenderGrid();
+}
+
+function gdriveFilteredImages() {
+  if (!gdriveFilterTag) return galleryData;
+  return galleryData.filter(img => (img.tags || []).includes(gdriveFilterTag));
+}
+
+function gdriveRenderGrid() {
+  const grid  = document.getElementById('gdrive-img-grid');
+  const empty = document.getElementById('gdrive-grid-empty');
+  if (!grid) return;
+  const imgs = gdriveFilteredImages();
+  if (!imgs.length) {
+    grid.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  grid.innerHTML = '';
+  imgs.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'gdrive-img-item' + (gdriveSelectedImgs.has(item.id) ? ' sel' : '');
+    div.onclick = () => gdriveToggleImg(item.id);
+    const url = URL.createObjectURL(new Blob([item.data], { type: 'image/png' }));
+    div.innerHTML = `<img src="${url}" loading="lazy"><div class="gdrive-img-cb">${gdriveSelectedImgs.has(item.id) ? '✓' : ''}</div>`;
+    grid.appendChild(div);
+  });
+  gdriveUpdateSelCount();
+}
+
+function gdriveToggleImg(id) {
+  if (gdriveSelectedImgs.has(id)) gdriveSelectedImgs.delete(id);
+  else gdriveSelectedImgs.add(id);
+  gdriveRenderGrid();
+}
+
+function gdriveSelectAll() {
+  gdriveFilteredImages().forEach(img => gdriveSelectedImgs.add(img.id));
+  gdriveRenderGrid();
+}
+function gdriveClearSel() {
+  gdriveSelectedImgs.clear();
+  gdriveRenderGrid();
+}
+
+function gdriveUpdateSelCount() {
+  const el = document.getElementById('gdrive-sel-count');
+  if (el) el.textContent = `${gdriveSelectedImgs.size} 張已選`;
+}
+
+// ── Upload ────────────────────────────────
+async function gdriveUpload() {
+  if (gdriveUploading) return;
+  if (!gdriveToken) { toast('請先連線 Google Drive', 'warn'); return; }
+  if (!gdriveSelectedImgs.size) { toast('請先選擇要上傳的圖片', 'warn'); return; }
+
+  const folderId = document.getElementById('gdrive-folder-sel').value || null;
+  const toUpload = galleryData.filter(img => gdriveSelectedImgs.has(img.id));
+  gdriveUploading = true;
+  document.getElementById('gdrive-upload-btn').disabled = true;
+  document.getElementById('gdrive-prog-wrap').style.display = 'block';
+
+  let done = 0, failed = 0;
+  for (const img of toUpload) {
+    const label = document.getElementById('gdrive-prog-label');
+    const bar   = document.getElementById('gdrive-prog-bar');
+    const status= document.getElementById('gdrive-upload-status');
+    const ts = new Date(img.timestamp || Date.now());
+    const pad = n => String(n).padStart(2,'0');
+    const fname = `nai_${ts.getFullYear()}${pad(ts.getMonth()+1)}${pad(ts.getDate())}_${pad(ts.getHours())}${pad(ts.getMinutes())}${pad(ts.getSeconds())}_${img.id}.png`;
+    if (label) label.textContent = `上傳中：${fname}（${done+1} / ${toUpload.length}）`;
+    if (status) status.textContent = `${done} / ${toUpload.length}`;
+    try {
+      await gdriveUploadFile(img.data, fname, folderId);
+      done++;
+    } catch (e) {
+      failed++;
+      toast(`「${fname}」上傳失敗：${e.message}`, 'err');
+    }
+    if (bar) bar.style.width = Math.round((done + failed) / toUpload.length * 100) + '%';
+  }
+
+  gdriveUploading = false;
+  document.getElementById('gdrive-upload-btn').disabled = false;
+  const status = document.getElementById('gdrive-upload-status');
+  if (status) status.textContent = '';
+  const label = document.getElementById('gdrive-prog-label');
+  if (label) label.textContent = failed ? `完成：${done} 張成功，${failed} 張失敗` : `✓ 全部 ${done} 張上傳完成`;
+  toast(failed ? `${done} 張完成，${failed} 張失敗` : `☁ ${done} 張全部上傳完成！`, failed ? 'warn' : 'ok');
+}
+
+async function gdriveUploadFile(arrayBuffer, filename, folderId) {
+  const boundary = 'nai_gdrive_' + Date.now().toString(36);
+  const meta = JSON.stringify({ name: filename, ...(folderId ? { parents: [folderId] } : {}) });
+  const enc = new TextEncoder();
+  const hdr  = enc.encode(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: image/png\r\n\r\n`);
+  const tail = enc.encode(`\r\n--${boundary}--`);
+  const img  = new Uint8Array(arrayBuffer);
+  const body = new Uint8Array(hdr.length + img.length + tail.length);
+  body.set(hdr, 0); body.set(img, hdr.length); body.set(tail, hdr.length + img.length);
+
+  const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer ' + gdriveToken,
+      'Content-Type': `multipart/related; boundary=${boundary}`
+    },
+    body: body.buffer,
+    signal: AbortSignal.timeout(60000)
+  });
+  if (r.status === 401) {
+    // Token expired — re-request then retry once
+    await new Promise(res => { gdriveTokenClient.requestAccessToken({ prompt: '' }); setTimeout(res, 3000); });
+    return gdriveUploadFile(arrayBuffer, filename, folderId);
+  }
+  if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + (await r.text()).slice(0, 80));
+  return await r.json();
 }
 
 </script>
