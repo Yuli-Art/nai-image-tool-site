@@ -6166,7 +6166,9 @@ async function generate() {
   }
 
   if (!resp||!resp.ok) {
-    toast(`生圖失敗：HTTP ${resp?.status||'?'}`,'err');
+    const detail = await getHttpErrorDetail(resp);
+    console.error('NAI generate failed', { status: resp?.status, detail });
+    toast(detail ? `生圖失敗：${detail}` : `生圖失敗：HTTP ${resp?.status||'?'}`,'err');
     setGenerating(false); hideStatus(); return;
   }
 
@@ -7272,6 +7274,24 @@ function toast(msg, type='info') {
 // UTILS
 // ═══════════════════════════════════════════
 function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+async function getHttpErrorDetail(resp) {
+  if (!resp) return '';
+  try {
+    const contentType = resp.headers.get('content-type') || '';
+    const raw = await resp.clone().text();
+    if (!raw) return '';
+    if (contentType.includes('application/json')) {
+      try {
+        const json = JSON.parse(raw);
+        return json.message || json.error || json.reason || JSON.stringify(json);
+      } catch (_) {}
+    }
+    return raw.length > 220 ? raw.slice(0, 220) + '…' : raw;
+  } catch (_) {
+    return '';
+  }
+}
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;'); }
 
 // ═══════════════════════════════════════════
@@ -7378,7 +7398,10 @@ async function callGenerateSimple({ prompt, negPrompt, model, width, height, ste
       throw e;
     }
   }
-  if (!resp || !resp.ok) throw new Error(`HTTP ${resp?.status || '?'}`);
+  if (!resp || !resp.ok) {
+    const detail = await getHttpErrorDetail(resp);
+    throw new Error(detail || `HTTP ${resp?.status || '?'}`);
+  }
   return await parseNaiResponse(resp);
 }
 
