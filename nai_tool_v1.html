@@ -566,10 +566,21 @@
     .tag-manager-hd{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;}
     .tag-manager-body{padding:14px 18px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;}
     .tag-manager-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+    .tag-manager-section{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px;}
+    .tag-manager-section-title{font-size:.82rem;font-weight:700;color:var(--txt);margin-bottom:8px;}
+    .tag-manager-section-help{font-size:.73rem;color:var(--txt2);line-height:1.45;margin-bottom:10px;}
+    .tag-type-create{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;}
+    .tag-type-list{display:flex;flex-direction:column;gap:8px;}
+    .tag-type-row{display:grid;grid-template-columns:minmax(0,1.3fr) auto auto auto;gap:10px;align-items:center;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px;}
+    .tag-type-meta{display:flex;align-items:center;gap:8px;min-width:0;}
+    .tag-type-badge{font-size:.68rem;padding:2px 7px;border-radius:999px;background:var(--bg3);border:1px solid var(--border);color:var(--txt2);}
+    .tag-type-input{min-width:0;}
+    .tag-type-empty{font-size:.78rem;color:var(--txt2);padding:8px 2px;}
     .tag-manager-list{display:flex;flex-direction:column;gap:10px;}
     .tag-manager-row{display:grid;grid-template-columns:minmax(0,1.3fr) auto auto;gap:12px;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:10px 12px;}
     .tag-manager-meta{display:flex;flex-direction:column;gap:4px;min-width:0;}
     .tag-manager-usage{font-size:.74rem;color:var(--txt2);line-height:1.45;}
+    .tag-manager-type{font-size:.72rem;color:var(--txt2);}
     .tag-manager-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
     .tag-color-input{width:38px;height:30px;border:none;background:none;padding:0;cursor:pointer;}
     .tag-manager-empty{font-size:.82rem;color:var(--txt2);padding:14px 4px;}
@@ -1548,6 +1559,10 @@
         <input id="artist-edit-tag" class="inp" type="text" placeholder="例：wlop, style of wlop" style="width:100%;">
         <div style="font-size:.72rem;color:var(--txt2);margin-top:3px;">只存 base tag，例如 <code>artist:wol</code>。不要在這裡加 weight，weight 在混搭記錄裡設定。</div>
       </div>
+      <div class="cb-row" style="margin-top:-2px;">
+        <input id="artist-edit-auto-tag" type="checkbox">
+        <label for="artist-edit-auto-tag">同步建立主 tag（類型：繪師）</label>
+      </div>
       <div>
         <div class="char-field-label">風格類型 <span style="font-size:.7rem;color:var(--txt2);">（選填）</span></div>
         <select id="artist-edit-style" class="sel" style="width:100%;">
@@ -1633,6 +1648,10 @@
       <div>
         <div class="char-field-label">作品 / 系列</div>
         <input id="char-edit-series" class="inp" type="text" placeholder="例：原神" style="width:100%;">
+      </div>
+      <div class="cb-row" style="margin-top:-2px;">
+        <input id="char-edit-auto-tag" type="checkbox">
+        <label for="char-edit-auto-tag">同步建立主 tag（類型：角色）</label>
       </div>
       <div>
         <div class="char-field-label">標籤</div>
@@ -1951,15 +1970,29 @@
     <div class="tag-manager-hd">
       <div>
         <div style="font-size:.94rem;font-weight:700;">管理 Tag</div>
-        <div class="tag-picker-help">設定顏色、查看使用情況、刪除整個系統裡的 tag。</div>
+        <div class="tag-picker-help">管理 tag 顏色、類型與使用情況。tag type 是分類骨架，預設類型可改名、可停用，自訂類型可新增與刪除。</div>
       </div>
       <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeTagManager()">✕</button>
     </div>
     <div class="tag-manager-body">
       <div class="tag-manager-toolbar">
         <input type="search" id="tag-manager-search" class="inp" placeholder="搜尋 tag..." style="width:240px;max-width:100%;" oninput="renderTagManager()">
+        <select id="tag-manager-type-filter" class="sel" style="width:180px;max-width:100%;" onchange="renderTagManager()"></select>
       </div>
-      <div class="tag-manager-list" id="tag-manager-list"></div>
+      <div class="tag-manager-section">
+        <div class="tag-manager-section-title">Tag 類型</div>
+        <div class="tag-manager-section-help">內建類型可改名、改色、停用；自訂類型可另外新增與刪除。刪除自訂類型時，底下 tag 會自動改掛到「自訂」。</div>
+        <div class="tag-type-create">
+          <input type="text" id="tag-type-new-name" class="inp" placeholder="新增類型名稱，例如：CP / 委託 / 版本" style="flex:1;min-width:220px;">
+          <button class="btn btn-s" type="button" onclick="createTagType()">＋ 新增類型</button>
+        </div>
+        <div class="tag-type-list" id="tag-type-manager-list"></div>
+      </div>
+      <div class="tag-manager-section">
+        <div class="tag-manager-section-title">Tag 清單</div>
+        <div class="tag-manager-section-help">可直接改 tag 顏色與類型。之後如果角色 / 繪師越來越多，可以先用上方類型篩選再整理。</div>
+        <div class="tag-manager-list" id="tag-manager-list"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1981,10 +2014,22 @@ let lastPrompt = '';
 let isGenerating = false;
 let seedRandom = true;
 const TAG_COLOR_POOL = ['#60a5fa','#f59e0b','#34d399','#f472b6','#a78bfa','#fb7185','#22c55e','#38bdf8','#f97316','#c084fc','#10b981','#eab308'];
+const DEFAULT_TAG_TYPES = [
+  { id:'character',  key:'character',  label:'角色', color:'#60a5fa', sortOrder:10, builtIn:true, disabled:false },
+  { id:'artist',     key:'artist',     label:'繪師', color:'#f59e0b', sortOrder:20, builtIn:true, disabled:false },
+  { id:'work',       key:'work',       label:'作品', color:'#a78bfa', sortOrder:30, builtIn:true, disabled:false },
+  { id:'test',       key:'test',       label:'測試', color:'#fb7185', sortOrder:40, builtIn:true, disabled:false },
+  { id:'usage',      key:'usage',      label:'用途', color:'#10b981', sortOrder:50, builtIn:true, disabled:false },
+  { id:'style',      key:'style',      label:'風格', color:'#f97316', sortOrder:60, builtIn:true, disabled:false },
+  { id:'scene',      key:'scene',      label:'場景', color:'#38bdf8', sortOrder:70, builtIn:true, disabled:false },
+  { id:'collection', key:'collection', label:'收藏', color:'#c084fc', sortOrder:80, builtIn:true, disabled:false },
+  { id:'custom',     key:'custom',     label:'自訂', color:'#9ca3af', sortOrder:999, builtIn:true, disabled:false }
+];
 
 // Tag input state
 let currentTags = [];
 let allKnownTags = [];
+let allTagTypes = [];
 let artistEditTagsState = [];
 let charEditTagsState = [];
 let tagPickerState = null;
@@ -2194,7 +2239,7 @@ let _db = null;
 async function getDB() {
   if (_db) return _db;
   _db = await new Promise((res, rej) => {
-    const r = indexedDB.open('nai_tool', 6);
+    const r = indexedDB.open('nai_tool', 7);
     r.onupgradeneeded = e => {
       const db = e.target.result;
       if (!db.objectStoreNames.contains('images')) {
@@ -2204,6 +2249,9 @@ async function getDB() {
       }
       if (!db.objectStoreNames.contains('tags')) {
         db.createObjectStore('tags', { keyPath:'name' });
+      }
+      if (!db.objectStoreNames.contains('tag_types')) {
+        db.createObjectStore('tag_types', { keyPath:'id' });
       }
       if (!db.objectStoreNames.contains('vibe_library')) {
         db.createObjectStore('vibe_library', { keyPath:'id', autoIncrement:true });
@@ -2297,7 +2345,8 @@ async function dbUpdateTags(id, tags) {
   });
 }
 
-async function dbSaveTag(name) {
+async function dbSaveTag(name, options) {
+  options = options || {};
   const db = await getDB();
   const existing = await new Promise(res => {
     const r = db.transaction('tags','readonly').objectStore('tags').get(name);
@@ -2307,6 +2356,8 @@ async function dbSaveTag(name) {
   return dbOp(db,'tags','readwrite', s => s.put({
     name,
     color: existing?.color || defaultTagColor(name),
+    typeId: existing?.typeId || options.typeId || 'custom',
+    source: existing?.source || options.source || 'manual',
     count: (existing?.count||0)+1,
     lastUsed: Date.now()
   }));
@@ -2322,6 +2373,8 @@ async function dbUpdateTagMeta(name, fields) {
       const item = Object.assign({
         name,
         color: defaultTagColor(name),
+        typeId: 'custom',
+        source: 'manual',
         count: 0,
         lastUsed: Date.now()
       }, r.result || {}, fields);
@@ -2336,6 +2389,22 @@ async function dbUpdateTagMeta(name, fields) {
 async function dbDeleteTag(name) {
   const db = await getDB();
   return dbOp(db,'tags','readwrite', s => s.delete(name));
+}
+
+async function dbGetTagTypes() {
+  const db = await getDB();
+  const rows = await dbOp(db, 'tag_types', 'readonly', s => s.getAll());
+  return rows.sort((a, b) => (a.sortOrder || 999) - (b.sortOrder || 999) || String(a.label || '').localeCompare(String(b.label || ''), 'zh-Hant'));
+}
+
+async function dbPutTagType(type) {
+  const db = await getDB();
+  return dbOp(db, 'tag_types', 'readwrite', s => s.put(type));
+}
+
+async function dbDeleteTagType(id) {
+  const db = await getDB();
+  return dbOp(db, 'tag_types', 'readwrite', s => s.delete(id));
 }
 
 // ── Vibe Library DB ──
@@ -2397,6 +2466,7 @@ async function dbSaveCharacter(char) {
     name: char.name || '',
     seriesName: char.seriesName || '',
     tags: char.tags || [],
+    primaryTagName: char.primaryTagName || '',
     prompt: char.prompt || '',
     notes: char.notes || '',
     thumbImageId: char.thumbImageId ?? null,
@@ -2435,6 +2505,7 @@ async function dbSaveArtist(a) {
   return dbOp(db,'artists','readwrite', s => s.add({
     name: a.name||'', artistTag: a.artistTag||'',
     styleType: a.styleType||'', tags: a.tags||[],
+    primaryTagName: a.primaryTagName || '',
     notes: a.notes||'', previewImageId: a.previewImageId??null,
     timestamp: Date.now()
   }));
@@ -2598,7 +2669,8 @@ async function dbGetTags() {
   const tags = await dbOp(db,'tags','readonly', s => s.getAll());
   return tags.map(t => ({
     ...t,
-    color: t.color || defaultTagColor(t.name)
+    color: t.color || defaultTagColor(t.name),
+    typeId: t.typeId || 'custom'
   })).sort((a,b) => b.count - a.count);
 }
 
@@ -2622,8 +2694,46 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+function slugifyTagTypeLabel(label) {
+  return String(label || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9\-\u4e00-\u9fff]/g, '')
+    .slice(0, 32);
+}
+
+function getSortedTagTypes(includeDisabled) {
+  return allTagTypes
+    .filter(t => includeDisabled || !t.disabled)
+    .slice()
+    .sort((a, b) => (a.sortOrder || 999) - (b.sortOrder || 999) || String(a.label || '').localeCompare(String(b.label || ''), 'zh-Hant'));
+}
+
+function getTagTypeMeta(typeId) {
+  return allTagTypes.find(t => t.id === typeId) || DEFAULT_TAG_TYPES.find(t => t.id === typeId) || DEFAULT_TAG_TYPES[DEFAULT_TAG_TYPES.length - 1];
+}
+
+function getTagTypeLabel(typeId) {
+  return getTagTypeMeta(typeId)?.label || '自訂';
+}
+
+async function refreshAllTagTypes() {
+  allTagTypes = await dbGetTagTypes();
+  return allTagTypes;
+}
+
+async function ensureDefaultTagTypes() {
+  const existing = await dbGetTagTypes();
+  const existingIds = new Set(existing.map(t => t.id));
+  for (const def of DEFAULT_TAG_TYPES) {
+    if (!existingIds.has(def.id)) await dbPutTagType({ ...def });
+  }
+  await refreshAllTagTypes();
+}
+
 function getTagMeta(name) {
-  return findExistingTag(name) || { name, color: defaultTagColor(name), count: 0 };
+  return findExistingTag(name) || { name, color: defaultTagColor(name), count: 0, typeId: 'custom' };
 }
 
 function getTagColor(name) {
@@ -2677,14 +2787,31 @@ async function refreshAllKnownTags() {
   return allKnownTags;
 }
 
-async function ensureKnownTag(name) {
+async function ensureKnownTag(name, options) {
+  options = options || {};
   const clean = String(name || '').trim();
   if (!clean) return '';
   const existing = findExistingTag(clean);
-  if (existing) return existing.name;
-  await dbSaveTag(clean);
+  if (existing) {
+    if (options.typeId && (!existing.typeId || existing.typeId === 'custom') && options.typeId !== existing.typeId) {
+      await dbUpdateTagMeta(existing.name, { typeId: options.typeId });
+      await refreshAllKnownTags();
+    }
+    return existing.name;
+  }
+  await dbSaveTag(clean, options);
   await refreshAllKnownTags();
   return clean;
+}
+
+async function ensureKnownTagList(tags, optionsMap) {
+  const out = [];
+  for (const raw of dedupeTags(tags || [])) {
+    const opts = typeof optionsMap === 'function' ? (optionsMap(raw) || {}) : (optionsMap || {});
+    const ensured = await ensureKnownTag(raw, opts);
+    if (ensured) out.push(ensured);
+  }
+  return dedupeTags(out);
 }
 
 function renderSimpleTagList(containerId, tags, emptyText, removeFnName) {
@@ -2707,7 +2834,8 @@ function openTagPicker(options) {
     multi: options.multi !== false,
     allowCreate: options.allowCreate !== false,
     onConfirm: options.onConfirm || (() => {}),
-    createLabel: options.createLabel || '建立新 tag'
+    createLabel: options.createLabel || '建立新 tag',
+    createTypeId: options.createTypeId || 'custom'
   };
   document.getElementById('tag-picker-title').textContent = tagPickerState.title;
   document.getElementById('tag-picker-help').textContent = tagPickerState.help;
@@ -2763,6 +2891,7 @@ function renderTagPicker() {
     <div style="min-width:0;">
       <div style="font-size:.78rem;color:var(--txt2);">${esc(tagPickerState.createLabel)}</div>
       <div style="font-size:.82rem;"><strong>${esc(search)}</strong></div>
+      <div style="font-size:.72rem;color:var(--txt2);margin-top:2px;">類型：${esc(getTagTypeLabel(tagPickerState.createTypeId || 'custom'))}</div>
       ${similar.length ? `<div class="tag-picker-similar">可能和既有 tag 太像：${similar.map(t => esc(t.name)).join('、')}</div>` : ''}
     </div>
     <button class="btn btn-s btn-out" type="button" onclick="createTagFromPicker()">建立</button>`;
@@ -2790,7 +2919,7 @@ async function createTagFromPicker() {
   }
   const similar = findSimilarTags(search).filter(t => normalizeTagName(t.name) !== normalizeTagName(search));
   if (similar.length && !confirm(`已有相近 tag：${similar.map(t => t.name).join('、')}\n仍要建立新 tag「${search}」嗎？`)) return;
-  const created = await ensureKnownTag(search);
+  const created = await ensureKnownTag(search, { typeId: tagPickerState.createTypeId || 'custom', source: 'manual' });
   if (!tagPickerState.multi) tagPickerState.selected.clear();
   tagPickerState.selected.add(created);
   document.getElementById('tag-picker-search').value = '';
@@ -2808,6 +2937,8 @@ function confirmTagPicker() {
 
 function openTagManager() {
   document.getElementById('tag-manager-search').value = '';
+  document.getElementById('tag-manager-type-filter').value = '';
+  document.getElementById('tag-type-new-name').value = '';
   document.getElementById('tag-manager-modal').classList.add('open');
   renderTagManager();
 }
@@ -2815,6 +2946,45 @@ function openTagManager() {
 function closeTagManager(e) {
   if (e && e.target !== document.getElementById('tag-manager-modal')) return;
   document.getElementById('tag-manager-modal').classList.remove('open');
+}
+
+function renderTagTypeFilterOptions() {
+  const sel = document.getElementById('tag-manager-type-filter');
+  if (!sel) return;
+  const current = sel.value || '';
+  const opts = [`<option value="">全部類型</option>`].concat(
+    getSortedTagTypes(true).map(t => `<option value="${esc(t.id)}">${esc(t.label)}${t.disabled ? '（停用）' : ''}</option>`)
+  );
+  sel.innerHTML = opts.join('');
+  sel.value = current;
+}
+
+function renderTagTypeManager() {
+  const list = document.getElementById('tag-type-manager-list');
+  if (!list) return;
+  const rows = getSortedTagTypes(true);
+  if (!rows.length) {
+    list.innerHTML = `<div class="tag-type-empty">目前還沒有任何類型</div>`;
+    return;
+  }
+  list.innerHTML = rows.map(t => {
+    const delBtn = t.builtIn
+      ? `<span class="tag-type-badge">內建</span>`
+      : `<button class="btn btn-d btn-s" type="button" data-type-id="${esc(t.id)}" onclick="deleteTagType(this.dataset.typeId)">刪除</button>`;
+    return `<div class="tag-type-row">
+      <div class="tag-type-meta">
+        <span class="tag-chip" style="background:${hexToRgba(t.color || '#9ca3af', 0.12)};border-color:${normalizeHexColor(t.color || '#9ca3af')};color:${normalizeHexColor(t.color || '#9ca3af')};">${esc(t.label)}</span>
+        <input class="inp tag-type-input" type="text" data-type-id="${esc(t.id)}" value="${esc(t.label)}" onchange="renameTagType(this.dataset.typeId, this.value)">
+      </div>
+      <label style="font-size:.75rem;color:var(--txt2);display:flex;align-items:center;gap:6px;">顏色
+        <input class="tag-color-input" type="color" data-type-id="${esc(t.id)}" value="${esc(normalizeHexColor(t.color || '#9ca3af'))}" onchange="updateTagTypeColor(this.dataset.typeId, this.value)">
+      </label>
+      <label style="font-size:.75rem;color:var(--txt2);display:flex;align-items:center;gap:6px;">
+        <input type="checkbox" data-type-id="${esc(t.id)}" ${t.disabled ? 'checked' : ''} onchange="toggleTagTypeDisabled(this.dataset.typeId, this.checked)">停用
+      </label>
+      ${delBtn}
+    </div>`;
+  }).join('');
 }
 
 function getTagUsageMap() {
@@ -2833,12 +3003,22 @@ function getTagUsageMap() {
 }
 
 function renderTagManager() {
+  renderTagTypeFilterOptions();
+  renderTagTypeManager();
   const list = document.getElementById('tag-manager-list');
   const q = normalizeTagName(document.getElementById('tag-manager-search').value || '');
+  const typeFilter = document.getElementById('tag-manager-type-filter').value || '';
   const usage = getTagUsageMap();
   const names = [...new Set([...allKnownTags.map(t => t.name), ...Object.keys(usage)])];
   const rows = names
-    .filter(name => !q || normalizeTagName(name).includes(q))
+    .filter(name => {
+      if (q && !normalizeTagName(name).includes(q)) return false;
+      if (typeFilter) {
+        const meta = getTagMeta(name);
+        if ((meta.typeId || 'custom') !== typeFilter) return false;
+      }
+      return true;
+    })
     .sort((a, b) => {
       const ua = usage[a] || {};
       const ub = usage[b] || {};
@@ -2853,12 +3033,19 @@ function renderTagManager() {
   list.innerHTML = rows.map(name => {
     const u = usage[name] || { images: 0, characters: 0, artists: 0, views: 0 };
     const meta = getTagMeta(name);
+    const typeOptions = getSortedTagTypes(true).map(t => `<option value="${esc(t.id)}" ${t.id === (meta.typeId || 'custom') ? 'selected' : ''}>${esc(t.label)}</option>`).join('');
     return `<div class="tag-manager-row">
       <div class="tag-manager-meta">
         <div><span class="tag-chip" style="${getTagChipStyle(name)}">${esc(name)}</span></div>
+        <div class="tag-manager-type">類型：${esc(getTagTypeLabel(meta.typeId || 'custom'))}</div>
         <div class="tag-manager-usage">圖片 ${u.images} / 角色 ${u.characters} / 繪師 ${u.artists} / 分頁 ${u.views}</div>
       </div>
       <div class="tag-manager-actions">
+        <label style="font-size:.75rem;color:var(--txt2);display:flex;align-items:center;gap:6px;">類型
+          <select class="sel" data-tag="${esc(name)}" onchange="updateTagType(this.dataset.tag, this.value)" style="width:124px;padding:6px 26px 6px 10px;font-size:.78rem;">
+            ${typeOptions}
+          </select>
+        </label>
         <label style="font-size:.75rem;color:var(--txt2);display:flex;align-items:center;gap:6px;">顏色
           <input class="tag-color-input" type="color" data-tag="${esc(name)}" value="${esc(normalizeHexColor(meta.color))}" onchange="updateTagColor(this.dataset.tag, this.value)">
         </label>
@@ -2868,6 +3055,79 @@ function renderTagManager() {
       </div>
     </div>`;
   }).join('');
+}
+
+async function createTagType() {
+  const input = document.getElementById('tag-type-new-name');
+  const label = String(input.value || '').trim();
+  if (!label) { toast('請先填寫類型名稱', 'warn'); return; }
+  const id = slugifyTagTypeLabel(label);
+  if (!id) { toast('類型名稱不可用', 'err'); return; }
+  if (allTagTypes.some(t => t.id === id || String(t.label || '').trim() === label)) {
+    toast('已有同名或同 key 的類型', 'warn');
+    return;
+  }
+  const maxOrder = allTagTypes.reduce((m, t) => Math.max(m, t.sortOrder || 0), 0);
+  await dbPutTagType({
+    id,
+    key: id,
+    label,
+    color: defaultTagColor(label),
+    sortOrder: maxOrder + 10,
+    builtIn: false,
+    disabled: false
+  });
+  input.value = '';
+  await refreshAllTagTypes();
+  renderTagManager();
+  toast(`已新增類型「${label}」`, 'ok');
+}
+
+async function renameTagType(typeId, label) {
+  const meta = getTagTypeMeta(typeId);
+  const clean = String(label || '').trim();
+  if (!clean || clean === meta.label) return;
+  await dbPutTagType({ ...meta, label: clean });
+  await refreshAllTagTypes();
+  renderTagManager();
+}
+
+async function updateTagTypeColor(typeId, color) {
+  const meta = getTagTypeMeta(typeId);
+  await dbPutTagType({ ...meta, color: normalizeHexColor(color) });
+  await refreshAllTagTypes();
+  renderTagManager();
+}
+
+async function toggleTagTypeDisabled(typeId, disabled) {
+  const meta = getTagTypeMeta(typeId);
+  await dbPutTagType({ ...meta, disabled: !!disabled });
+  await refreshAllTagTypes();
+  renderTagManager();
+}
+
+async function deleteTagType(typeId) {
+  const meta = getTagTypeMeta(typeId);
+  if (meta.builtIn) {
+    toast('內建類型請改用停用，不建議直接刪除', 'warn');
+    return;
+  }
+  const affected = allKnownTags.filter(t => (t.typeId || 'custom') === typeId);
+  if (!confirm(`確定刪除類型「${meta.label}」？\n底下 ${affected.length} 個 tag 會自動改掛到「${getTagTypeLabel('custom')}」。`)) return;
+  for (const tag of affected) {
+    await dbUpdateTagMeta(tag.name, { typeId: 'custom' });
+  }
+  await dbDeleteTagType(typeId);
+  await refreshAllTagTypes();
+  await refreshAllKnownTags();
+  renderTagManager();
+  toast(`已刪除類型「${meta.label}」`, 'ok');
+}
+
+async function updateTagType(name, typeId) {
+  await dbUpdateTagMeta(name, { typeId });
+  await refreshAllKnownTags();
+  renderTagManager();
 }
 
 async function updateTagColor(name, color) {
@@ -2894,14 +3154,18 @@ async function deleteTagEverywhere(name) {
     await dbUpdateTags(img.id, img.tags);
   }
   for (const c of characterData) {
-    if (!(c.tags || []).includes(name)) continue;
-    c.tags = c.tags.filter(t => t !== name);
-    await dbUpdateCharacter(c.id, { tags: c.tags });
+    const hit = (c.tags || []).includes(name) || c.primaryTagName === name;
+    if (!hit) continue;
+    c.tags = (c.tags || []).filter(t => t !== name);
+    if (c.primaryTagName === name) c.primaryTagName = '';
+    await dbUpdateCharacter(c.id, { tags: c.tags, primaryTagName: c.primaryTagName || '' });
   }
   for (const a of artistData) {
-    if (!(a.tags || []).includes(name)) continue;
-    a.tags = a.tags.filter(t => t !== name);
-    await dbUpdateArtist(a.id, { tags: a.tags });
+    const hit = (a.tags || []).includes(name) || a.primaryTagName === name;
+    if (!hit) continue;
+    a.tags = (a.tags || []).filter(t => t !== name);
+    if (a.primaryTagName === name) a.primaryTagName = '';
+    await dbUpdateArtist(a.id, { tags: a.tags, primaryTagName: a.primaryTagName || '' });
   }
 
   galViews = galViews.map(v => ({
@@ -3004,6 +3268,7 @@ async function showApp() {
   loadGalViews();
   loadNotesViews();
   loadBatchTasks();
+  await ensureDefaultTagTypes();
   await refreshAllKnownTags();
   await loadGallery();
   renderGalViewTabs();
@@ -4122,6 +4387,7 @@ async function openArtistEditModal(id) {
     document.getElementById('artist-edit-title').textContent = '編輯繪師';
     document.getElementById('artist-edit-name').value  = a.name||'';
     document.getElementById('artist-edit-tag').value   = a.artistTag||'';
+    document.getElementById('artist-edit-auto-tag').checked = !!a.primaryTagName;
     document.getElementById('artist-edit-style').value = a.styleType||'';
     artistEditTagsState = dedupeTags(a.tags || []);
     renderArtistEditTags();
@@ -4131,6 +4397,7 @@ async function openArtistEditModal(id) {
   } else {
     document.getElementById('artist-edit-title').textContent = '新增繪師';
     ['artist-edit-name','artist-edit-tag','artist-edit-notes'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('artist-edit-auto-tag').checked = false;
     document.getElementById('artist-edit-style').value = '';
     artistEditTagsState = [];
     renderArtistEditTags();
@@ -4175,14 +4442,21 @@ function artistEditClearThumb() { artistEditThumbImageId=null; renderArtistEditT
 async function saveArtistEdit() {
   const name = document.getElementById('artist-edit-name').value.trim();
   const artistTag = document.getElementById('artist-edit-tag').value.trim();
+  const autoPrimaryTag = document.getElementById('artist-edit-auto-tag').checked;
   if (!name) { toast('請填寫繪師名稱','err'); return; }
   if (!artistTag) { toast('請填寫 Prompt Tag','err'); return; }
   if (artistTag.includes('::')) { toast('這裡只填 base tag，例如 artist:wol；不要把 weight::tag:: 整串貼進來', 'warn'); return; }
-  const tags = dedupeTags(artistEditTagsState);
-  for (const tag of tags) await ensureKnownTag(tag);
+  let tags = dedupeTags(artistEditTagsState);
+  let primaryTagName = '';
+  if (autoPrimaryTag) {
+    primaryTagName = await ensureKnownTag(name, { typeId: 'artist', source: 'system-artist' });
+    tags = dedupeTags([...tags, primaryTagName]);
+  }
+  tags = await ensureKnownTagList(tags);
   const data = {
     name, artistTag,
     styleType: document.getElementById('artist-edit-style').value,
+    primaryTagName,
     tags, notes: document.getElementById('artist-edit-notes').value.trim(),
     previewImageId: artistEditThumbImageId, timestamp: Date.now()
   };
@@ -4618,6 +4892,7 @@ async function openCharEditModal(id) {
     document.getElementById('char-edit-title').textContent = '編輯角色';
     document.getElementById('char-edit-name').value = c.name || '';
     document.getElementById('char-edit-series').value = c.seriesName || '';
+    document.getElementById('char-edit-auto-tag').checked = !!c.primaryTagName;
     charEditTagsState = dedupeTags(c.tags || []);
     renderCharEditTags();
     document.getElementById('char-edit-prompt').value = c.prompt || '';
@@ -4646,6 +4921,7 @@ async function openCharEditModal(id) {
     document.getElementById('char-edit-title').textContent = '新增角色';
     document.getElementById('char-edit-name').value = '';
     document.getElementById('char-edit-series').value = '';
+    document.getElementById('char-edit-auto-tag').checked = false;
     charEditTagsState = [];
     renderCharEditTags();
     document.getElementById('char-edit-prompt').value = '';
@@ -4713,12 +4989,19 @@ function charEditRemoveRef(idx) {
 
 async function saveCharEdit() {
   const name = document.getElementById('char-edit-name').value.trim();
+  const autoPrimaryTag = document.getElementById('char-edit-auto-tag').checked;
   if (!name) { toast('請填寫角色名稱','err'); return; }
-  const tags = dedupeTags(charEditTagsState);
-  for (const tag of tags) await ensureKnownTag(tag);
+  let tags = dedupeTags(charEditTagsState);
+  let primaryTagName = '';
+  if (autoPrimaryTag) {
+    primaryTagName = await ensureKnownTag(name, { typeId: 'character', source: 'system-character' });
+    tags = dedupeTags([...tags, primaryTagName]);
+  }
+  tags = await ensureKnownTagList(tags);
   const data = {
     name,
     seriesName: document.getElementById('char-edit-series').value.trim(),
+    primaryTagName,
     tags,
     prompt: document.getElementById('char-edit-prompt').value.trim(),
     notes: document.getElementById('char-edit-notes').value.trim(),
