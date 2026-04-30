@@ -135,6 +135,8 @@
       color:var(--txt);padding:9px 12px;font-size:.875rem;outline:none;transition:border-color .15s;font-family:inherit;}
     input:focus,textarea:focus,select:focus{border-color:var(--accent);}
     textarea{resize:none;line-height:1.6;overflow:hidden;min-height:60px;}
+    .prompt-editor{resize:vertical;overflow:auto;min-height:110px;}
+    .prompt-editor-sm{resize:vertical;overflow:auto;min-height:88px;}
     select option{background:var(--bg2);}
     input[type=number]{-moz-appearance:textfield;}
     input[type=number]::-webkit-inner-spin-button,
@@ -589,6 +591,15 @@
     .tag-manager-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
     .tag-color-input{width:38px;height:30px;border:none;background:none;padding:0;cursor:pointer;}
     .tag-manager-empty{font-size:.82rem;color:var(--txt2);padding:14px 4px;}
+    .prompt-insert-list{display:flex;flex-direction:column;gap:12px;}
+    .prompt-insert-card{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px;}
+    .prompt-insert-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+    .prompt-insert-meta{display:flex;flex-direction:column;gap:5px;min-width:0;}
+    .prompt-insert-title{font-size:.86rem;font-weight:700;color:var(--txt);}
+    .prompt-insert-sub{font-size:.74rem;color:var(--txt2);line-height:1.45;}
+    .prompt-insert-tags{display:flex;flex-wrap:wrap;gap:5px;}
+    .prompt-insert-text{width:100%;min-height:120px;max-height:42vh;resize:vertical;overflow:auto;background:var(--bg2);border:1px solid var(--border);border-radius:10px;color:var(--txt);padding:10px 12px;font-size:.82rem;line-height:1.6;font-family:monospace;}
+    .prompt-insert-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;}
 
     /* Precise Reference */
     .pref-dropzone{border:1.5px dashed var(--border);border-radius:10px;padding:22px 12px;text-align:center;
@@ -769,11 +780,11 @@
               <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('char', this, 'prompt')">👤 角色</button>
               <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('style', this, 'prompt')">🎨 風格</button>
               <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('note', this, 'prompt')">📝 片段</button>
-              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openNoteInsertModal('prompt')">📓 選片段</button>
+              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openNoteInsertModal('prompt')">📚 插入 Prompt</button>
             </div>
           </div>
           <div class="prompt-dd-wrap">
-            <textarea id="prompt" rows="5" placeholder="1girl, blue eyes, long hair..."></textarea>
+            <textarea id="prompt" class="prompt-editor" data-manual-resize="true" rows="5" placeholder="1girl, blue eyes, long hair..."></textarea>
             <div id="prompt-dd" class="prompt-dd"></div>
           </div>
         </div>
@@ -782,10 +793,10 @@
             <span>負向 Prompt（Undesired Content）</span>
             <div style="display:flex;gap:4px;">
               <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openBtInsertPicker('note', this, 'neg-prompt')">📝 片段</button>
-              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openNoteInsertModal('neg-prompt')">📓 選片段</button>
+              <button class="btn btn-s btn-out" style="font-size:.7rem;padding:2px 7px;" onclick="openNoteInsertModal('neg-prompt')">📚 插入 Prompt</button>
             </div>
           </div>
-          <textarea id="neg-prompt" rows="3" placeholder="lowres, bad anatomy..."></textarea>
+          <textarea id="neg-prompt" class="prompt-editor-sm" data-manual-resize="true" rows="3" placeholder="lowres, bad anatomy..."></textarea>
         </div>
       </div>
 
@@ -1456,7 +1467,7 @@
     <div class="char-modal-body">
       <div>
         <div class="char-field-label">Prompt 片段 *</div>
-        <textarea id="note-edit-fragment" class="inp" rows="3"
+        <textarea id="note-edit-fragment" class="inp prompt-editor" data-manual-resize="true" rows="3"
           placeholder="例：masterpiece, best quality, ..."
           style="width:100%;resize:vertical;font-family:monospace;font-size:.85rem;"></textarea>
       </div>
@@ -1505,24 +1516,24 @@
 
 <!-- ── NOTE INSERT MODAL ── -->
 <div class="char-modal-overlay" id="note-insert-modal" onclick="closeNoteInsertModal(event)">
-  <div class="char-modal-box" onclick="event.stopPropagation()" style="max-width:860px;">
+  <div class="char-modal-box" onclick="event.stopPropagation()" style="max-width:960px;">
     <div class="char-modal-hd">
       <div>
-        <div>選擇 Prompt 片段</div>
-        <div id="note-insert-subtitle" style="font-size:.74rem;color:var(--txt2);font-weight:400;margin-top:2px;">從筆記本挑一段，再插入目前欄位。</div>
+        <div>插入 Prompt</div>
+        <div id="note-insert-subtitle" style="font-size:.74rem;color:var(--txt2);font-weight:400;margin-top:2px;">這裡會一起列出角色 Prompt、風格 Prompt、混搭 Prompt、筆記片段，挑中就直接插入目前欄位。</div>
       </div>
       <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeNoteInsertModal()">✕</button>
     </div>
     <div class="char-modal-body">
       <div>
         <div class="char-field-label">搜尋</div>
-        <input id="note-insert-search" class="inp" type="search" placeholder="搜尋片段 / 說明 / tag..." style="width:100%;" oninput="renderNoteInsertModal()">
+        <input id="note-insert-search" class="inp" type="search" placeholder="搜尋角色 / 風格 / 混搭 / 片段 / tag..." style="width:100%;" oninput="renderNoteInsertModal()">
       </div>
       <div>
-        <div class="char-field-label">分類</div>
+        <div class="char-field-label">來源</div>
         <div id="note-insert-cat-row" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
       </div>
-      <div id="note-insert-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;"></div>
+      <div id="note-insert-list" class="prompt-insert-list"></div>
     </div>
     <div class="char-modal-ft">
       <button class="btn btn-s btn-out" onclick="closeNoteInsertModal()">關閉</button>
@@ -1673,7 +1684,7 @@
       </div>
       <div>
         <div class="char-field-label">角色 Prompt</div>
-        <textarea id="char-edit-prompt" class="inp" rows="3" placeholder="例：raiden shogun, 1girl, ..." style="width:100%;resize:vertical;"></textarea>
+        <textarea id="char-edit-prompt" class="inp prompt-editor-sm" data-manual-resize="true" rows="3" placeholder="例：raiden shogun, 1girl, ..." style="width:100%;resize:vertical;"></textarea>
       </div>
       <div>
         <div class="char-field-label">備註</div>
@@ -1786,22 +1797,22 @@
             <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openBtInsertPicker('char', this)">👤 插入角色</button>
             <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openBtInsertPicker('style', this)">🎨 插入風格</button>
             <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openBtInsertPicker('note', this)">📝 插入片段</button>
-            <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openNoteInsertModal('bt-prompt')">📓 選片段</button>
+            <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openNoteInsertModal('bt-prompt')">📚 插入 Prompt</button>
           </div>
         </div>
-        <textarea id="bt-prompt" class="inp" rows="5"
+        <textarea id="bt-prompt" class="inp prompt-editor" rows="5"
           placeholder="完整正向 prompt&#10;&#10;用上方按鈕從角色庫、風格庫、筆記本插入內容到游標位置。"
-          style="width:100%;resize:vertical;font-family:monospace;font-size:.83rem;"></textarea>
+          style="width:100%;resize:vertical;font-family:monospace;font-size:.83rem;" data-manual-resize="true"></textarea>
       </div>
       <div>
         <div class="char-field-label" style="display:flex;align-items:center;justify-content:space-between;">
           <span>負向 Prompt</span>
           <div style="display:flex;gap:5px;">
             <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openBtInsertPicker('note', this, 'bt-neg')">📝 插入片段</button>
-            <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openNoteInsertModal('bt-neg')">📓 選片段</button>
+            <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openNoteInsertModal('bt-neg')">📚 插入 Prompt</button>
           </div>
         </div>
-        <textarea id="bt-neg" class="inp" rows="3" placeholder="負向 prompt..." style="width:100%;resize:vertical;font-family:monospace;font-size:.83rem;"></textarea>
+        <textarea id="bt-neg" class="inp prompt-editor-sm" rows="3" placeholder="負向 prompt..." style="width:100%;resize:vertical;font-family:monospace;font-size:.83rem;" data-manual-resize="true"></textarea>
       </div>
       <!-- Parameters (collapsible) -->
       <div>
@@ -2211,13 +2222,19 @@ window.addEventListener('DOMContentLoaded', async () => {
   loadDanbooruTags();
 
   // textarea auto-resize
+  function isManualResizeTextarea(el) {
+    return el?.dataset?.manualResize === 'true';
+  }
   function autoResize(el) {
+    if (isManualResizeTextarea(el)) return;
     el.style.height = 'auto';
     el.style.height = el.scrollHeight + 'px';
   }
   document.querySelectorAll('textarea').forEach(ta => {
-    ta.addEventListener('input', () => autoResize(ta));
-    autoResize(ta);
+    if (!isManualResizeTextarea(ta)) {
+      ta.addEventListener('input', () => autoResize(ta));
+      autoResize(ta);
+    }
   });
 
   // tag input events
@@ -2241,8 +2258,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   draftSaveReady = true;
   saveDraftState();
   document.querySelectorAll('textarea').forEach(ta => {
-    ta.style.height = 'auto';
-    ta.style.height = ta.scrollHeight + 'px';
+    if (!isManualResizeTextarea(ta)) {
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+    }
   });
 });
 
@@ -5612,8 +5631,10 @@ function insertPromptTag(tagName) {
   const newPos = before.length + tagName.length + 2;
   ta.setSelectionRange(newPos, newPos);
   ta.focus();
-  ta.style.height = 'auto';
-  ta.style.height = ta.scrollHeight + 'px';
+  if (ta.dataset.manualResize !== 'true') {
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight + 'px';
+  }
   hidePromptDD();
 }
 
@@ -6169,8 +6190,10 @@ function fillFromModal() {
   showPage('generate');
   // re-trigger auto-resize for updated textareas
   document.querySelectorAll('textarea').forEach(ta => {
-    ta.style.height = 'auto';
-    ta.style.height = ta.scrollHeight + 'px';
+    if (ta.dataset.manualResize !== 'true') {
+      ta.style.height = 'auto';
+      ta.style.height = ta.scrollHeight + 'px';
+    }
   });
   toast('已填入生圖介面','ok');
 }
@@ -6512,7 +6535,7 @@ function openNoteInsertModal(targetId='prompt') {
   const searchEl = document.getElementById('note-insert-search');
   if (searchEl) searchEl.value = '';
   const subtitle = document.getElementById('note-insert-subtitle');
-  if (subtitle) subtitle.textContent = `從筆記本挑一段，再插入到${getNoteInsertTargetLabel(targetId)}。`;
+  if (subtitle) subtitle.textContent = `從角色 Prompt、風格 Prompt、混搭 Prompt、筆記片段中挑一段，再插入到${getNoteInsertTargetLabel(targetId)}。`;
   renderNoteInsertModal();
   document.getElementById('note-insert-modal').classList.add('open');
   setTimeout(() => document.getElementById('note-insert-search')?.focus(), 0);
@@ -6528,14 +6551,70 @@ function setNoteInsertCategory(cat) {
   renderNoteInsertModal();
 }
 
-function insertNoteFragmentToTarget(noteId) {
-  const n = notesData.find(x => x.id === noteId);
-  if (!n) return;
+function insertPromptItemToTarget(text) {
   const el = document.getElementById(noteInsertTargetId || 'prompt');
   if (!el) return;
-  insertAtCursor(el, n.fragment);
+  insertAtCursor(el, text);
   closeNoteInsertModal();
   toast(`已插入到${getNoteInsertTargetLabel(noteInsertTargetId)}`, 'ok');
+}
+
+function getPromptInsertItems() {
+  const items = [];
+  characterData.forEach(c => {
+    const text = String(c.prompt || '').trim();
+    if (!text) return;
+    items.push({
+      source: 'char',
+      sourceLabel: '角色 Prompt',
+      badgeClass: 'nc-composition',
+      title: c.name || '未命名角色',
+      subtitle: c.seriesName ? `作品：${c.seriesName}` : '角色庫',
+      text,
+      tags: c.tags || []
+    });
+  });
+  artistData.forEach(a => {
+    const text = String(a.artistTag || '').trim();
+    if (!text) return;
+    items.push({
+      source: 'style',
+      sourceLabel: '風格 Prompt',
+      badgeClass: 'nc-style',
+      title: a.name || '未命名風格',
+      subtitle: a.styleType ? `風格類型：${STYLE_LABELS[a.styleType] || a.styleType}` : '繪師庫',
+      text,
+      tags: a.tags || []
+    });
+  });
+  blendData.forEach(b => {
+    const text = renderBlendPrompt(b.artistEntries || []).trim();
+    if (!text) return;
+    items.push({
+      source: 'style',
+      sourceLabel: '混搭 Prompt',
+      badgeClass: 'nc-linework',
+      title: deriveBlendName(b),
+      subtitle: '風格混搭記錄',
+      text,
+      tags: []
+    });
+  });
+  notesData.forEach(n => {
+    const text = String(n.fragment || '').trim();
+    if (!text) return;
+    items.push({
+      source: 'note',
+      sourceLabel: '片段 Prompt',
+      badgeClass: NOTE_CAT_CLASS[n.category] || 'nc-other',
+      title: NOTE_CATEGORIES[n.category] || '片段',
+      subtitle: n.description || '筆記片段',
+      text,
+      tags: n.tags || [],
+      noteId: n.id
+    });
+  });
+  return items;
 }
 
 function renderNoteInsertModal() {
@@ -6544,51 +6623,64 @@ function renderNoteInsertModal() {
   const list = document.getElementById('note-insert-list');
   if (!catRow || !list) return;
 
-  const catCount = {};
-  notesData.forEach(n => { catCount[n.category] = (catCount[n.category] || 0) + 1; });
-  let catHtml = `<span class="tag-filter-chip ${noteInsertCategory === '' ? 'active' : ''}" onclick="setNoteInsertCategory('')">全部</span>`;
-  Object.entries(NOTE_CATEGORIES).forEach(([key, label]) => {
-    if (!catCount[key]) return;
+  const allItems = getPromptInsertItems();
+  const sourceCount = {
+    char: allItems.filter(x => x.source === 'char').length,
+    style: allItems.filter(x => x.source === 'style').length,
+    note: allItems.filter(x => x.source === 'note').length
+  };
+  let catHtml = `<span class="tag-filter-chip ${noteInsertCategory === '' ? 'active' : ''}" onclick="setNoteInsertCategory('')">全部 <small style="opacity:.7">${allItems.length}</small></span>`;
+  [
+    ['char', '角色 Prompt'],
+    ['style', '風格 Prompt'],
+    ['note', '片段 Prompt']
+  ].forEach(([key, label]) => {
+    if (!sourceCount[key]) return;
     const active = noteInsertCategory === key;
-    catHtml += `<span class="tag-filter-chip ${active ? 'active' : ''} note-cat-badge ${NOTE_CAT_CLASS[key]}"
-      style="border:1px solid currentColor;opacity:.85;"
-      onclick="setNoteInsertCategory('${key}')">${label} <small style="opacity:.7">${catCount[key]}</small></span>`;
+    catHtml += `<span class="tag-filter-chip ${active ? 'active' : ''}" onclick="setNoteInsertCategory('${key}')">${label} <small style="opacity:.7">${sourceCount[key]}</small></span>`;
   });
   catRow.innerHTML = catHtml;
 
-  const filtered = notesData.filter(n => {
-    const matchCat = !noteInsertCategory || n.category === noteInsertCategory;
-    const matchQ = !q ||
-      n.fragment.toLowerCase().includes(q) ||
-      (n.description || '').toLowerCase().includes(q) ||
-      (n.tags || []).some(t => t.toLowerCase().includes(q));
+  const filtered = allItems.filter(item => {
+    const matchCat = !noteInsertCategory || item.source === noteInsertCategory;
+    const haystack = [
+      item.title,
+      item.subtitle,
+      item.text,
+      ...(item.tags || [])
+    ].join('\n').toLowerCase();
+    const matchQ = !q || haystack.includes(q);
     return matchCat && matchQ;
   });
 
   if (!filtered.length) {
-    list.innerHTML = `<div class="gallery-empty" style="grid-column:1/-1;padding:30px 20px;">
+    list.innerHTML = `<div class="gallery-empty" style="padding:30px 20px;">
       <div style="font-size:1.5rem;margin-bottom:8px;">📓</div>
-      <span>沒有符合的片段</span>
+      <span>沒有符合的 Prompt</span>
     </div>`;
     return;
   }
 
-  list.innerHTML = filtered.map(n => {
-    const catClass = NOTE_CAT_CLASS[n.category] || 'nc-other';
-    const catLabel = NOTE_CATEGORIES[n.category] || n.category;
-    const tags = (n.tags || []).map(t => `<span class="char-card-tag" style="${getTagChipStyle(t, 0.10)}">${esc(t)}</span>`).join('');
-    return `<div class="note-card">
-      <div class="note-card-body">
-        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-          <span class="note-cat-badge ${catClass}">${catLabel}</span>
-          ${tags}
+  list.innerHTML = filtered.map(item => {
+    const tags = (item.tags || []).map(t => `<span class="char-card-tag" style="${getTagChipStyle(t, 0.10)}">${esc(t)}</span>`).join('');
+    const editBtn = item.noteId
+      ? `<button class="note-edit-btn" onclick="closeNoteInsertModal();openNoteEditModal(${item.noteId})">編輯片段</button>`
+      : '';
+    return `<div class="prompt-insert-card">
+      <div class="prompt-insert-top">
+        <div class="prompt-insert-meta">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <span class="note-cat-badge ${item.badgeClass || 'nc-other'}">${esc(item.sourceLabel)}</span>
+            ${tags}
+          </div>
+          <div class="prompt-insert-title">${esc(item.title)}</div>
+          <div class="prompt-insert-sub">${esc(item.subtitle || '')}</div>
         </div>
-        <div class="note-fragment">${esc(n.fragment)}</div>
-        ${n.description ? `<div class="note-desc">${esc(n.description)}</div>` : ''}
-        <div class="note-insert-row">
-          <button class="note-ins-pos" onclick="insertNoteFragmentToTarget(${n.id})">插入</button>
-          <button class="note-edit-btn" onclick="closeNoteInsertModal();openNoteEditModal(${n.id})">編輯</button>
-        </div>
+      </div>
+      <textarea class="prompt-insert-text" readonly>${esc(item.text)}</textarea>
+      <div class="prompt-insert-actions">
+        ${editBtn}
+        <button class="btn btn-p" data-text="${esc(item.text)}" onclick="insertPromptItemToTarget(this.dataset.text)">插入</button>
       </div>
     </div>`;
   }).join('');
