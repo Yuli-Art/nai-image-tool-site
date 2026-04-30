@@ -26,72 +26,185 @@
       --warn:     #f59e0b;
       --err:      #ef4444;
       --info:     #3b82f6;
+      --font-body: -apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans TC',sans-serif;
+      --font-display: Georgia,'Times New Roman','Noto Serif TC',serif;
+      --shadow-soft: none;
     }
-    html[data-ui-theme="design-md"] {
-      --bg:       #f6efe7;
-      --bg2:      #efe3d6;
-      --bg3:      #e3d0bf;
-      --accent:   #c46c4a;
-      --accent-h: #a85839;
-      --accent-l: rgba(196,108,74,.14);
-      --txt:      #2f241d;
-      --txt2:     #7f6759;
-      --border:   #d8c4b4;
-      --ok:       #6f8f55;
-      --warn:     #b7791f;
-      --err:      #ba5a3a;
+    html[data-ui-theme="design-md-light"] {
+      --bg:       #faf9f5;
+      --bg2:      #efe9de;
+      --bg3:      #e8e0d2;
+      --accent:   #cc785c;
+      --accent-h: #a9583e;
+      --accent-l: rgba(204,120,92,.14);
+      --txt:      #141413;
+      --txt2:     #6c6a64;
+      --border:   #e6dfd8;
+      --ok:       #5db872;
+      --warn:     #d4a017;
+      --err:      #c64545;
       --info:     #8a5b44;
+      --font-body: Inter,'Segoe UI','Noto Sans TC',sans-serif;
+      --font-display: "Times New Roman",Georgia,'Noto Serif TC',serif;
+      --shadow-soft: 0 14px 40px rgba(79,50,33,.08);
+    }
+    html[data-ui-theme="design-md-dark"] {
+      --bg:       #141413;
+      --bg2:      #181715;
+      --bg3:      #252320;
+      --accent:   #cc785c;
+      --accent-h: #a9583e;
+      --accent-l: rgba(204,120,92,.14);
+      --txt:      #faf9f5;
+      --txt2:     #a09d96;
+      --border:   #35312d;
+      --ok:       #5db872;
+      --warn:     #d4a017;
+      --err:      #d86565;
+      --info:     #c99172;
+      --font-body: Inter,'Segoe UI','Noto Sans TC',sans-serif;
+      --font-display: "Times New Roman",Georgia,'Noto Serif TC',serif;
+      --shadow-soft: 0 18px 44px rgba(0,0,0,.25);
     }
     *{margin:0;padding:0;box-sizing:border-box;}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans TC',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;font-size:14px;}
-    html[data-ui-theme="design-md"] body{
+    body{font-family:var(--font-body);background:var(--bg);color:var(--txt);min-height:100vh;font-size:14px;}
+    html[data-ui-theme="design-md-light"] body{
       background:
-        radial-gradient(circle at top left, rgba(196,108,74,.08), transparent 34%),
-        linear-gradient(180deg, #fbf7f2 0%, #f6efe7 100%);
+        radial-gradient(circle at top left, rgba(204,120,92,.08), transparent 34%),
+        linear-gradient(180deg, #fbf7f2 0%, #faf9f5 100%);
       color:var(--txt);
     }
-    html[data-ui-theme="design-md"] .nav-brand,
-    html[data-ui-theme="design-md"] .login-title,
-    html[data-ui-theme="design-md"] .card-title,
-    html[data-ui-theme="design-md"] .char-modal-hd,
-    html[data-ui-theme="design-md"] .card-title{
-      letter-spacing:.03em;
+    html[data-ui-theme="design-md-dark"] body{
+      background:
+        radial-gradient(circle at top left, rgba(204,120,92,.06), transparent 28%),
+        linear-gradient(180deg, #171614 0%, #141413 100%);
+      color:var(--txt);
     }
-    html[data-ui-theme="design-md"] .login-card,
-    html[data-ui-theme="design-md"] .card,
-    html[data-ui-theme="design-md"] .modal-box,
-    html[data-ui-theme="design-md"] .char-modal-box,
-    html[data-ui-theme="design-md"] .gal-picker-box,
-    html[data-ui-theme="design-md"] .char-ref-picker-box,
-    html[data-ui-theme="design-md"] .batch-presets-box,
-    html[data-ui-theme="design-md"] .tag-picker-box,
-    html[data-ui-theme="design-md"] .tag-manager-box{
-      box-shadow:0 14px 40px rgba(79,50,33,.08);
+    html[data-ui-theme^="design-md"] .nav-brand,
+    html[data-ui-theme^="design-md"] .login-title,
+    html[data-ui-theme^="design-md"] .card-title,
+    html[data-ui-theme^="design-md"] .char-modal-hd,
+    html[data-ui-theme^="design-md"] .ab-section-head{
+      font-family:var(--font-display);
+      font-weight:400;
+      letter-spacing:-.02em;
     }
-    html[data-ui-theme="design-md"] .navbar{
-      background:rgba(239,227,214,.92);
+    html[data-ui-theme="design-md-light"] .login-card,
+    html[data-ui-theme="design-md-light"] .card,
+    html[data-ui-theme="design-md-light"] .modal-box,
+    html[data-ui-theme="design-md-light"] .char-modal-box,
+    html[data-ui-theme="design-md-light"] .gal-picker-box,
+    html[data-ui-theme="design-md-light"] .char-ref-picker-box,
+    html[data-ui-theme="design-md-light"] .batch-presets-box,
+    html[data-ui-theme="design-md-light"] .tag-picker-box,
+    html[data-ui-theme="design-md-light"] .tag-manager-box,
+    html[data-ui-theme="design-md-light"] .note-card,
+    html[data-ui-theme="design-md-light"] .gcard,
+    html[data-ui-theme="design-md-light"] .blend-card,
+    html[data-ui-theme="design-md-light"] .batch-task-card{
+      box-shadow:var(--shadow-soft);
+    }
+    html[data-ui-theme="design-md-light"] .navbar{
+      background:rgba(250,249,245,.92);
       backdrop-filter:blur(8px);
+      border-bottom-color:var(--border);
+      height:64px;
     }
-    html[data-ui-theme="design-md"] .btn,
-    html[data-ui-theme="design-md"] .nav-tab,
-    html[data-ui-theme="design-md"] .seed-toggle,
-    html[data-ui-theme="design-md"] .mode-tab{
-      border-radius:999px;
+    html[data-ui-theme="design-md-dark"] .navbar{
+      background:rgba(24,23,21,.92);
+      backdrop-filter:blur(8px);
+      border-bottom-color:var(--border);
+      height:64px;
     }
-    html[data-ui-theme="design-md"] input[type=text],
-    html[data-ui-theme="design-md"] input[type=password],
-    html[data-ui-theme="design-md"] input[type=number],
-    html[data-ui-theme="design-md"] textarea,
-    html[data-ui-theme="design-md"] select,
-    html[data-ui-theme="design-md"] .gallery-search{
-      background:#fbf6f1;
+    html[data-ui-theme^="design-md"] .btn,
+    html[data-ui-theme^="design-md"] .nav-tab,
+    html[data-ui-theme^="design-md"] .seed-toggle,
+    html[data-ui-theme^="design-md"] .mode-tab{
+      border-radius:8px;
+      font-family:var(--font-body);
+      font-weight:500;
     }
-    html[data-ui-theme="design-md"] .left-panel,
-    html[data-ui-theme="design-md"] .gallery-toolbar,
-    html[data-ui-theme="design-md"] .gen-sub-nav,
-    html[data-ui-theme="design-md"] .batch-progress-wrap,
-    html[data-ui-theme="design-md"] .gal-views-bar{
-      background:rgba(239,227,214,.88);
+    html[data-ui-theme="design-md-light"] input[type=text],
+    html[data-ui-theme="design-md-light"] input[type=password],
+    html[data-ui-theme="design-md-light"] input[type=number],
+    html[data-ui-theme="design-md-light"] textarea,
+    html[data-ui-theme="design-md-light"] select,
+    html[data-ui-theme="design-md-light"] .gallery-search{
+      background:#fbf7f2;
+    }
+    html[data-ui-theme="design-md-dark"] input[type=text],
+    html[data-ui-theme="design-md-dark"] input[type=password],
+    html[data-ui-theme="design-md-dark"] input[type=number],
+    html[data-ui-theme="design-md-dark"] textarea,
+    html[data-ui-theme="design-md-dark"] select,
+    html[data-ui-theme="design-md-dark"] .gallery-search{
+      background:#1f1e1b;
+      color:var(--txt);
+    }
+    html[data-ui-theme="design-md-light"] .left-panel,
+    html[data-ui-theme="design-md-light"] .batch-progress-wrap{
+      background:#181715;
+      color:#faf9f5;
+      border-right-color:#252320;
+      border-bottom-color:#252320;
+    }
+    html[data-ui-theme="design-md-light"] .left-panel .card{
+      background:#1f1e1b;
+      border-color:#35312d;
+      color:#faf9f5;
+    }
+    html[data-ui-theme="design-md-light"] .left-panel .card-title,
+    html[data-ui-theme="design-md-light"] .left-panel label,
+    html[data-ui-theme="design-md-light"] .left-panel .res-note,
+    html[data-ui-theme="design-md-light"] .left-panel .anlas-cost,
+    html[data-ui-theme="design-md-light"] .left-panel .anlas-bal{
+      color:#a09d96;
+    }
+    html[data-ui-theme="design-md-light"] .left-panel input[type=text],
+    html[data-ui-theme="design-md-light"] .left-panel input[type=password],
+    html[data-ui-theme="design-md-light"] .left-panel input[type=number],
+    html[data-ui-theme="design-md-light"] .left-panel textarea,
+    html[data-ui-theme="design-md-light"] .left-panel select{
+      background:#181715;
+      color:#faf9f5;
+      border-color:#35312d;
+    }
+    html[data-ui-theme="design-md-light"] .gallery-toolbar,
+    html[data-ui-theme="design-md-light"] .gen-sub-nav,
+    html[data-ui-theme="design-md-light"] .gal-views-bar{
+      background:rgba(250,249,245,.88);
+    }
+    html[data-ui-theme="design-md-dark"] .left-panel,
+    html[data-ui-theme="design-md-dark"] .gallery-toolbar,
+    html[data-ui-theme="design-md-dark"] .gen-sub-nav,
+    html[data-ui-theme="design-md-dark"] .batch-progress-wrap,
+    html[data-ui-theme="design-md-dark"] .gal-views-bar{
+      background:#181715;
+      border-color:#252320;
+    }
+    html[data-ui-theme="design-md-dark"] .card,
+    html[data-ui-theme="design-md-dark"] .gcard,
+    html[data-ui-theme="design-md-dark"] .note-card,
+    html[data-ui-theme="design-md-dark"] .blend-card,
+    html[data-ui-theme="design-md-dark"] .batch-task-card,
+    html[data-ui-theme="design-md-dark"] .login-card,
+    html[data-ui-theme="design-md-dark"] .modal-box,
+    html[data-ui-theme="design-md-dark"] .char-modal-box,
+    html[data-ui-theme="design-md-dark"] .gal-picker-box,
+    html[data-ui-theme="design-md-dark"] .char-ref-picker-box,
+    html[data-ui-theme="design-md-dark"] .batch-presets-box,
+    html[data-ui-theme="design-md-dark"] .tag-picker-box,
+    html[data-ui-theme="design-md-dark"] .tag-manager-box{
+      background:#181715;
+      border-color:#35312d;
+      box-shadow:var(--shadow-soft);
+    }
+    html[data-ui-theme^="design-md"] .card-title{
+      font-size:1.05rem;
+      text-transform:none;
+      letter-spacing:-.01em;
+      color:var(--txt);
+      margin-bottom:14px;
     }
 
     /* ── LOGIN ── */
@@ -660,7 +773,8 @@
         <span class="theme-picker-label">外觀</span>
         <select id="ui-theme-sel" class="theme-picker-sel" onchange="setUITheme(this.value)">
           <option value="classic">經典</option>
-          <option value="design-md">Claude 風</option>
+          <option value="design-md-light">Claude 淺色</option>
+          <option value="design-md-dark">Claude 深色</option>
         </select>
       </div>
       <div class="anlas-info">
@@ -2079,17 +2193,24 @@ function applyDraftState(draft, isMob) {
 const UI_THEME_KEY = 'nai_ui_theme_v1';
 
 function applyUITheme(theme) {
-  const finalTheme = theme === 'design-md' ? 'design-md' : 'classic';
+  const finalTheme = ['design-md-light', 'design-md-dark', 'classic'].includes(theme)
+    ? theme
+    : (theme === 'design-md' ? 'design-md-light' : 'classic');
   document.documentElement.dataset.uiTheme = finalTheme;
   const sel = document.getElementById('ui-theme-sel');
   if (sel) sel.value = finalTheme;
 }
 
 function setUITheme(theme) {
-  const finalTheme = theme === 'design-md' ? 'design-md' : 'classic';
+  const finalTheme = ['design-md-light', 'design-md-dark', 'classic'].includes(theme)
+    ? theme
+    : (theme === 'design-md' ? 'design-md-light' : 'classic');
   applyUITheme(finalTheme);
   try { localStorage.setItem(UI_THEME_KEY, finalTheme); } catch (_) {}
-  toast(finalTheme === 'design-md' ? '已套用 Claude 風' : '已切回經典版', 'ok');
+  const msg = finalTheme === 'classic'
+    ? '已切回經典版'
+    : (finalTheme === 'design-md-dark' ? '已套用 Claude 深色' : '已套用 Claude 淺色');
+  toast(msg, 'ok');
 }
 
 // ═══════════════════════════════════════════
