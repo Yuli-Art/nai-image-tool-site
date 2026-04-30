@@ -2247,20 +2247,24 @@
               </select>
             </div>
           </div>
-          <div class="row2">
-            <div class="fg">
-              <label>Steps</label>
-              <input id="bt-steps" class="inp" type="number" value="28" min="1" max="50" style="width:100%;">
+            <div class="row2">
+              <div class="fg">
+                <label>Steps</label>
+                <input id="bt-steps" class="inp" type="number" value="28" min="1" max="50" style="width:100%;">
+              </div>
+              <div class="fg">
+                <label>CFG Scale</label>
+                <input id="bt-cfg" class="inp" type="number" value="5" min="1" max="10" step="0.1" style="width:100%;">
+              </div>
             </div>
             <div class="fg">
-              <label>CFG Scale</label>
-              <input id="bt-cfg" class="inp" type="number" value="5" min="1" max="10" step="0.1" style="width:100%;">
+              <label>CFG Rescale</label>
+              <input id="bt-cfg-r" class="inp" type="number" value="0" min="0" max="1" step="0.01" style="width:100%;">
             </div>
-          </div>
-          <div class="row2">
-            <div class="fg">
-              <label>Sampler</label>
-              <select id="bt-sampler" class="sel">
+            <div class="row2">
+              <div class="fg">
+                <label>Sampler</label>
+                <select id="bt-sampler" class="sel">
                 <option value="k_euler_ancestral">Euler Ancestral</option>
                 <option value="k_euler">Euler</option>
                 <option value="k_dpmpp_2s_ancestral">DPM++ 2S a</option>
@@ -2320,19 +2324,23 @@
         以下圖片是從外部上傳（非圖庫或 Vibe 資料庫），<strong>排程無法重現它們</strong>：
       </p>
       <ul id="batch-ext-img-list" style="font-size:.84rem;color:var(--txt2);margin:0 0 14px 0;padding-left:20px;line-height:1.8;"></ul>
-      <p style="font-size:.82rem;color:var(--txt2);margin-bottom:16px;">
-        建議先將它們存入圖庫，再重新加入排程。<br>
-        或點「跳過並繼續」，這些圖片將不會被排程使用。
-      </p>
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
-        <button class="btn btn-s btn-out" data-close
-          onclick="document.getElementById('batch-ext-img-modal').classList.remove('open');_pendingBatchSnapshotForModal=null;">
-          取消
-        </button>
-        <button class="btn btn-p" onclick="proceedBatchWithoutExternals()">
-          跳過並繼續
-        </button>
-      </div>
+        <p style="font-size:.82rem;color:var(--txt2);margin-bottom:16px;">
+          建議先將它們存入圖庫，再重新加入排程。<br>
+          點「存入圖庫後繼續」會自動加上「外部參考圖」tag。<br>
+          或點「跳過並繼續」，這些圖片將不會被排程使用。
+        </p>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button class="btn btn-s btn-out" data-close
+            onclick="document.getElementById('batch-ext-img-modal').classList.remove('open');_pendingBatchSnapshotForModal=null;">
+            取消
+          </button>
+          <button class="btn btn-s" onclick="saveExternalBatchAssetsAndProceed()">
+            存入圖庫後繼續
+          </button>
+          <button class="btn btn-p" onclick="proceedBatchWithoutExternals()">
+            跳過並繼續
+          </button>
+        </div>
     </div>
   </div>
 </div>
@@ -2495,6 +2503,7 @@ let tagManagerTab = 'tags';
 let genMode = 'txt2img';      // 'txt2img' | 'img2img' | 'enhance'
 let srcImgBase64 = null;      // base64 string (no data: prefix) for img2img/enhance
 let srcImgGalleryId = null;  // gallery DB id of srcImgBase64, or null if externally uploaded
+let srcImgMimeType = 'image/png';
 let vibeImages = [];          // [{base64, url, infoExtracted, refStrength}]
 let adv2Open = false;
 let vibeOpen = false;
@@ -4400,9 +4409,11 @@ function renderGenerateDockBatch() {
 function collectGenSnapshot() {
   // Capture all current generate-page settings into a plain object
   const vibeData = vibeImages.map(v => ({
+    galleryId: v.galleryId ?? null,     // DB id from gallery when saved from external upload
     vibeLibId: v.id ?? null,        // DB id from vibe_library (null = external upload)
     base64: v.id ? null : v.base64, // only embed base64 for external vibes
     name: v.name,
+    mimeType: v.mimeType || 'image/png',
     infoExtracted: v.infoExtracted ?? 1.0,
     refStrength: v.refStrength ?? 0.6,
     isPreEncoded: v.isPreEncoded ?? false,
@@ -4412,23 +4423,35 @@ function collectGenSnapshot() {
     prompt:   document.getElementById('prompt')?.value || '',
     negPrompt:document.getElementById('neg-prompt')?.value || '',
     model:    document.getElementById('model')?.value || 'nai-diffusion-4-5-full',
-    res:      document.getElementById('res')?.value || '832x1216',
-    steps:    parseInt(document.getElementById('steps')?.value) || 28,
-    scale:    parseFloat(document.getElementById('cfg')?.value) || 5,
-    sampler:  document.getElementById('sampler')?.value || 'k_euler_ancestral',
-    noiseSch: document.getElementById('noise-sch')?.value || 'karras',
-    seed:     seedRandom ? -1 : coerceSeedValue(document.getElementById('seed')?.value, -1),
-    vibeData,
-    preciseRefGalleryId: preciseRef?.galleryId ?? null,
-    preciseRefMode:      preciseRef?.mode ?? 'character&style',
-    preciseRefStrength:  preciseRef?.strength ?? 1.0,
-    preciseRefFidelity:  preciseRef?.fidelity ?? 1.0,
-    srcImgGalleryId: srcImgGalleryId,
-    genMode: genMode,
-    i2iStrength: parseFloat(document.getElementById('i2i-strength')?.value) || 0.7,
-    i2iNoise:    parseFloat(document.getElementById('i2i-noise')?.value) || 0,
-    enhStrength: parseFloat(document.getElementById('enh-strength')?.value) || 0.5,
-  };
+      res:      document.getElementById('res')?.value || '832x1216',
+      steps:    parseInt(document.getElementById('steps')?.value) || 28,
+      scale:    parseFloat(document.getElementById('cfg')?.value) || 5,
+      cfgR:     parseFloat(document.getElementById('cfg-r')?.value) || 0,
+      sampler:  document.getElementById('sampler')?.value || 'k_euler_ancestral',
+      noiseSch: document.getElementById('noise-sch')?.value || 'karras',
+      seed:     seedRandom ? -1 : coerceSeedValue(document.getElementById('seed')?.value, -1),
+      currentTags: [...currentTags],
+      vibeData,
+      preciseRefGalleryId: preciseRef?.galleryId ?? null,
+      preciseRefData: (!preciseRef?.galleryId && preciseRef?.base64) ? {
+        base64: preciseRef.base64,
+        name: preciseRef.name || '精確參考圖',
+        mimeType: preciseRef.mimeType || 'image/png'
+      } : null,
+      preciseRefMode:      preciseRef?.mode ?? 'character&style',
+      preciseRefStrength:  preciseRef?.strength ?? 1.0,
+      preciseRefFidelity:  preciseRef?.fidelity ?? 1.0,
+      srcImgGalleryId: srcImgGalleryId,
+      srcImgData: (!srcImgGalleryId && srcImgBase64) ? {
+        base64: srcImgBase64,
+        name: '來源圖',
+        mimeType: srcImgMimeType || 'image/png'
+      } : null,
+      genMode: genMode,
+      i2iStrength: parseFloat(document.getElementById('i2i-strength')?.value) || 0.7,
+      i2iNoise:    parseFloat(document.getElementById('i2i-noise')?.value) || 0,
+      enhStrength: parseFloat(document.getElementById('enh-strength')?.value) || 0.5,
+    };
 }
 
 function addCurrentToBatchFromDock() {
@@ -4454,6 +4477,58 @@ function addCurrentToBatchFromDock() {
   }
 }
 
+async function persistExternalSnapshotAssets(snapshot) {
+  if (!snapshot) return;
+  let latestId = null;
+  const externalTags = ['外部參考圖'];
+
+  async function saveExternalImageAsset(base64, name, mimeType, extraTags = []) {
+    if (!base64) return null;
+    const ab = await base64ToBlob(base64, mimeType || 'image/png').arrayBuffer();
+    const meta = {
+      prompt: name || '外部參考圖',
+      _uploaded: true,
+      _mimeType: mimeType || 'image/png',
+      _batchExternalAsset: true
+    };
+    const tags = dedupeTags([...externalTags, ...extraTags]);
+    const id = await dbSaveImage(ab, meta, tags);
+    galleryData.unshift({ id, timestamp: Date.now(), data: ab, metadata: meta, tags });
+    latestId = id;
+    return id;
+  }
+
+  for (const v of snapshot.vibeData || []) {
+    if (!v.vibeLibId && !v.galleryId && v.base64) {
+      v.galleryId = await saveExternalImageAsset(v.base64, v.name || '外部 Vibe', v.mimeType, ['Vibe']);
+      v.base64 = null;
+    }
+  }
+  if (!snapshot.preciseRefGalleryId && snapshot.preciseRefData?.base64) {
+    snapshot.preciseRefGalleryId = await saveExternalImageAsset(
+      snapshot.preciseRefData.base64,
+      snapshot.preciseRefData.name || '精確參考圖',
+      snapshot.preciseRefData.mimeType,
+      ['精確參考']
+    );
+    snapshot.preciseRefData = null;
+  }
+  if (!snapshot.srcImgGalleryId && snapshot.srcImgData?.base64) {
+    snapshot.srcImgGalleryId = await saveExternalImageAsset(
+      snapshot.srcImgData.base64,
+      snapshot.srcImgData.name || '來源圖',
+      snapshot.srcImgData.mimeType,
+      ['排程來源圖']
+    );
+    snapshot.srcImgData = null;
+  }
+
+  if (latestId) {
+    updateGalCount();
+    revealLatestInGenerateDock(latestId, { forceGallery: true });
+  }
+}
+
 function openBatchTaskModalWithSnapshot(snapshot) {
   pendingBatchSnapshot = snapshot;
   openBatchTaskModal(null);
@@ -4464,9 +4539,12 @@ function openBatchTaskModalWithSnapshot(snapshot) {
   document.getElementById('bt-res').value     = snapshot.res;
   document.getElementById('bt-steps').value   = snapshot.steps;
   document.getElementById('bt-cfg').value     = snapshot.scale;
+  document.getElementById('bt-cfg-r').value   = snapshot.cfgR ?? 0;
   document.getElementById('bt-sampler').value = snapshot.sampler;
   document.getElementById('bt-noise-sch').value = snapshot.noiseSch;
   document.getElementById('bt-seed').value    = snapshot.seed;
+  btTags = dedupeTags([...(snapshot.currentTags || [])]);
+  renderBtTagChips();
 }
 
 function showBatchExternalImageModal(externals, snapshot) {
@@ -4491,20 +4569,36 @@ function proceedBatchWithoutExternals() {
   _pendingBatchSnapshotForModal = null;
 
   // Strip external vibes (keep only those with a vibeLibId)
-  snapshot.vibeData = snapshot.vibeData.filter(v => v.vibeLibId !== null);
+  snapshot.vibeData = snapshot.vibeData.filter(v => v.vibeLibId !== null || v.galleryId !== null);
   // Strip external preciseRef
   if (!snapshot.preciseRefGalleryId) {
     snapshot.preciseRefGalleryId = null;
+    snapshot.preciseRefData = null;
     snapshot.preciseRefMode = 'character&style';
     snapshot.preciseRefStrength = 1.0;
     snapshot.preciseRefFidelity = 1.0;
   }
   // Strip external srcImg — fall back to txt2img if mode required an image
   if (!snapshot.srcImgGalleryId && (snapshot.genMode === 'img2img' || snapshot.genMode === 'enhance')) {
+    snapshot.srcImgData = null;
     snapshot.genMode = 'txt2img';
   }
 
   openBatchTaskModalWithSnapshot(snapshot);
+}
+
+async function saveExternalBatchAssetsAndProceed() {
+  if (!_pendingBatchSnapshotForModal) return;
+  const snapshot = _pendingBatchSnapshotForModal;
+  _pendingBatchSnapshotForModal = null;
+  document.getElementById('batch-ext-img-modal').classList.remove('open');
+  try {
+    await persistExternalSnapshotAssets(snapshot);
+    toast('已將外部圖片存入圖庫，並加上「外部參考圖」tag', 'ok');
+    openBatchTaskModalWithSnapshot(snapshot);
+  } catch (e) {
+    toast('存入圖庫失敗：' + e.message, 'err');
+  }
 }
 
 function openGenerateDockFullPage() {
@@ -5010,6 +5104,7 @@ async function onSrcImgDrop(e) {
 }
 async function loadSrcImg(file) {
   srcImgBase64 = await fileToBase64(file);
+  srcImgMimeType = file.type || 'image/png';
   srcImgGalleryId = null; // user-uploaded file, not from gallery
   showSrcImgPreview(URL.createObjectURL(file));
 }
@@ -5025,6 +5120,7 @@ function showSrcImgPreview(url) {
 function clearSrcImg() {
   srcImgBase64 = null;
   srcImgGalleryId = null;
+  srcImgMimeType = 'image/png';
   document.getElementById('src-img-file').value = '';
   document.getElementById('src-img-preview').style.display = 'none';
   document.getElementById('src-img-preview').src = '';
@@ -5034,6 +5130,7 @@ function clearSrcImg() {
 function setCurrentAsImg2Img() {
   if (!lastAB) return;
   srcImgBase64 = arrayBufferToBase64(lastAB);
+  srcImgMimeType = 'image/png';
   srcImgGalleryId = null; // generated image, not from gallery directly
   showSrcImgPreview(URL.createObjectURL(new Blob([lastAB], { type: 'image/png' })));
   setGenMode('img2img');
@@ -5044,6 +5141,7 @@ function setGalleryImgAsImg2Img(id) {
   const img = galleryData.find(i => i.id === id);
   if (!img) return;
   srcImgBase64 = arrayBufferToBase64(img.data);
+  srcImgMimeType = img.metadata?._mimeType || 'image/png';
   srcImgGalleryId = id;
   showSrcImgPreview(URL.createObjectURL(new Blob([img.data], { type: 'image/png' })));
   setGenMode('img2img');
@@ -6654,7 +6752,7 @@ async function addVibeToSession(id) {
   if (vibeImages.find(x => x.base64 === v.base64)) {
     toast(`「${v.name}」已在 Vibe Transfer 清單中`, 'warn'); return;
   }
-  vibeImages.push({ base64: v.base64, url: v.thumbUrl, name: v.name,
+  vibeImages.push({ id: v.id, base64: v.base64, url: v.thumbUrl, name: v.name, mimeType: v.thumbMime || 'image/webp',
     infoExtracted: v.infoExtracted ?? 1.0,
     refStrength: v.strength ?? 0.6, isPreEncoded: v.isPreEncoded });
   renderVibeList();
@@ -6730,7 +6828,7 @@ async function pickerSelectVibe(id) {
     renderVibeList(); updateVibeCount();
     toast(`已移除「${v.name}」`, 'info');
   } else {
-    vibeImages.push({ id: v.id, base64: v.base64, url: v.thumbUrl, name: v.name,
+    vibeImages.push({ id: v.id, galleryId: null, base64: v.base64, url: v.thumbUrl, name: v.name, mimeType: v.thumbMime || 'image/webp',
       infoExtracted: v.infoExtracted ?? 1.0,
       refStrength: v.strength ?? 0.6, isPreEncoded: v.isPreEncoded });
     renderVibeList();
@@ -8251,8 +8349,21 @@ function composeBatchPrompt(task) {
   return task.prompt || task.basePrompt || '';
 }
 
+async function resolveBatchImageAsset(imageId, fallbackName = '圖庫圖片') {
+  if (!imageId) return null;
+  const img = galleryData.find(i => i.id === imageId) || await dbGetImageById(imageId);
+  if (!img?.data) return null;
+  return {
+    id: imageId,
+    arrayBuffer: img.data,
+    base64: arrayBufferToBase64(img.data),
+    mimeType: img.metadata?._mimeType || 'image/png',
+    name: img.metadata?.prompt || `${fallbackName} #${imageId}`
+  };
+}
+
 // ── Core API (no Vibe / PreciseRef / img2img — batch only) ──
-async function callGenerateSimple({ prompt, negPrompt, model, width, height, steps, scale, cfgR, sampler, noiseSch, seed, vibeData, _stopFn, _abortHolder }) {
+async function callGenerateSimple({ prompt, negPrompt, model, width, height, steps, scale, cfgR, sampler, noiseSch, seed, vibeData, preciseRefTask, srcImageTask, genMode = 'txt2img', i2iStrength = 0.7, i2iNoise = 0, enhStrength = 0.5, _stopFn, _abortHolder }) {
   if (!apiToken) throw new Error('未登入');
   const isV4 = model.startsWith('nai-diffusion-4');
   const params = {
@@ -8269,47 +8380,101 @@ async function callGenerateSimple({ prompt, negPrompt, model, width, height, ste
   if (isV4) {
     params.v4_prompt = { caption: { base_caption: prompt, char_captions: [] }, use_coords: false, use_order: false };
     params.v4_negative_prompt = { caption: { base_caption: negPrompt, char_captions: [] }, legacy_uc: false };
-  } else {
-    params.sm = false; params.sm_dyn = false;
-  }
+    } else {
+      params.sm = false; params.sm_dyn = false;
+    }
 
-  // ── Vibe transfer (load from DB if vibeLibId present) ──
-  if (vibeData && vibeData.length > 0) {
-    const resolvedVibes = [];
-    for (const v of vibeData) {
-      let b64 = v.base64 || null;
-      if (!b64 && v.vibeLibId) {
-        try {
-          const rec = await dbGetVibeById(v.vibeLibId);
-          if (rec) b64 = rec.base64 || null;
-        } catch (_) {}
+    let action = 'generate';
+    if (genMode === 'img2img' || genMode === 'enhance') {
+      if (!srcImageTask?.base64) throw new Error(`排程缺少${genMode === 'img2img' ? '圖片變體' : '強化放大'}來源圖`);
+      action = 'img2img';
+      params.image = srcImageTask.base64;
+      params.extra_noise_seed = nextRandomSeed();
+      if (genMode === 'img2img') {
+        params.strength = i2iStrength;
+        params.noise = i2iNoise;
+      } else {
+        params.strength = enhStrength;
+        params.noise = 0;
       }
-      if (b64) resolvedVibes.push({ base64: b64, infoExtracted: v.infoExtracted ?? 1.0, refStrength: v.refStrength ?? 0.6 });
     }
-    if (resolvedVibes.length > 0) {
-      params.reference_image_multiple    = resolvedVibes.map(v => v.base64);
-      params.reference_strength_multiple = resolvedVibes.map(v => v.refStrength);
-      params.reference_information_extracted_multiple = resolvedVibes.map(v => v.infoExtracted);
-      params.add_original_image = false;
-    }
-  }
 
-  const body = { input: prompt, model, action: 'generate', parameters: params };
-  const TIMEOUT = 120000, MAX_RETRY = 2;
-  let resp = null;
-  for (let attempt = 0; attempt <= MAX_RETRY; attempt++) {
-    if (batchShouldStop || (_stopFn && _stopFn())) throw new Error('stopped');
-    const ctrl = new AbortController();
+    // ── Vibe transfer (load from DB if vibeLibId present) ──
+    if (vibeData && vibeData.length > 0) {
+      const resolvedVibes = [];
+      for (const v of vibeData) {
+        let b64 = v.base64 || null;
+        if (!b64 && v.vibeLibId) {
+          try {
+            const rec = await dbGetVibeById(v.vibeLibId);
+            if (rec) b64 = rec.base64 || null;
+          } catch (_) {}
+        }
+        if (!b64 && v.galleryId) {
+          try {
+            const rec = await resolveBatchImageAsset(v.galleryId, v.name || '外部 Vibe');
+            if (rec) b64 = rec.base64;
+          } catch (_) {}
+        }
+        if (b64) resolvedVibes.push({ base64: b64, infoExtracted: v.infoExtracted ?? 1.0, refStrength: v.refStrength ?? 0.6 });
+      }
+      if (resolvedVibes.length > 0) {
+        params.reference_image_multiple    = resolvedVibes.map(v => v.base64);
+        params.reference_strength_multiple = resolvedVibes.map(v => v.refStrength);
+      params.reference_information_extracted_multiple = resolvedVibes.map(v => v.infoExtracted);
+        params.add_original_image = false;
+      }
+    }
+
+    if (preciseRefTask?.base64) {
+      params.director_reference_descriptions = [{
+        caption: { base_caption: preciseRefTask.mode || 'character&style', char_captions: [] },
+        legacy_uc: false
+      }];
+      params.director_reference_information_extracted = [preciseRefTask.fidelity ?? 1.0];
+      params.director_reference_strength_values = [preciseRefTask.strength ?? 1.0];
+      params.director_reference_secondary_strength_values = [0];
+      params.director_reference_images_cached = [{
+        ...(preciseRefTask.cacheKey ? { cache_secret_key: preciseRefTask.cacheKey } : {}),
+        data: 'director_ref_0'
+      }];
+      params.controlnet_strength = 1;
+      params.add_original_image = true;
+      params.use_coords = true;
+      params.normalize_reference_strength_multiple = true;
+      params.stream = 'msgpack';
+      params.v4_prompt = Object.assign({}, params.v4_prompt, { use_coords: true, use_order: true });
+      params.v4_negative_prompt = Object.assign({}, params.v4_negative_prompt, { legacy_uc: false });
+    }
+
+    const body = { input: prompt, model, action, parameters: params };
+    const TIMEOUT = 120000, MAX_RETRY = 2;
+    let resp = null;
+    for (let attempt = 0; attempt <= MAX_RETRY; attempt++) {
+      if (batchShouldStop || (_stopFn && _stopFn())) throw new Error('stopped');
+      const ctrl = new AbortController();
     batchCurrentAbort = ctrl;
     if (_abortHolder) _abortHolder.ctrl = ctrl;
-    const tid = setTimeout(() => ctrl.abort(), TIMEOUT);
-    try {
-      resp = await fetch('https://image.novelai.net/ai/generate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiToken}`, 'Accept': 'application/x-msgpack' },
-        body: JSON.stringify(body), signal: ctrl.signal
-      });
-      clearTimeout(tid);
+      const tid = setTimeout(() => ctrl.abort(), TIMEOUT);
+      try {
+        if (preciseRefTask?.base64) {
+          const fd = new FormData();
+          fd.append('director_ref_0', base64ToBlob(preciseRefTask.base64, preciseRefTask.mimeType || 'image/png'), preciseRefTask.name || 'blob');
+          fd.append('request', new Blob([JSON.stringify(body)], { type: 'application/json' }), 'blob');
+          resp = await fetch('https://image.novelai.net/ai/generate-image-stream', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${apiToken}` },
+            body: fd,
+            signal: ctrl.signal
+          });
+        } else {
+          resp = await fetch('https://image.novelai.net/ai/generate-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiToken}`, 'Accept': 'application/x-msgpack' },
+            body: JSON.stringify(body), signal: ctrl.signal
+          });
+        }
+        clearTimeout(tid);
       if ((resp.status === 429 || (resp.status >= 500 && resp.status <= 599)) && attempt < MAX_RETRY) {
         const wait = resp.status === 429 ? 3000 * (attempt + 1) : 1500 * (attempt + 1);
         await sleep(wait); continue;
@@ -8359,10 +8524,16 @@ async function batchRun() {
       continue;
     }
 
-    const [w, h] = (task.res || '832x1216').split('x').map(Number);
-    const count = task.count || 1;
+      const [w, h] = (task.res || '832x1216').split('x').map(Number);
+      const count = task.count || 1;
+      const preciseRefTask = task.preciseRefGalleryId
+        ? await resolveBatchImageAsset(task.preciseRefGalleryId, '精確參考圖')
+        : null;
+      const srcImageTask = task.srcImgGalleryId
+        ? await resolveBatchImageAsset(task.srcImgGalleryId, '來源圖')
+        : null;
 
-    for (let i = 0; i < count; i++) {
+      for (let i = 0; i < count; i++) {
       // Handle pause
       while (batchPaused && !batchShouldStop) await sleep(300);
       if (batchShouldStop) break;
@@ -8383,19 +8554,30 @@ async function batchRun() {
           width: w, height: h,
           steps:  task.steps   || 28,
           scale:  task.scale   || 5,
-          cfgR:   task.cfgR    || 0,
-          sampler:  task.sampler   || 'k_euler_ancestral',
-          noiseSch: task.noiseSch  || 'karras',
-          seed,
-          vibeData: task.vibeData || [],
-        });
-        const meta = extractPNGMeta(ab);
-        if (!meta.prompt) meta.prompt = composedPrompt;
-        if (!meta.seed) meta.seed = seed;
-        if (!meta.model) meta.model = task.model || 'nai-diffusion-4-5-full';
-        const autoTags = [...(task.tags || [])];
-        if (task.name) autoTags.push(task.name);
-        const id = await dbSaveImage(ab, meta, dedupeTags(autoTags));
+            cfgR:   task.cfgR    || 0,
+            sampler:  task.sampler   || 'k_euler_ancestral',
+            noiseSch: task.noiseSch  || 'karras',
+            seed,
+            vibeData: task.vibeData || [],
+            preciseRefTask: preciseRefTask ? {
+              ...preciseRefTask,
+              mode: task.preciseRefMode || 'character&style',
+              strength: task.preciseRefStrength ?? 1.0,
+              fidelity: task.preciseRefFidelity ?? 1.0
+            } : null,
+            srcImageTask,
+            genMode: task.genMode || 'txt2img',
+            i2iStrength: task.i2iStrength ?? 0.7,
+            i2iNoise: task.i2iNoise ?? 0,
+            enhStrength: task.enhStrength ?? 0.5,
+          });
+          const meta = extractPNGMeta(ab);
+          if (!meta.prompt) meta.prompt = composedPrompt;
+          if (!meta.seed) meta.seed = seed;
+          if (!meta.model) meta.model = task.model || 'nai-diffusion-4-5-full';
+          const autoTags = dedupeTags([...(task.currentTags || []), ...(task.tags || [])]);
+          if (task.name) autoTags.push(task.name);
+          const id = await dbSaveImage(ab, meta, dedupeTags(autoTags));
         galleryData.unshift({ id, timestamp: Date.now(), data: ab, metadata: meta, tags: dedupeTags(autoTags) });
         updateGalCount();
         batchDoneImages++;
@@ -8546,35 +8728,37 @@ function openBatchTaskModal(idx) {
   btEditId = idx;
   btTags = [];
 
-  if (idx !== null && batchTasks[idx]) {
-    const t = batchTasks[idx];
-    document.getElementById('bt-modal-title').textContent = '編輯任務';
-    document.getElementById('bt-name').value    = t.name    || '';
-    document.getElementById('bt-prompt').value  = t.prompt || t.basePrompt || '';
+    if (idx !== null && batchTasks[idx]) {
+      const t = batchTasks[idx];
+      document.getElementById('bt-modal-title').textContent = '編輯任務';
+      document.getElementById('bt-name').value    = t.name    || '';
+      document.getElementById('bt-prompt').value  = t.prompt || t.basePrompt || '';
     document.getElementById('bt-neg').value     = t.negPrompt  || '';
     document.getElementById('bt-model').value   = t.model   || 'nai-diffusion-4-5-full';
-    document.getElementById('bt-res').value     = t.res     || '832x1216';
-    document.getElementById('bt-steps').value   = t.steps   || 28;
-    document.getElementById('bt-cfg').value     = t.scale   || 5;
-    document.getElementById('bt-sampler').value = t.sampler || 'k_euler_ancestral';
-    document.getElementById('bt-noise-sch').value = t.noiseSch || 'karras';
-    document.getElementById('bt-seed').value    = t.seed    ?? -1;
-    document.getElementById('bt-count').value   = t.count   || 1;
-    btTags = [...(t.tags || [])];
+      document.getElementById('bt-res').value     = t.res     || '832x1216';
+      document.getElementById('bt-steps').value   = t.steps   || 28;
+      document.getElementById('bt-cfg').value     = t.scale   || 5;
+      document.getElementById('bt-cfg-r').value   = t.cfgR    ?? 0;
+      document.getElementById('bt-sampler').value = t.sampler || 'k_euler_ancestral';
+      document.getElementById('bt-noise-sch').value = t.noiseSch || 'karras';
+      document.getElementById('bt-seed').value    = t.seed    ?? -1;
+      document.getElementById('bt-count').value   = t.count   || 1;
+      btTags = [...(t.tags || [])];
   } else {
     document.getElementById('bt-modal-title').textContent = '新增任務';
     document.getElementById('bt-name').value    = '';
     document.getElementById('bt-prompt').value  = '';
     document.getElementById('bt-neg').value     = '';
     document.getElementById('bt-model').value   = 'nai-diffusion-4-5-full';
-    document.getElementById('bt-res').value     = '832x1216';
-    document.getElementById('bt-steps').value   = 28;
-    document.getElementById('bt-cfg').value     = 5;
-    document.getElementById('bt-sampler').value = 'k_euler_ancestral';
-    document.getElementById('bt-noise-sch').value = 'karras';
-    document.getElementById('bt-seed').value    = -1;
-    document.getElementById('bt-count').value   = 1;
-    btTags = [];
+      document.getElementById('bt-res').value     = '832x1216';
+      document.getElementById('bt-steps').value   = 28;
+      document.getElementById('bt-cfg').value     = 5;
+      document.getElementById('bt-cfg-r').value   = 0;
+      document.getElementById('bt-sampler').value = 'k_euler_ancestral';
+      document.getElementById('bt-noise-sch').value = 'karras';
+      document.getElementById('bt-seed').value    = -1;
+      document.getElementById('bt-count').value   = 1;
+      btTags = [];
   }
 
   renderBtTagChips();
@@ -8887,9 +9071,12 @@ function btImportGenParams() {
   document.getElementById('bt-res').value       = document.getElementById('res').value;
   document.getElementById('bt-steps').value     = document.getElementById('steps').value;
   document.getElementById('bt-cfg').value       = document.getElementById('cfg').value;
+  document.getElementById('bt-cfg-r').value     = document.getElementById('cfg-r').value;
   document.getElementById('bt-sampler').value   = document.getElementById('sampler').value;
   document.getElementById('bt-noise-sch').value = document.getElementById('noise-sch').value;
   document.getElementById('bt-seed').value      = seedRandom ? -1 : coerceSeedValue(document.getElementById('seed').value, -1);
+  btTags = dedupeTags([...(currentTags || []), ...btTags]);
+  renderBtTagChips();
   toast('已匯入目前生圖頁參數', 'ok');
 }
 
@@ -8900,28 +9087,31 @@ function saveBatchTask() {
     name:     document.getElementById('bt-name').value.trim() || '未命名任務',
     prompt:   document.getElementById('bt-prompt').value.trim(),
     negPrompt:document.getElementById('bt-neg').value.trim(),
-    model:    document.getElementById('bt-model').value,
-    res:      document.getElementById('bt-res').value,
-    steps:    parseInt(document.getElementById('bt-steps').value) || 28,
-    scale:    parseFloat(document.getElementById('bt-cfg').value) || 5,
-    cfgR:     0,
-    sampler:  document.getElementById('bt-sampler').value,
-    noiseSch: document.getElementById('bt-noise-sch').value,
-    seed:     coerceSeedValue(document.getElementById('bt-seed').value, -1),
-    count:    parseInt(document.getElementById('bt-count').value) || 1,
-    tags:     [...btTags],
-    done:     false,
-    // ── Snapshot fields (populated when adding from dock) ──
-    vibeData:            snap.vibeData            ?? (batchTasks[btEditId]?.vibeData ?? []),
-    preciseRefGalleryId: snap.preciseRefGalleryId ?? (batchTasks[btEditId]?.preciseRefGalleryId ?? null),
-    preciseRefMode:      snap.preciseRefMode      ?? (batchTasks[btEditId]?.preciseRefMode ?? 'character&style'),
-    preciseRefStrength:  snap.preciseRefStrength  ?? (batchTasks[btEditId]?.preciseRefStrength ?? 1.0),
-    preciseRefFidelity:  snap.preciseRefFidelity  ?? (batchTasks[btEditId]?.preciseRefFidelity ?? 1.0),
-    srcImgGalleryId:     snap.srcImgGalleryId     ?? (batchTasks[btEditId]?.srcImgGalleryId ?? null),
-    genMode:             snap.genMode             ?? (batchTasks[btEditId]?.genMode ?? 'txt2img'),
-    i2iStrength:         snap.i2iStrength         ?? (batchTasks[btEditId]?.i2iStrength ?? 0.7),
-    i2iNoise:            snap.i2iNoise            ?? (batchTasks[btEditId]?.i2iNoise ?? 0),
-    enhStrength:         snap.enhStrength         ?? (batchTasks[btEditId]?.enhStrength ?? 0.5),
+      model:    document.getElementById('bt-model').value,
+      res:      document.getElementById('bt-res').value,
+      steps:    parseInt(document.getElementById('bt-steps').value) || 28,
+      scale:    parseFloat(document.getElementById('bt-cfg').value) || 5,
+      cfgR:     parseFloat(document.getElementById('bt-cfg-r').value) || 0,
+      sampler:  document.getElementById('bt-sampler').value,
+      noiseSch: document.getElementById('bt-noise-sch').value,
+      seed:     coerceSeedValue(document.getElementById('bt-seed').value, -1),
+      count:    parseInt(document.getElementById('bt-count').value) || 1,
+      tags:     [...btTags],
+      done:     false,
+      // ── Snapshot fields (populated when adding from dock) ──
+      currentTags:         snap.currentTags         ?? (batchTasks[btEditId]?.currentTags ?? []),
+      vibeData:            snap.vibeData            ?? (batchTasks[btEditId]?.vibeData ?? []),
+      preciseRefGalleryId: snap.preciseRefGalleryId ?? (batchTasks[btEditId]?.preciseRefGalleryId ?? null),
+      preciseRefData:      snap.preciseRefData      ?? (batchTasks[btEditId]?.preciseRefData ?? null),
+      preciseRefMode:      snap.preciseRefMode      ?? (batchTasks[btEditId]?.preciseRefMode ?? 'character&style'),
+      preciseRefStrength:  snap.preciseRefStrength  ?? (batchTasks[btEditId]?.preciseRefStrength ?? 1.0),
+      preciseRefFidelity:  snap.preciseRefFidelity  ?? (batchTasks[btEditId]?.preciseRefFidelity ?? 1.0),
+      srcImgGalleryId:     snap.srcImgGalleryId     ?? (batchTasks[btEditId]?.srcImgGalleryId ?? null),
+      srcImgData:          snap.srcImgData          ?? (batchTasks[btEditId]?.srcImgData ?? null),
+      genMode:             snap.genMode             ?? (batchTasks[btEditId]?.genMode ?? 'txt2img'),
+      i2iStrength:         snap.i2iStrength         ?? (batchTasks[btEditId]?.i2iStrength ?? 0.7),
+      i2iNoise:            snap.i2iNoise            ?? (batchTasks[btEditId]?.i2iNoise ?? 0),
+      enhStrength:         snap.enhStrength         ?? (batchTasks[btEditId]?.enhStrength ?? 0.5),
   };
 
   if (btEditId !== null) batchTasks[btEditId] = task;
