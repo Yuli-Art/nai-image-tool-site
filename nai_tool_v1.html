@@ -112,6 +112,7 @@
       color:var(--txt);
     }
     html[data-ui-theme="design-md-dark"] .left-panel,
+    html[data-ui-theme="design-md-dark"] .generate-dock,
     html[data-ui-theme="design-md-dark"] .gallery-toolbar,
     html[data-ui-theme="design-md-dark"] .gen-sub-nav,
     html[data-ui-theme="design-md-dark"] .batch-progress-wrap,
@@ -120,6 +121,8 @@
       border-color:#252320;
     }
     html[data-ui-theme="design-md-dark"] .card,
+    html[data-ui-theme="design-md-dark"] .dock-gallery-card,
+    html[data-ui-theme="design-md-dark"] .dock-record,
     html[data-ui-theme="design-md-dark"] .gcard,
     html[data-ui-theme="design-md-dark"] .note-card,
     html[data-ui-theme="design-md-dark"] .blend-card,
@@ -136,12 +139,25 @@
       border-color:#35312d;
       box-shadow:var(--shadow-soft);
     }
+    html[data-ui-theme="design-md-dark"] .generate-dock-toolbar{background:#1b1917;}
+    html[data-ui-theme="design-md-dark"] .generate-dock-tab.active{background:rgba(204,120,92,.12);}
+    html[data-ui-theme="design-md-dark"] .generate-dock-search,
+    html[data-ui-theme="design-md-dark"] .dock-gallery-card,
+    html[data-ui-theme="design-md-dark"] .dock-record{background:#1f1e1b;}
+    html[data-ui-theme="design-md-dark"] .generate-dock-title{
+      font-family:var(--font-display);
+      font-weight:400;
+      letter-spacing:-.02em;
+    }
     html[data-ui-theme^="design-md"] .card-title{
       font-size:1.05rem;
       text-transform:none;
       letter-spacing:-.01em;
       color:var(--txt);
       margin-bottom:14px;
+    }
+    @media(max-width:1380px){
+      #page-generate.active{grid-template-columns:320px minmax(340px,1fr) 360px;}
     }
 
     /* ── LOGIN ── */
@@ -211,13 +227,52 @@
     /* Pages */
     .page{display:none;flex:1;}
     .page.active{display:flex;flex-direction:column;}
-    #page-generate.active{flex-direction:row;}
+    #page-generate.active{
+      display:grid;
+      grid-template-columns:360px minmax(420px,1fr) 420px;
+      align-items:stretch;
+      flex:1;
+      min-height:0;
+    }
 
     /* ── GENERATE PAGE ── */
-    .left-panel{width:360px;min-width:360px;background:var(--bg2);border-right:1px solid var(--border);
+    .left-panel{width:auto;min-width:0;background:var(--bg2);border-right:1px solid var(--border);
       overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px;}
-    .right-panel{flex:1;padding:20px;display:flex;flex-direction:column;align-items:center;
+    .generate-main-panel{padding:20px;display:flex;flex-direction:column;align-items:center;
       justify-content:flex-start;overflow-y:auto;gap:14px;}
+    .generate-main-shell{width:100%;max-width:760px;display:flex;flex-direction:column;align-items:center;gap:14px;}
+    .generate-dock{background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+    .generate-dock-head{padding:18px 18px 10px;border-bottom:1px solid var(--border);background:var(--bg2);}
+    .generate-dock-title{font-size:1.02rem;font-weight:700;}
+    .generate-dock-sub{font-size:.76rem;color:var(--txt2);line-height:1.55;margin-top:4px;}
+    .generate-dock-tabs{display:flex;gap:8px;flex-wrap:wrap;padding:12px 18px 10px;border-bottom:1px solid var(--border);}
+    .generate-dock-tab{background:transparent;border:1px solid var(--border);color:var(--txt2);cursor:pointer;
+      padding:7px 12px;border-radius:10px;font-size:.78rem;font-weight:600;font-family:inherit;transition:all .15s;}
+    .generate-dock-tab.active{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
+    .generate-dock-toolbar{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;background:rgba(0,0,0,.06);}
+    .generate-dock-search{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;
+      color:var(--txt);padding:8px 12px;font-size:.84rem;outline:none;font-family:inherit;}
+    .generate-dock-search:focus{border-color:var(--accent);}
+    .generate-dock-body{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px;}
+    .generate-dock-empty{border:1px dashed var(--border);border-radius:14px;padding:28px 18px;text-align:center;color:var(--txt2);background:rgba(255,255,255,.02);}
+    .generate-dock-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+    .dock-gallery-card{background:var(--bg);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:border-color .15s,transform .15s;}
+    .dock-gallery-card:hover{border-color:var(--accent);transform:translateY(-2px);}
+    .dock-gallery-card img{width:100%;aspect-ratio:5/7;object-fit:cover;display:block;background:var(--bg3);}
+    .dock-gallery-meta{padding:9px 10px;display:flex;flex-direction:column;gap:6px;}
+    .dock-gallery-tags{display:flex;flex-wrap:wrap;gap:4px;min-height:22px;}
+    .dock-gallery-time{font-size:.72rem;color:var(--txt2);}
+    .generate-dock-list{display:flex;flex-direction:column;gap:12px;}
+    .dock-record{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:12px;display:flex;gap:12px;align-items:flex-start;}
+    .dock-record-media{width:72px;min-width:72px;height:92px;border-radius:12px;background:var(--bg3);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--txt2);}
+    .dock-record-media img{width:100%;height:100%;object-fit:cover;display:block;}
+    .dock-record-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
+    .dock-record-title{font-size:.92rem;font-weight:700;line-height:1.35;color:var(--txt);}
+    .dock-record-sub{font-size:.74rem;color:var(--txt2);}
+    .dock-record-desc{font-size:.8rem;line-height:1.6;color:var(--txt);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
+    .dock-record-tags{display:flex;flex-wrap:wrap;gap:4px;}
+    .dock-record-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;}
+    .dock-record-actions .btn{padding:6px 10px;font-size:.76rem;}
     .card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;}
     .card-title{font-size:.72rem;font-weight:700;color:var(--txt2);text-transform:uppercase;
       letter-spacing:.06em;margin-bottom:12px;}
@@ -694,9 +749,10 @@
       *::-webkit-scrollbar{width:8px;height:8px;}
       *::-webkit-scrollbar-thumb{border-width:2px;}
       .gal-views-bar::-webkit-scrollbar{height:6px;}
-      #page-generate.active{flex-direction:column;}
+      #page-generate.active{display:flex;flex-direction:column;}
       .left-panel{width:100%;min-width:unset;border-right:none;border-bottom:1px solid var(--border);}
-      .right-panel{padding:14px;}
+      .generate-main-panel{padding:14px;}
+      .generate-dock{display:none;}
       .modal-box{flex-direction:column;}
       .modal-info{width:100%;min-width:unset;border-left:none;border-top:1px solid var(--border);}
       .anlas-info{display:none;}
@@ -1002,26 +1058,41 @@
     </div>
 
     <!-- Right: result -->
-    <div class="right-panel">
-      <div class="result-area">
-        <div id="result-ph" class="result-placeholder">
-          <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
-            <rect x="3" y="3" width="18" height="18" rx="2.5"/>
-            <circle cx="8.5" cy="8.5" r="1.5"/>
-            <polyline points="21 15 16 10 5 21"/>
-          </svg>
-          <span>生成的圖片會顯示在這裡</span>
-        </div>
-        <img id="result-img" alt="生成結果">
-        <div id="status-bar" class="status-bar"></div>
-        <div id="result-actions" class="result-actions">
-          <button class="btn btn-p" onclick="downloadCurrent()">⬇ 下載圖片</button>
-          <button class="btn btn-s" onclick="copyCurrentPrompt()">📋 複製 Prompt</button>
-          <button class="btn btn-s" onclick="setCurrentAsImg2Img()">🔄 設為來源圖</button>
-          <button class="btn btn-s" onclick="showPage('gallery')">📁 查看圖庫</button>
+    <div class="generate-main-panel">
+      <div class="generate-main-shell">
+        <div class="result-area">
+          <div id="result-ph" class="result-placeholder">
+            <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+              <rect x="3" y="3" width="18" height="18" rx="2.5"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <span>生成的圖片會顯示在這裡</span>
+          </div>
+          <img id="result-img" alt="生成結果">
+          <div id="status-bar" class="status-bar"></div>
+          <div id="result-actions" class="result-actions">
+            <button class="btn btn-p" onclick="downloadCurrent()">⬇ 下載圖片</button>
+            <button class="btn btn-s" onclick="copyCurrentPrompt()">📋 複製 Prompt</button>
+            <button class="btn btn-s" onclick="setCurrentAsImg2Img()">🔄 設為來源圖</button>
+            <button class="btn btn-s" onclick="showPage('gallery')">📁 查看圖庫</button>
+          </div>
         </div>
       </div>
     </div>
+
+    <aside class="generate-dock" id="generate-dock">
+      <div class="generate-dock-head">
+        <div class="generate-dock-title">工作資料庫</div>
+        <div class="generate-dock-sub">右側集中放圖庫、角色庫、風格庫與筆記本。桌機版可以一邊生圖，一邊查資料與插入內容。</div>
+      </div>
+      <div class="generate-dock-tabs" id="generate-dock-tabs"></div>
+      <div class="generate-dock-toolbar">
+        <input type="search" id="generate-dock-search" class="generate-dock-search" placeholder="搜尋目前分頁..." oninput="renderGenerateDock()">
+        <button class="btn btn-s btn-out" type="button" onclick="openGenerateDockFullPage()">展開頁面</button>
+      </div>
+      <div class="generate-dock-body" id="generate-dock-body"></div>
+    </aside>
   </div>
 
   <!-- ── GALLERY PAGE ── -->
@@ -2116,6 +2187,7 @@ let filteredData = [];      // after filter/search
 let activeTagFilters = new Set();
 let selectMode = false;
 let selectedIds = new Set();
+let generateDockTab = 'gallery';
 
 // Modal state
 let modalImageId = null;
@@ -2273,6 +2345,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (!isManualResizeTextarea(ta)) {
       ta.addEventListener('input', () => autoResize(ta));
       autoResize(ta);
+    }
+  });
+  window.addEventListener('resize', () => {
+    if (document.getElementById('page-generate')?.classList.contains('active')) {
+      renderGenerateDock();
     }
   });
 
@@ -3358,6 +3435,7 @@ async function showApp() {
   await loadCharacterData();
   await loadArtistData();
   await loadNotesData();
+  renderGenerateDock();
   // Bind A/B tag inline input
   bindInlineTagInput({
     inputId: 'ab-tag-in', ddId: 'ab-tag-dd',
@@ -3467,6 +3545,7 @@ function showPage(page) {
   if (page === 'generate') {
     show('page-generate'); activateTab('tab-gen');
     const el = document.getElementById('gen-sub-gen'); if (el) el.classList.add('active');
+    renderGenerateDock();
   } else if (page === 'gallery') {
     show('page-gallery'); activateTab('tab-gal'); renderGallery();
   } else if (page === 'vibe') {
@@ -3488,6 +3567,218 @@ function showPage(page) {
     show('page-gdrive'); activateTab('tab-gdrive-page');
     initGdrivePage();
   }
+}
+
+const GENERATE_DOCK_PAGE_MAP = {
+  gallery: 'gallery',
+  characters: 'characters',
+  artists: 'artists',
+  notes: 'notes'
+};
+
+function isGenerateDockAvailable() {
+  return window.innerWidth > 768 && !!document.getElementById('generate-dock');
+}
+
+function refreshGenerateDockIfVisible() {
+  if (!isGenerateDockAvailable()) return;
+  if (!document.getElementById('page-generate')?.classList.contains('active')) return;
+  renderGenerateDock();
+}
+
+function getGenerateDockSearchPlaceholder() {
+  return {
+    gallery: '搜尋圖庫 prompt / tag...',
+    characters: '搜尋角色名稱 / 作品 / prompt...',
+    artists: '搜尋繪師名稱 / artist tag...',
+    notes: '搜尋片段 / 描述 / tag...'
+  }[generateDockTab] || '搜尋目前分頁...';
+}
+
+function setGenerateDockTab(tab) {
+  generateDockTab = tab;
+  const search = document.getElementById('generate-dock-search');
+  if (search) search.placeholder = getGenerateDockSearchPlaceholder();
+  renderGenerateDock();
+}
+
+function openGenerateDockFullPage() {
+  showPage(GENERATE_DOCK_PAGE_MAP[generateDockTab] || 'gallery');
+}
+
+function buildGenerateDockTabs() {
+  const wrap = document.getElementById('generate-dock-tabs');
+  if (!wrap) return;
+  const defs = [
+    ['gallery', `圖庫 ${galleryData.length ? `(${galleryData.length})` : ''}`],
+    ['characters', `角色庫 ${characterData.length ? `(${characterData.length})` : ''}`],
+    ['artists', `風格庫 ${(artistData.length + blendData.length) ? `(${artistData.length + blendData.length})` : ''}`],
+    ['notes', `筆記本 ${notesData.length ? `(${notesData.length})` : ''}`]
+  ];
+  wrap.innerHTML = defs.map(([key, label]) =>
+    `<button class="generate-dock-tab ${generateDockTab===key?'active':''}" onclick="setGenerateDockTab('${key}')">${label}</button>`
+  ).join('');
+}
+
+function openModalFromDock(id) {
+  const img = galleryData.find(x => x.id === id);
+  if (!img) return;
+  const url = URL.createObjectURL(new Blob([img.data], { type:'image/png' }));
+  openModal(id, url);
+}
+
+function insertTextIntoGeneratePrompt(text, target='prompt') {
+  const el = document.getElementById(target);
+  if (!el || !text) return;
+  insertAtCursor(el, text);
+  toast(`已插入到${target==='neg-prompt'?'負向':'正向'} prompt`, 'ok');
+}
+
+function renderGenerateDockGallery(q) {
+  const items = galleryData
+    .filter(img => {
+      if (!q) return true;
+      const meta = img.metadata || {};
+      return (meta.prompt||'').toLowerCase().includes(q) || (img.tags||[]).some(t => t.toLowerCase().includes(q));
+    })
+    .sort((a,b) => (b.timestamp||0) - (a.timestamp||0))
+    .slice(0, 24);
+  if (!items.length) {
+    return `<div class="generate-dock-empty">${galleryData.length ? '沒有符合條件的圖片' : '圖庫還沒有圖片。生完圖後會自動出現在這裡。'}</div>`;
+  }
+  return `<div class="generate-dock-grid">${items.map(img => {
+    const url = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
+    const tags = (img.tags||[]).slice(0,3).map(t => `<span class="gcard-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
+    const time = new Date(img.timestamp).toLocaleDateString('zh-TW',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    return `<div class="dock-gallery-card" onclick="openModalFromDock(${img.id})">
+      <img src="${url}" loading="lazy" alt="">
+      <div class="dock-gallery-meta">
+        <div class="dock-gallery-tags">${tags}</div>
+        <div class="dock-gallery-time">${time}</div>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderGenerateDockCharacters(q) {
+  const items = characterData
+    .filter(c => !q || c.name.toLowerCase().includes(q) || (c.prompt||'').toLowerCase().includes(q) || (c.seriesName||'').toLowerCase().includes(q))
+    .sort((a,b) => (b.timestamp||0) - (a.timestamp||0))
+    .slice(0, 18);
+  if (!items.length) {
+    return `<div class="generate-dock-empty">${characterData.length ? '沒有符合條件的角色' : '角色庫目前是空的。'}</div>`;
+  }
+  return `<div class="generate-dock-list">${items.map(c => {
+    const media = c._thumbUrl ? `<img src="${c._thumbUrl}" alt="">` : '👤';
+    const tags = (c.tags||[]).slice(0,3).map(t => `<span class="char-card-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
+    return `<div class="dock-record">
+      <div class="dock-record-media">${media}</div>
+      <div class="dock-record-main">
+        <div class="dock-record-title">${esc(c.name)}</div>
+        <div class="dock-record-sub">${esc(c.seriesName || '角色庫')}</div>
+        <div class="dock-record-desc">${esc(c.prompt || '尚未填寫角色 Prompt')}</div>
+        <div class="dock-record-tags">${tags}</div>
+        <div class="dock-record-actions">
+          <button class="btn btn-s" type="button" data-text="${esc(c.prompt || '')}" onclick="insertTextIntoGeneratePrompt(this.dataset.text)">插入正向</button>
+          <button class="btn btn-s btn-out" type="button" onclick="openCharEditModal(${c.id})">查看角色</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderGenerateDockArtists(q) {
+  const artistItems = artistData
+    .filter(a => !q || a.name.toLowerCase().includes(q) || (a.artistTag||'').toLowerCase().includes(q) || (a.tags||[]).some(t => t.toLowerCase().includes(q)))
+    .sort((a,b) => (b.timestamp||0) - (a.timestamp||0))
+    .slice(0, 16);
+  const blendItems = blendData
+    .filter(b => {
+      const prompt = renderBlendPrompt(b.artistEntries || []).toLowerCase();
+      return !q || deriveBlendName(b).toLowerCase().includes(q) || prompt.includes(q);
+    })
+    .sort((a,b) => (b.timestamp||0) - (a.timestamp||0))
+    .slice(0, 10);
+  const blocks = [];
+  artistItems.forEach(a => {
+    const media = a._previewUrl ? `<img src="${a._previewUrl}" alt="">` : '🎨';
+    const tags = (a.tags||[]).slice(0,3).map(t => `<span class="char-card-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
+    blocks.push(`<div class="dock-record">
+      <div class="dock-record-media">${media}</div>
+      <div class="dock-record-main">
+        <div class="dock-record-title">${esc(a.name)}</div>
+        <div class="dock-record-sub">${esc(a.artistTag || '未設定 artist tag')}</div>
+        <div class="dock-record-tags">${tags}</div>
+        <div class="dock-record-actions">
+          <button class="btn btn-s" type="button" data-text="${esc(a.artistTag || '')}" onclick="insertTextIntoGeneratePrompt(this.dataset.text)">插入正向</button>
+          <button class="btn btn-s btn-out" type="button" onclick="openArtistEditModal(${a.id})">查看風格</button>
+        </div>
+      </div>
+    </div>`);
+  });
+  blendItems.forEach(b => {
+    const prompt = renderBlendPrompt(b.artistEntries || []);
+    blocks.push(`<div class="dock-record">
+      <div class="dock-record-media">🧪</div>
+      <div class="dock-record-main">
+        <div class="dock-record-title">${esc(deriveBlendName(b))}</div>
+        <div class="dock-record-sub">混搭記錄</div>
+        <div class="dock-record-desc">${esc(prompt || '尚未設定混搭條目')}</div>
+        <div class="dock-record-actions">
+          <button class="btn btn-s" type="button" data-text="${esc(prompt || '')}" onclick="insertTextIntoGeneratePrompt(this.dataset.text)">插入正向</button>
+          <button class="btn btn-s btn-out" type="button" onclick="openBlendDetailModal(${b.id})">查看混搭</button>
+        </div>
+      </div>
+    </div>`);
+  });
+  if (!blocks.length) {
+    return `<div class="generate-dock-empty">${artistData.length || blendData.length ? '沒有符合條件的風格或混搭' : '風格庫目前是空的。'}</div>`;
+  }
+  return `<div class="generate-dock-list">${blocks.join('')}</div>`;
+}
+
+function renderGenerateDockNotes(q) {
+  const items = notesData
+    .filter(n => !q || (n.fragment||'').toLowerCase().includes(q) || (n.description||'').toLowerCase().includes(q) || (n.tags||[]).some(t => t.toLowerCase().includes(q)))
+    .sort((a,b) => (b.timestamp||0) - (a.timestamp||0))
+    .slice(0, 18);
+  if (!items.length) {
+    return `<div class="generate-dock-empty">${notesData.length ? '沒有符合條件的筆記' : '筆記本目前是空的。'}</div>`;
+  }
+  return `<div class="generate-dock-list">${items.map(n => {
+    const catLabel = NOTE_CATEGORIES[n.category] || n.category || '片段';
+    const tags = (n.tags||[]).slice(0,3).map(t => `<span class="char-card-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
+    return `<div class="dock-record">
+      <div class="dock-record-media">📓</div>
+      <div class="dock-record-main">
+        <div class="dock-record-title">${esc(catLabel)}</div>
+        <div class="dock-record-sub">${esc(n.description || 'Prompt 片段')}</div>
+        <div class="dock-record-desc">${esc(n.fragment || '')}</div>
+        <div class="dock-record-tags">${tags}</div>
+        <div class="dock-record-actions">
+          <button class="btn btn-s" type="button" onclick="insertNoteToPrompt(${n.id},'pos')">插入正向</button>
+          <button class="btn btn-s" type="button" onclick="insertNoteToPrompt(${n.id},'neg')">插入負向</button>
+          <button class="btn btn-s btn-out" type="button" onclick="openNoteEditModal(${n.id})">查看筆記</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+async function renderGenerateDock() {
+  if (!isGenerateDockAvailable()) return;
+  buildGenerateDockTabs();
+  const search = document.getElementById('generate-dock-search');
+  const body = document.getElementById('generate-dock-body');
+  if (!search || !body) return;
+  search.placeholder = getGenerateDockSearchPlaceholder();
+  const q = (search.value || '').trim().toLowerCase();
+  let html = '';
+  if (generateDockTab === 'gallery') html = renderGenerateDockGallery(q);
+  else if (generateDockTab === 'characters') html = renderGenerateDockCharacters(q);
+  else if (generateDockTab === 'artists') html = renderGenerateDockArtists(q);
+  else html = renderGenerateDockNotes(q);
+  body.innerHTML = html;
 }
 
 // ═══════════════════════════════════════════
@@ -4344,6 +4635,8 @@ async function loadArtistData() {
 
 function updateArtistLibCount(n) {
   document.getElementById('artist-lib-count').textContent = n ? `(${n})` : '';
+  buildGenerateDockTabs();
+  refreshGenerateDockIfVisible();
 }
 
 let artistActiveStyle = '';
@@ -4393,6 +4686,7 @@ async function renderArtistPage() {
 
   // Render blends
   renderBlendGrid();
+  refreshGenerateDockIfVisible();
 }
 
 function buildArtistFilterRow() {
@@ -4854,6 +5148,8 @@ async function loadCharacterData() {
 
 function updateCharLibCount(n) {
   document.getElementById('char-lib-count').textContent = n ? `(${n})` : '';
+  buildGenerateDockTabs();
+  refreshGenerateDockIfVisible();
 }
 
 async function renderCharPage() {
@@ -4877,6 +5173,7 @@ async function renderCharPage() {
       <div style="font-size:1.5rem;margin-bottom:8px;">👤</div>
       <span>${characterData.length ? '沒有符合條件的角色' : '角色庫是空的，點「＋ 新增角色」開始建立'}</span>
     </div>`;
+    refreshGenerateDockIfVisible();
     return;
   }
 
@@ -4898,6 +5195,7 @@ async function renderCharPage() {
       </div>
     </div>`;
   }).join('');
+  refreshGenerateDockIfVisible();
 }
 
 let charActiveSeries = '';
@@ -5874,6 +6172,8 @@ async function loadGallery() {
 
 function updateGalCount() {
   document.getElementById('gal-count').textContent = galleryData.length ? `(${galleryData.length})` : '';
+  buildGenerateDockTabs();
+  refreshGenerateDockIfVisible();
 }
 
 function buildTagFilterList() {
@@ -5931,6 +6231,7 @@ function renderGallery() {
       </svg>
       <span>${galleryData.length ? '沒有符合條件的圖片' : '圖庫是空的，生完圖會自動存入這裡'}</span>
     </div>`;
+    refreshGenerateDockIfVisible();
     return;
   }
   grid.innerHTML = filteredData.map(img => {
@@ -5947,6 +6248,7 @@ function renderGallery() {
       </div>
     </div>`;
   }).join('');
+  refreshGenerateDockIfVisible();
 }
 
 function filterGallery_noRender() {
@@ -6471,6 +6773,8 @@ async function loadNotesData() {
 
 function updateNotesCount(n) {
   document.getElementById('notes-count').textContent = n ? `(${n})` : '';
+  buildGenerateDockTabs();
+  refreshGenerateDockIfVisible();
 }
 
 // ── Render ──
@@ -6495,6 +6799,7 @@ function renderNotesPage() {
       <div style="font-size:1.5rem;margin-bottom:8px;">📓</div>
       <span>${notesData.length ? '沒有符合條件的筆記' : '筆記本是空的，點「＋ 新增筆記」開始記錄 prompt 技巧'}</span>
     </div>`;
+    refreshGenerateDockIfVisible();
     return;
   }
 
@@ -6534,6 +6839,7 @@ function renderNotesPage() {
       </div>
     </div>`;
   }).join('');
+  refreshGenerateDockIfVisible();
 }
 
 function buildNotesCategoryFilter() {
