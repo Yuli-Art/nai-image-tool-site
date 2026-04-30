@@ -407,6 +407,18 @@
     .generate-dock-head{padding:18px 18px 10px;border-bottom:1px solid var(--border);background:var(--bg2);}
     .generate-dock-title{font-size:1.02rem;font-weight:700;}
     .generate-dock-sub{font-size:.76rem;color:var(--txt2);line-height:1.55;margin-top:4px;}
+    /* Dock top-level panel switcher */
+    .dock-panel-switcher{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+    .dock-panel-btn{flex:1;background:transparent;border:none;border-bottom:2px solid transparent;
+      color:var(--txt2);cursor:pointer;padding:10px 12px;font-size:.84rem;font-weight:600;
+      font-family:inherit;transition:all .15s;white-space:nowrap;}
+    .dock-panel-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+    .dock-panel-btn:hover:not(.active){color:var(--txt);background:var(--bg3);}
+    /* Dock batch panel */
+    .dock-batch-task{background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+      padding:8px 10px;transition:background .15s;}
+    .dock-batch-task.bt-done{opacity:.55;}
+    .dock-batch-task.bt-running{border-color:var(--accent);background:var(--accent-l);}
     .generate-dock-tabs{display:flex;gap:8px;flex-wrap:wrap;padding:12px 18px 10px;border-bottom:1px solid var(--border);}
     .generate-dock-tab{background:transparent;border:1px solid var(--border);color:var(--txt2);cursor:pointer;
       padding:7px 12px;border-radius:10px;font-size:.78rem;font-weight:600;font-family:inherit;transition:all .15s;}
@@ -989,7 +1001,6 @@
   <!-- ── GEN SUB-NAV ── -->
   <div class="gen-sub-nav visible" id="gen-sub-nav">
     <button class="gen-sub-tab active" id="gen-sub-gen" onclick="showPage('generate')">生圖</button>
-    <button class="gen-sub-tab" id="gen-sub-batch" onclick="showPage('batch')">批次排程</button>
     <button class="gen-sub-tab" id="gen-sub-ab" onclick="showPage('ab')">A/B 比較</button>
   </div>
 
@@ -1270,12 +1281,15 @@
     <div class="generate-pane-resizer" id="generate-right-resizer" aria-hidden="true"></div>
 
     <aside class="generate-dock" id="generate-dock">
-      <div class="generate-dock-head">
-        <div class="generate-dock-title">工作資料庫</div>
-        <div class="generate-dock-sub">右側集中放圖庫、角色庫、風格庫與筆記本。桌機版可以一邊生圖，一邊查資料與插入內容。</div>
+      <!-- Top-level panel switcher -->
+      <div class="dock-panel-switcher" id="dock-panel-switcher">
+        <button class="dock-panel-btn active" id="dock-panel-db-btn" onclick="setGenerateDockPanel('database')">資料庫</button>
+        <button class="dock-panel-btn" id="dock-panel-batch-btn" onclick="setGenerateDockPanel('batch')">排程</button>
       </div>
+      <!-- Sub-tabs (database mode only) -->
       <div class="generate-dock-tabs" id="generate-dock-tabs"></div>
-      <div class="generate-dock-toolbar">
+      <!-- Toolbar (database mode only) -->
+      <div class="generate-dock-toolbar" id="generate-dock-toolbar">
         <input type="search" id="generate-dock-search" class="generate-dock-search" placeholder="搜尋目前分頁..." oninput="renderGenerateDock()">
         <button class="btn btn-s btn-out" type="button" onclick="openGenerateDockFullPage()">展開頁面</button>
       </div>
@@ -1875,7 +1889,7 @@
 </div>
 
 <!-- ── NOTE INSERT MODAL ── -->
-<div class="char-modal-overlay" id="note-insert-modal" onclick="closeNoteInsertModal(event)">
+<div class="char-modal-overlay" id="note-insert-modal" onclick="closeNoteInsertModal(event)" style="z-index:280;">
   <div class="char-modal-box" onclick="event.stopPropagation()" style="max-width:960px;height:min(92vh,980px);">
     <div class="char-modal-hd">
       <div>
@@ -2459,6 +2473,7 @@ let activeTagFilters = new Set();
 let selectMode = false;
 let selectedIds = new Set();
 let generateDockTab = 'gallery';
+let generateDockPanel = 'database'; // 'database' | 'batch'
 
 // Modal state
 let modalImageId = null;
@@ -4199,6 +4214,101 @@ function setGenerateDockTab(tab) {
   renderGenerateDock();
 }
 
+function setGenerateDockPanel(panel) {
+  generateDockPanel = panel;
+  document.getElementById('dock-panel-db-btn')?.classList.toggle('active', panel === 'database');
+  document.getElementById('dock-panel-batch-btn')?.classList.toggle('active', panel === 'batch');
+  // Sub-tabs only visible in database mode
+  const tabsEl = document.getElementById('generate-dock-tabs');
+  if (tabsEl) tabsEl.style.display = panel === 'batch' ? 'none' : '';
+  // Toolbar (search + expand) only in database mode
+  const toolbarEl = document.getElementById('generate-dock-toolbar');
+  if (toolbarEl) toolbarEl.style.display = panel === 'batch' ? 'none' : '';
+  renderGenerateDock();
+}
+
+function refreshDockBatchIfVisible() {
+  if (generateDockPanel !== 'batch' || !isGenerateDockAvailable()) return;
+  if (!document.getElementById('page-generate')?.classList.contains('active')) return;
+  document.getElementById('generate-dock-body').innerHTML = renderGenerateDockBatch();
+}
+
+function renderGenerateDockBatch() {
+  loadBatchTasks();
+  const pct = batchTotalImages > 0 ? Math.round(batchDoneImages / batchTotalImages * 100) : 0;
+
+  // Progress bar (only when running)
+  const progressHtml = batchRunning ? `
+    <div style="padding:9px 14px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+        <span id="dock-batch-prog-text" style="font-size:.78rem;color:var(--txt);font-weight:500;">生圖中...</span>
+        <span id="dock-batch-prog-count" style="font-size:.74rem;color:var(--txt2);">${batchDoneImages} / ${batchTotalImages} 張</span>
+      </div>
+      <div class="batch-progress-bar-outer">
+        <div class="batch-progress-bar-inner" id="dock-batch-prog-bar" style="width:${pct}%;"></div>
+      </div>
+    </div>` : '';
+
+  // Control buttons
+  const runBtn   = !batchRunning
+    ? `<button class="btn btn-p btn-s" onclick="startBatch()" style="font-size:.78rem;padding:4px 10px;">▶ 開始</button>` : '';
+  const pauseBtn = batchRunning
+    ? `<button class="btn btn-warn btn-s" onclick="batchTogglePause()" style="font-size:.78rem;padding:4px 10px;">${batchPaused ? '▶ 繼續' : '⏸ 暫停'}</button>` : '';
+  const stopBtn  = batchRunning
+    ? `<button class="btn btn-d btn-s" onclick="batchStop()" style="font-size:.78rem;padding:4px 10px;">■ 停止</button>` : '';
+
+  const ctrlHtml = `
+    <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;gap:6px;align-items:center;flex-wrap:wrap;flex-shrink:0;">
+      ${runBtn}${pauseBtn}${stopBtn}
+      <div style="flex:1;"></div>
+      <button class="btn btn-p btn-s" onclick="addCurrentToBatchFromDock()" style="font-size:.78rem;padding:4px 10px;">＋ 加入排程</button>
+    </div>
+    <div style="padding:5px 12px 7px;border-bottom:1px solid var(--border);display:flex;gap:5px;flex-wrap:wrap;flex-shrink:0;">
+      <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="saveCurrentAsPreset()">💾 存記錄</button>
+      <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="openBatchPresetsModal()">📂 記錄庫</button>
+      <button class="btn btn-s btn-out" style="font-size:.72rem;padding:2px 8px;" onclick="clearDoneBatchTasks()">清除完成</button>
+    </div>`;
+
+  // Task list
+  let tasksHtml;
+  if (!batchTasks.length) {
+    tasksHtml = `<div style="padding:36px 16px;text-align:center;color:var(--txt2);font-size:.83rem;">
+      還沒有排程任務<br><br>
+      <button class="btn btn-s" onclick="addCurrentToBatchFromDock()">＋ 加入排程</button>
+    </div>`;
+  } else {
+    const items = batchTasks.map((t, i) => {
+      const isDone = t.done;
+      const isRunning = batchRunning && !isDone && i === batchTasks.findIndex(x => !x.done);
+      const statusIcon = isDone ? '✓' : (isRunning ? '●' : '○');
+      const statusColor = isDone ? 'var(--accent)' : (isRunning ? 'var(--accent)' : 'var(--txt2)');
+      return `<div class="dock-batch-task ${isDone ? 'bt-done' : ''} ${isRunning ? 'bt-running' : ''}">
+        <div style="display:flex;align-items:center;gap:5px;">
+          <span style="font-size:.75rem;color:${statusColor};flex-shrink:0;">${statusIcon}</span>
+          <span style="font-size:.8rem;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(t.name||'')}">${esc(t.name||'未命名任務')}</span>
+          <span style="font-size:.72rem;color:var(--txt2);flex-shrink:0;">×${t.count||1}</span>
+          <button onclick="openBatchTaskModal(${i})" title="編輯"
+            style="background:none;border:none;cursor:pointer;color:var(--txt2);font-size:.75rem;padding:1px 4px;line-height:1;">✏</button>
+          <button onclick="deleteBatchTask(${i})" title="刪除"
+            style="background:none;border:none;cursor:pointer;color:var(--txt2);font-size:.75rem;padding:1px 4px;line-height:1;">✕</button>
+        </div>
+        <div style="font-size:.72rem;color:var(--txt2);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc((t.prompt||t.basePrompt||'').slice(0,60))}</div>
+      </div>`;
+    }).join('');
+    tasksHtml = `<div style="padding:10px 12px;display:flex;flex-direction:column;gap:5px;overflow-y:auto;">${items}</div>`;
+  }
+
+  return progressHtml + ctrlHtml + tasksHtml;
+}
+
+function addCurrentToBatchFromDock() {
+  openBatchTaskModal(null);
+  // Pre-fill with current generate page settings
+  btImportGenParams();
+  document.getElementById('bt-prompt').value = document.getElementById('prompt')?.value || '';
+  document.getElementById('bt-neg').value    = document.getElementById('neg-prompt')?.value || '';
+}
+
 function openGenerateDockFullPage() {
   showPage(GENERATE_DOCK_PAGE_MAP[generateDockTab] || 'gallery');
 }
@@ -4364,10 +4474,26 @@ function renderGenerateDockNotes(q) {
 
 async function renderGenerateDock() {
   if (!isGenerateDockAvailable()) return;
+  const body = document.getElementById('generate-dock-body');
+  if (!body) return;
+
+  // Sync panel UI state
+  const tabsEl    = document.getElementById('generate-dock-tabs');
+  const toolbarEl = document.getElementById('generate-dock-toolbar');
+  if (tabsEl)    tabsEl.style.display    = generateDockPanel === 'batch' ? 'none' : '';
+  if (toolbarEl) toolbarEl.style.display = generateDockPanel === 'batch' ? 'none' : '';
+  document.getElementById('dock-panel-db-btn')?.classList.toggle('active', generateDockPanel === 'database');
+  document.getElementById('dock-panel-batch-btn')?.classList.toggle('active', generateDockPanel === 'batch');
+
+  if (generateDockPanel === 'batch') {
+    body.innerHTML = renderGenerateDockBatch();
+    return;
+  }
+
+  // Database mode
   buildGenerateDockTabs();
   const search = document.getElementById('generate-dock-search');
-  const body = document.getElementById('generate-dock-body');
-  if (!search || !body) return;
+  if (!search) return;
   search.placeholder = getGenerateDockSearchPlaceholder();
   const q = (search.value || '').trim().toLowerCase();
   let html = '';
@@ -7990,6 +8116,7 @@ async function batchRun() {
   document.getElementById('batch-pause-btn').style.display = '';
   document.getElementById('batch-stop-btn').style.display  = '';
   document.getElementById('batch-progress-wrap').classList.add('visible');
+  refreshDockBatchIfVisible();
 
   for (let ti = 0; ti < batchTasks.length; ti++) {
     const task = batchTasks[ti];
@@ -8076,11 +8203,13 @@ async function batchRun() {
     toast('批次生圖全部完成！', 'ok');
   }
   renderBatchPage();
+  refreshDockBatchIfVisible();
 }
 
 function batchTogglePause() {
   batchPaused = !batchPaused;
   document.getElementById('batch-pause-btn').textContent = batchPaused ? '▶ 繼續' : '⏸ 暫停';
+  refreshDockBatchIfVisible();
   if (batchPaused) toast('已暫停，點「繼續」恢復', 'warn');
 }
 
@@ -8104,6 +8233,13 @@ function batchUpdateProgress(text, done, total) {
   document.getElementById('batch-progress-text').textContent = text;
   document.getElementById('batch-progress-count').textContent = `${done} / ${total} 張`;
   document.getElementById('batch-progress-bar').style.width = total ? `${Math.round(done / total * 100)}%` : '0%';
+  // Also update dock progress elements if visible
+  const dockText  = document.getElementById('dock-batch-prog-text');
+  const dockCount = document.getElementById('dock-batch-prog-count');
+  const dockBar   = document.getElementById('dock-batch-prog-bar');
+  if (dockText)  dockText.textContent  = text;
+  if (dockCount) dockCount.textContent = `${done} / ${total} 張`;
+  if (dockBar)   dockBar.style.width   = total ? `${Math.round(done / total * 100)}%` : '0%';
 }
 
 // ── Batch page render ──
@@ -8159,6 +8295,7 @@ function renderBatchPage() {
       <div class="batch-task-actions">${actions}</div>
     </div>`;
   }).join('');
+  refreshDockBatchIfVisible();
 }
 
 function deleteBatchTask(idx) {
@@ -8166,6 +8303,7 @@ function deleteBatchTask(idx) {
   batchTasks.splice(idx, 1);
   saveBatchTasks();
   renderBatchPage();
+  refreshDockBatchIfVisible();
 }
 
 function batchResetTask(idx) {
@@ -8550,6 +8688,7 @@ function saveBatchTask() {
   saveBatchTasks();
   closeBatchTaskModal();
   renderBatchPage();
+  refreshDockBatchIfVisible();
   toast(btEditId !== null ? '任務已更新' : '任務已新增', 'ok');
 }
 
