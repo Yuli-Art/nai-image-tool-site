@@ -204,6 +204,26 @@
       border-left:6px solid transparent;border-right:6px solid transparent;
       border-bottom:6px solid #cc785c;}
     #onboarding-tip.hidden{display:none;}
+    /* ── STORAGE BAR ── */
+    .storage-bar-wrap{background:#252320;border-radius:6px;height:6px;overflow:hidden;margin:6px 0 2px;}
+    .storage-bar-fill{height:100%;border-radius:6px;background:var(--accent);transition:width .4s ease;}
+    .storage-bar-fill.warn{background:var(--warn);}
+    .storage-bar-fill.danger{background:var(--err);}
+    .storage-meta{font-size:.74rem;color:var(--txt2);display:flex;justify-content:space-between;}
+    /* ── SYNC SECTION ── */
+    .sync-status-row{display:flex;align-items:center;gap:6px;font-size:.8rem;padding:6px 0;}
+    .sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+    .sync-dot.ok{background:var(--ok);}
+    .sync-dot.warn{background:var(--warn);}
+    .sync-dot.idle{background:var(--txt2);}
+    .sync-prog-wrap{margin:6px 0;display:none;}
+    .sync-prog-outer{background:#252320;border-radius:6px;height:5px;overflow:hidden;}
+    .sync-prog-inner{height:100%;border-radius:6px;background:var(--accent);width:0%;transition:width .2s;}
+    .sync-prog-label{font-size:.72rem;color:var(--txt2);margin-top:4px;}
+    .sync-btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+    .sync-conflict-row{display:flex;align-items:center;gap:12px;font-size:.8rem;color:var(--txt2);}
+    .sync-conflict-row label{display:flex;align-items:center;gap:4px;cursor:pointer;color:var(--txt2);font-size:.8rem;margin-bottom:0;}
+    .sync-conflict-row input[type=radio]{width:14px;height:14px;accent-color:var(--accent);cursor:pointer;}
     /* ── SETTINGS BUTTON ── */
     .btn-settings{background:none;border:none;color:var(--txt2);font-size:1.1rem;
       cursor:pointer;padding:6px 8px;border-radius:8px;line-height:1;transition:color .15s,background .15s;}
@@ -1667,6 +1687,61 @@
             <span id="settings-gdrive-email" style="font-size:.78rem;color:var(--txt2);"></span>
             <button class="btn btn-s btn-out" style="font-size:.78rem;padding:4px 10px;" onclick="gdriveDisconnect()">中斷</button>
           </div>
+        </div>
+      </div>
+
+      <!-- Backup & Sync -->
+      <div class="settings-section">
+        <div class="settings-section-label">備份與同步</div>
+
+        <!-- Storage bar -->
+        <div>
+          <div class="storage-meta">
+            <span id="storage-img-count">計算中…</span>
+            <span id="storage-pct"></span>
+          </div>
+          <div class="storage-bar-wrap">
+            <div class="storage-bar-fill" id="storage-bar" style="width:0%;"></div>
+          </div>
+          <div class="storage-meta" style="margin-top:2px;">
+            <span id="storage-used"></span>
+            <span id="storage-quota"></span>
+          </div>
+        </div>
+
+        <!-- Drive sync status -->
+        <div class="sync-status-row" id="sync-status-row">
+          <div class="sync-dot idle" id="sync-dot"></div>
+          <span id="sync-status-msg" style="color:var(--txt2);">尚未連線 Google Drive</span>
+        </div>
+        <div id="sync-last-row" style="font-size:.74rem;color:var(--txt2);display:none;">
+          上次備份：<span id="sync-last-at">—</span>
+        </div>
+
+        <!-- Progress bar (hidden until action) -->
+        <div class="sync-prog-wrap" id="sync-prog-wrap">
+          <div class="sync-prog-outer">
+            <div class="sync-prog-inner" id="sync-prog-bar"></div>
+          </div>
+          <div class="sync-prog-label" id="sync-prog-label"></div>
+        </div>
+
+        <!-- Conflict resolution -->
+        <div class="sync-conflict-row">
+          <span>衝突處理：</span>
+          <label><input type="radio" name="sync-conflict" value="recent" id="sync-conflict-recent" checked onchange="setSyncConflict('recent')"> 最近修改優先</label>
+          <label><input type="radio" name="sync-conflict" value="merge" id="sync-conflict-merge" onchange="setSyncConflict('merge')"> 合併標籤</label>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="sync-btn-row">
+          <button class="btn btn-p" style="flex:1;font-size:.8rem;" onclick="doBackupToDrive()" id="sync-btn-backup">☁ 備份到 Drive</button>
+          <button class="btn btn-s" style="font-size:.8rem;" onclick="doImportFromDrive()" id="sync-btn-import">↓ 從 Drive 匯入</button>
+        </div>
+        <div class="sync-btn-row">
+          <button class="btn btn-s" style="flex:1;font-size:.8rem;" onclick="doBackupLocal()">⬇ 打包下載（本機）</button>
+          <button class="btn btn-s" style="font-size:.8rem;" onclick="doImportLocal()">📂 匯入本機備份</button>
+          <input type="file" id="import-zip-input" accept=".zip" style="display:none;" onchange="handleLocalZipImport(this)">
         </div>
       </div>
 
@@ -3723,6 +3798,8 @@ function openSettingsModal() {
   // Set theme selector to current
   const sel = document.getElementById('ui-theme-sel');
   if (sel) sel.value = localStorage.getItem(UI_THEME_KEY) || 'design-md-dark';
+  // Init backup/sync section
+  initSyncSection();
 }
 
 function closeSettingsModal(e) {
@@ -3804,9 +3881,22 @@ async function showApp() {
   });
   // Init token fetch if we already have a token
   if (apiToken) fetchAnlasSilent();
-  // Init GDrive client if client ID saved
+  // Init GDrive client if client ID saved, then auto-check backup version
   const savedCid = localStorage.getItem(GDRIVE_CID_KEY);
-  if (savedCid) loadGIS(() => gdriveInitClient(savedCid));
+  if (savedCid) {
+    loadGIS(() => {
+      gdriveInitClient(savedCid);
+      // Give token client a moment to init, then try silent token for version check
+      setTimeout(() => {
+        if (gdriveTokenClient && !gdriveToken) {
+          // Attempt silent re-auth (no popup if user already authorized)
+          try { gdriveTokenClient.requestAccessToken({ prompt: '' }); } catch (_) {}
+        } else if (gdriveToken) {
+          autoCheckDriveVersion();
+        }
+      }, 1500);
+    });
+  }
   // Onboarding tooltip
   initOnboardingTip();
 }
@@ -8646,6 +8736,8 @@ function gdriveInitClient(clientId) {
       } catch { document.getElementById('gdrive-user-email').textContent = ''; }
       gdriveShowConnected();
       gdriveFetchFolders();
+      // Check for newer backup after connecting
+      autoCheckDriveVersion();
     }
   });
 }
@@ -8883,6 +8975,439 @@ async function gdriveUploadFile(arrayBuffer, filename, folderId) {
   }
   if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + (await r.text()).slice(0, 80));
   return await r.json();
+}
+
+// ═══════════════════════════════════════════
+// BACKUP & SYNC
+// ═══════════════════════════════════════════
+const SYNC_LAST_AT_KEY   = 'nai_last_sync_at_v1';
+const SYNC_CONFLICT_KEY  = 'nai_sync_conflict_v1';
+const DRIVE_BACKUP_NAME  = 'nai_backup.zip';
+const BACKUP_VERSION     = 1;
+
+// ── Helpers ───────────────────────────────
+async function sha256hex(arrayBuffer) {
+  const hash = await crypto.subtle.digest('SHA-256', arrayBuffer instanceof ArrayBuffer ? arrayBuffer : arrayBuffer.buffer ?? arrayBuffer);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function setSyncConflict(mode) {
+  localStorage.setItem(SYNC_CONFLICT_KEY, mode);
+}
+function getSyncConflict() {
+  return localStorage.getItem(SYNC_CONFLICT_KEY) || 'recent';
+}
+
+function fmtBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  if (bytes < 1024*1024*1024) return (bytes/1024/1024).toFixed(1) + ' MB';
+  return (bytes/1024/1024/1024).toFixed(2) + ' GB';
+}
+
+function setSyncProgress(done, total, msg) {
+  const wrap = document.getElementById('sync-prog-wrap');
+  const bar  = document.getElementById('sync-prog-bar');
+  const lbl  = document.getElementById('sync-prog-label');
+  if (!wrap) return;
+  if (total === null) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  if (bar) bar.style.width = total > 0 ? Math.round(done/total*100)+'%' : '0%';
+  if (lbl) lbl.textContent = msg || '';
+}
+
+function setSyncStatus(msg, dotClass) {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-status-msg');
+  if (dot) { dot.className = 'sync-dot ' + (dotClass||'idle'); }
+  if (txt) txt.textContent = msg;
+}
+
+function setSyncBtnsDisabled(on) {
+  ['sync-btn-backup','sync-btn-import'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = on;
+  });
+}
+
+// ── Storage info ──────────────────────────
+async function loadStorageInfo() {
+  try {
+    const est = await navigator.storage.estimate();
+    const usage = est.usage || 0;
+    const quota = est.quota || 0;
+    const pct   = quota > 0 ? usage/quota*100 : 0;
+    const count = galleryData.length;
+
+    const countEl = document.getElementById('storage-img-count');
+    const pctEl   = document.getElementById('storage-pct');
+    const usedEl  = document.getElementById('storage-used');
+    const quotaEl = document.getElementById('storage-quota');
+    const bar     = document.getElementById('storage-bar');
+
+    if (countEl) countEl.textContent = `圖庫：${count} 張`;
+    if (pctEl)   pctEl.textContent   = `${pct.toFixed(1)}%`;
+    if (usedEl)  usedEl.textContent  = `已用 ${fmtBytes(usage)}`;
+    if (quotaEl) quotaEl.textContent = `上限 ${fmtBytes(quota)}`;
+    if (bar) {
+      bar.style.width = Math.min(pct, 100) + '%';
+      bar.className = 'storage-bar-fill' + (pct > 90 ? ' danger' : pct > 70 ? ' warn' : '');
+    }
+  } catch (e) {
+    const el = document.getElementById('storage-img-count');
+    if (el) el.textContent = `圖庫：${galleryData.length} 張`;
+  }
+}
+
+// ── Sync section init ─────────────────────
+function initSyncSection() {
+  loadStorageInfo();
+  // Restore conflict setting
+  const mode = getSyncConflict();
+  const r = document.getElementById('sync-conflict-' + mode);
+  if (r) r.checked = true;
+  // Last sync time
+  const lastAt = localStorage.getItem(SYNC_LAST_AT_KEY);
+  const row = document.getElementById('sync-last-row');
+  const lbl = document.getElementById('sync-last-at');
+  if (lastAt && row && lbl) {
+    row.style.display = 'block';
+    lbl.textContent = new Date(parseInt(lastAt)).toLocaleString('zh-TW');
+  }
+  // Drive status
+  if (!gdriveToken) {
+    setSyncStatus('尚未連線 Google Drive', 'idle');
+  } else {
+    setSyncStatus('已連線，可備份', 'ok');
+    // Quietly check Drive version
+    checkDriveBackupVersion().then(meta => {
+      if (!meta) return;
+      const lastSync = parseInt(localStorage.getItem(SYNC_LAST_AT_KEY) || '0');
+      const driveTs  = new Date(meta.modifiedTime).getTime();
+      if (driveTs > lastSync + 60000) {
+        setSyncStatus(`Drive 有較新備份（${new Date(meta.modifiedTime).toLocaleString('zh-TW')}）`, 'warn');
+      } else {
+        setSyncStatus('✓ 與 Drive 同步', 'ok');
+      }
+    }).catch(() => {});
+  }
+  setSyncProgress(0, null, '');
+}
+
+// ── Build backup zip ──────────────────────
+async function buildBackupZip(progressCb) {
+  const zip = new JSZip();
+  const imgFolder = zip.folder('images');
+  const allImages = await dbGetAll();
+  const manifest  = { version: BACKUP_VERSION, exportedAt: new Date().toISOString(), imageCount: allImages.length, images: [] };
+
+  for (let i = 0; i < allImages.length; i++) {
+    const img = allImages[i];
+    if (progressCb) progressCb(i, allImages.length, `計算圖片 ${i+1}/${allImages.length}…`);
+    const buf  = img.data instanceof ArrayBuffer ? img.data : img.data.buffer ?? img.data;
+    const hash = await sha256hex(buf);
+    imgFolder.file(hash + '.png', buf);
+    manifest.images.push({ hash, timestamp: img.timestamp, metadata: img.metadata, tags: img.tags || [], imageCategory: img.imageCategory || 'general' });
+  }
+
+  // Library data (all non-image stores)
+  const db = await getDB();
+  const readStore = name => new Promise(res => {
+    const tx = db.transaction(name, 'readonly');
+    const r  = tx.objectStore(name).getAll();
+    r.onsuccess = () => res(r.result);
+    r.onerror   = () => res([]);
+  });
+  const library = {
+    tags:         await readStore('tags'),
+    tagTypes:     await readStore('tag_types'),
+    vibes:        await readStore('vibe_library'),
+    characters:   await readStore('characters'),
+    artists:      await readStore('artists'),
+    blends:       await readStore('artist_blends'),
+    notes:        await readStore('prompt_notes'),
+    exportedAt:   new Date().toISOString()
+  };
+
+  zip.file('manifest.json', JSON.stringify(manifest));
+  zip.file('library.json',  JSON.stringify(library));
+  return zip;
+}
+
+// ── Drive: find/upload backup file ────────
+async function getDriveBackupFileMeta() {
+  if (!gdriveToken) return null;
+  const q = encodeURIComponent(`name='${DRIVE_BACKUP_NAME}' and trashed=false`);
+  const r = await fetch(
+    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,modifiedTime,size)&pageSize=1`,
+    { headers: { Authorization: 'Bearer ' + gdriveToken } }
+  );
+  if (!r.ok) return null;
+  const d = await r.json();
+  return d.files?.[0] || null;
+}
+
+async function checkDriveBackupVersion() {
+  return getDriveBackupFileMeta();
+}
+
+async function uploadZipToDrive(zipBlob, progressCb) {
+  const meta = await getDriveBackupFileMeta();
+  const boundary = 'nai_bk_' + Date.now().toString(36);
+  const fileMeta = JSON.stringify({ name: DRIVE_BACKUP_NAME });
+  const enc  = new TextEncoder();
+  const hdr  = enc.encode(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${fileMeta}\r\n--${boundary}\r\nContent-Type: application/zip\r\n\r\n`);
+  const tail = enc.encode(`\r\n--${boundary}--`);
+  const imgArr = new Uint8Array(await zipBlob.arrayBuffer());
+  const body   = new Uint8Array(hdr.length + imgArr.length + tail.length);
+  body.set(hdr, 0); body.set(imgArr, hdr.length); body.set(tail, hdr.length + imgArr.length);
+
+  const url    = meta
+    ? `https://www.googleapis.com/upload/drive/v3/files/${meta.id}?uploadType=multipart`
+    : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`;
+  const method = meta ? 'PATCH' : 'POST';
+
+  const r = await fetch(url, {
+    method,
+    headers: { Authorization: 'Bearer ' + gdriveToken, 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body: body.buffer,
+    signal: AbortSignal.timeout(120000)
+  });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return await r.json();
+}
+
+async function downloadZipFromDrive(fileId) {
+  const r = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+    { headers: { Authorization: 'Bearer ' + gdriveToken }, signal: AbortSignal.timeout(120000) }
+  );
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return await r.blob();
+}
+
+// ── Merge backup into local DB ─────────────
+async function mergeBackupIntoLocal(zipBlob, conflictMode, progressCb) {
+  const zip      = await JSZip.loadAsync(await zipBlob.arrayBuffer());
+  const manifest = JSON.parse(await zip.file('manifest.json').async('string'));
+  const library  = JSON.parse(await zip.file('library.json').async('string'));
+
+  let added = 0, skipped = 0, merged = 0;
+
+  // ── Images ──
+  // Build local hash map
+  if (progressCb) progressCb(0, manifest.images.length, '建立本地雜湊索引…');
+  const localHashMap = new Map(); // hash → {id, tags, timestamp}
+  for (const img of galleryData) {
+    const buf  = img.data instanceof ArrayBuffer ? img.data : img.data.buffer ?? img.data;
+    const h    = await sha256hex(buf);
+    localHashMap.set(h, { id: img.id, tags: img.tags || [], timestamp: img.timestamp });
+  }
+
+  for (let i = 0; i < manifest.images.length; i++) {
+    const entry = manifest.images[i];
+    if (progressCb) progressCb(i+1, manifest.images.length, `處理圖片 ${i+1}/${manifest.images.length}…`);
+    const local = localHashMap.get(entry.hash);
+
+    if (!local) {
+      // New image — import
+      const pngFile = zip.file('images/' + entry.hash + '.png');
+      if (!pngFile) { skipped++; continue; }
+      const buf = (await pngFile.async('arraybuffer'));
+      await dbSaveImage(buf, entry.metadata, entry.tags, entry.imageCategory);
+      added++;
+    } else {
+      // Exists — handle tag conflict
+      let newTags;
+      if (conflictMode === 'merge') {
+        newTags = [...new Set([...local.tags, ...entry.tags])];
+      } else {
+        // 'recent': keep whichever is newer
+        newTags = (entry.timestamp > local.timestamp) ? entry.tags : local.tags;
+      }
+      const tagsChanged = JSON.stringify(newTags.sort()) !== JSON.stringify([...local.tags].sort());
+      if (tagsChanged) {
+        await dbUpdateTags(local.id, newTags);
+        merged++;
+      } else {
+        skipped++;
+      }
+    }
+  }
+
+  // ── Library: helper to merge by id ──
+  const db = await getDB();
+  async function mergeStore(storeName, items, keyField) {
+    if (!items?.length) return;
+    const existing = await new Promise(res => {
+      const r = db.transaction(storeName,'readonly').objectStore(storeName).getAll();
+      r.onsuccess = () => res(r.result);
+      r.onerror   = () => res([]);
+    });
+    const existingIds = new Set(existing.map(e => e[keyField]));
+    for (const item of items) {
+      if (!existingIds.has(item[keyField])) {
+        await new Promise(res => {
+          const tx = db.transaction(storeName,'readwrite');
+          const r  = tx.objectStore(storeName).put(item);
+          r.onsuccess = res; r.onerror = res;
+        });
+      }
+    }
+  }
+
+  if (progressCb) progressCb(manifest.images.length, manifest.images.length, '合併資料庫…');
+  await mergeStore('tag_types',     library.tagTypes,   'id');
+  await mergeStore('vibe_library',  library.vibes,      'id');
+  await mergeStore('characters',    library.characters, 'id');
+  await mergeStore('artists',       library.artists,    'id');
+  await mergeStore('artist_blends', library.blends,     'id');
+  await mergeStore('prompt_notes',  library.notes,      'id');
+
+  return { added, skipped, merged };
+}
+
+// ── Orchestration ─────────────────────────
+async function doBackupToDrive() {
+  if (!gdriveToken) { toast('請先連線 Google Drive', 'warn'); return; }
+  setSyncBtnsDisabled(true);
+  setSyncProgress(0, 1, '打包備份中…');
+  try {
+    const zip  = await buildBackupZip((done, total, msg) => setSyncProgress(done, total, msg));
+    setSyncProgress(1, 1, '上傳至 Drive…');
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+    await uploadZipToDrive(blob);
+    localStorage.setItem(SYNC_LAST_AT_KEY, Date.now().toString());
+    setSyncProgress(1, 1, '');
+    setSyncProgress(0, null, '');
+    setSyncStatus('✓ 備份完成', 'ok');
+    const row = document.getElementById('sync-last-row');
+    const lbl = document.getElementById('sync-last-at');
+    if (row) row.style.display = 'block';
+    if (lbl) lbl.textContent = new Date().toLocaleString('zh-TW');
+    toast('☁ 備份完成！', 'ok');
+  } catch (e) {
+    setSyncProgress(0, null, '');
+    setSyncStatus('備份失敗：' + e.message, 'warn');
+    toast('備份失敗：' + e.message, 'err');
+  } finally {
+    setSyncBtnsDisabled(false);
+  }
+}
+
+async function doImportFromDrive() {
+  if (!gdriveToken) { toast('請先連線 Google Drive', 'warn'); return; }
+  const meta = await getDriveBackupFileMeta();
+  if (!meta) { toast('Drive 上找不到備份檔', 'warn'); return; }
+  setSyncBtnsDisabled(true);
+  setSyncProgress(0, 1, '下載備份…');
+  try {
+    const blob    = await downloadZipFromDrive(meta.id);
+    const conflict = getSyncConflict();
+    const result  = await mergeBackupIntoLocal(blob, conflict,
+      (done, total, msg) => setSyncProgress(done, total, msg));
+    localStorage.setItem(SYNC_LAST_AT_KEY, Date.now().toString());
+    setSyncProgress(0, null, '');
+    setSyncStatus('✓ 匯入完成', 'ok');
+    const row = document.getElementById('sync-last-row');
+    if (row) row.style.display = 'block';
+    document.getElementById('sync-last-at').textContent = new Date().toLocaleString('zh-TW');
+    toast(`匯入完成：新增 ${result.added} 張，合併標籤 ${result.merged} 張，略過 ${result.skipped} 張`, 'ok');
+    // Reload gallery
+    await loadGallery();
+    renderGalViewTabs();
+    filterGallery();
+    updateGalCount();
+  } catch (e) {
+    setSyncProgress(0, null, '');
+    setSyncStatus('匯入失敗：' + e.message, 'warn');
+    toast('匯入失敗：' + e.message, 'err');
+  } finally {
+    setSyncBtnsDisabled(false);
+  }
+}
+
+async function doBackupLocal() {
+  setSyncBtnsDisabled(true);
+  setSyncProgress(0, 1, '打包中…');
+  try {
+    const zip  = await buildBackupZip((done, total, msg) => setSyncProgress(done, total, msg));
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const date = new Date().toISOString().slice(0,10);
+    a.href = url; a.download = `nai_backup_${date}.zip`; a.click();
+    URL.revokeObjectURL(url);
+    setSyncProgress(0, null, '');
+    toast('⬇ 備份檔已下載', 'ok');
+  } catch (e) {
+    setSyncProgress(0, null, '');
+    toast('備份失敗：' + e.message, 'err');
+  } finally {
+    setSyncBtnsDisabled(false);
+  }
+}
+
+function doImportLocal() {
+  document.getElementById('import-zip-input').click();
+}
+
+async function handleLocalZipImport(input) {
+  const file = input.files[0];
+  if (!file) return;
+  input.value = '';
+  setSyncBtnsDisabled(true);
+  setSyncProgress(0, 1, '解壓縮中…');
+  try {
+    const conflict = getSyncConflict();
+    const result   = await mergeBackupIntoLocal(file, conflict,
+      (done, total, msg) => setSyncProgress(done, total, msg));
+    setSyncProgress(0, null, '');
+    toast(`匯入完成：新增 ${result.added} 張，合併標籤 ${result.merged} 張，略過 ${result.skipped} 張`, 'ok');
+    await loadGallery();
+    renderGalViewTabs();
+    filterGallery();
+    updateGalCount();
+  } catch (e) {
+    setSyncProgress(0, null, '');
+    toast('匯入失敗：' + e.message, 'err');
+  } finally {
+    setSyncBtnsDisabled(false);
+  }
+}
+
+// ── Auto-check Drive on app load ──────────
+async function autoCheckDriveVersion() {
+  if (!gdriveToken) return;
+  try {
+    const meta = await checkDriveBackupVersion();
+    if (!meta) return;
+    const lastSync = parseInt(localStorage.getItem(SYNC_LAST_AT_KEY) || '0');
+    const driveTs  = new Date(meta.modifiedTime).getTime();
+    if (driveTs > lastSync + 60000) {
+      // Show persistent toast with action buttons
+      const msg = `☁ Drive 有較新的備份（${new Date(meta.modifiedTime).toLocaleString('zh-TW')}），要同步嗎？`;
+      showSyncPromptToast(msg);
+    }
+  } catch (_) {}
+}
+
+function showSyncPromptToast(msg) {
+  // Remove existing
+  document.getElementById('sync-prompt-toast')?.remove();
+  const div = document.createElement('div');
+  div.id = 'sync-prompt-toast';
+  div.style.cssText = `position:fixed;bottom:72px;left:50%;transform:translateX(-50%);
+    background:#181715;border:1px solid #35312d;border-radius:10px;padding:12px 16px;
+    display:flex;align-items:center;gap:10px;z-index:950;box-shadow:0 8px 24px rgba(0,0,0,.4);
+    font-size:.82rem;color:#faf9f5;max-width:calc(100vw - 32px);flex-wrap:wrap;`;
+  div.innerHTML = `
+    <span style="flex:1;min-width:180px;">${msg}</span>
+    <button class="btn btn-p" style="padding:5px 14px;font-size:.78rem;" onclick="doImportFromDrive();this.closest('#sync-prompt-toast').remove();">同步</button>
+    <button class="btn btn-s" style="padding:5px 10px;font-size:.78rem;" onclick="this.closest('#sync-prompt-toast').remove();">略過</button>`;
+  document.body.appendChild(div);
+  // Auto-dismiss after 12s
+  setTimeout(() => div.remove(), 12000);
 }
 
 </script>
