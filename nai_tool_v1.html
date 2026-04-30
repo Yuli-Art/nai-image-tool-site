@@ -691,6 +691,9 @@
 
     /* ── MOBILE ── */
     @media(max-width:768px){
+      *::-webkit-scrollbar{width:8px;height:8px;}
+      *::-webkit-scrollbar-thumb{border-width:2px;}
+      .gal-views-bar::-webkit-scrollbar{height:6px;}
       #page-generate.active{flex-direction:column;}
       .left-panel{width:100%;min-width:unset;border-right:none;border-bottom:1px solid var(--border);}
       .right-panel{padding:14px;}
