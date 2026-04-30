@@ -430,8 +430,9 @@
     .generate-dock-body{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:12px;}
     .generate-dock-empty{border:1px dashed var(--border);border-radius:14px;padding:28px 18px;text-align:center;color:var(--txt2);background:rgba(255,255,255,.02);}
     .generate-dock-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
-    .dock-gallery-card{background:var(--bg);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:border-color .15s,transform .15s;}
+    .dock-gallery-card{background:var(--bg);border:1px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;transition:border-color .15s,transform .15s,box-shadow .15s;}
     .dock-gallery-card:hover{border-color:var(--accent);transform:translateY(-2px);}
+    .dock-gallery-card.is-new{border-color:var(--accent);box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent), 0 14px 32px rgba(0,0,0,.22);}
     .dock-gallery-card img{width:100%;aspect-ratio:5/7;object-fit:cover;display:block;background:var(--bg3);}
     .dock-gallery-meta{padding:9px 10px;display:flex;flex-direction:column;gap:6px;}
     .dock-gallery-tags{display:flex;flex-wrap:wrap;gap:4px;min-height:22px;}
@@ -2511,6 +2512,7 @@ let selectMode = false;
 let selectedIds = new Set();
 let generateDockTab = 'gallery';
 let generateDockPanel = 'database'; // 'database' | 'batch'
+let generateDockPendingImageId = null;
 
 // Modal state
 let modalImageId = null;
@@ -4269,6 +4271,27 @@ function refreshGenerateDockIfVisible() {
   renderGenerateDock();
 }
 
+function revealLatestInGenerateDock(imageId, opts = {}) {
+  if (!imageId) return;
+  if (!isGenerateDockAvailable()) return;
+  if (!document.getElementById('page-generate')?.classList.contains('active')) return;
+  if (opts.forceGallery) {
+    generateDockPanel = 'database';
+    generateDockTab = 'gallery';
+  }
+  if (generateDockPanel !== 'database' || generateDockTab !== 'gallery') return;
+  generateDockPendingImageId = imageId;
+  renderGenerateDock().then(() => {
+    const body = document.getElementById('generate-dock-body');
+    if (!body) return;
+    body.scrollTop = 0;
+    const card = body.querySelector(`.dock-gallery-card[data-image-id="${imageId}"]`);
+    if (!card) return;
+    card.classList.add('is-new');
+    setTimeout(() => card.classList.remove('is-new'), 1800);
+  });
+}
+
 function getGenerateDockSearchPlaceholder() {
   return {
     gallery: '搜尋圖庫 prompt / tag...',
@@ -4532,12 +4555,12 @@ function renderGenerateDockGallery(q) {
     const url = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
     const tags = (img.tags||[]).slice(0,3).map(t => `<span class="gcard-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
     const time = new Date(img.timestamp).toLocaleDateString('zh-TW',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-    return `<div class="dock-gallery-card" onclick="openModalFromDock(${img.id})">
-      <img src="${url}" loading="lazy" alt="">
-      <div class="dock-gallery-meta">
-        <div class="dock-gallery-tags">${tags}</div>
-        <div class="dock-gallery-time">${time}</div>
-      </div>
+      return `<div class="dock-gallery-card${generateDockPendingImageId === img.id ? ' is-new' : ''}" data-image-id="${img.id}" onclick="openModalFromDock(${img.id})">
+        <img src="${url}" loading="lazy" alt="">
+        <div class="dock-gallery-meta">
+          <div class="dock-gallery-tags">${tags}</div>
+          <div class="dock-gallery-time">${time}</div>
+        </div>
     </div>`;
   }).join('')}</div>`;
 }
@@ -4677,6 +4700,7 @@ async function renderGenerateDock() {
   else if (generateDockTab === 'artists') html = renderGenerateDockArtists(q);
   else html = renderGenerateDockNotes(q);
   body.innerHTML = html;
+  generateDockPendingImageId = null;
 }
 
 // ═══════════════════════════════════════════
@@ -7042,7 +7066,7 @@ async function generate() {
     document.getElementById('result-ph').style.display = 'none';
     document.getElementById('result-img').src = url;
     document.getElementById('result-img').style.display = 'block';
-    document.getElementById('result-actions').classList.add('ready');
+    document.getElementById('result-actions')?.classList.add('ready');
 
     // Update seed display if fixed mode
     if (!seedRandom) document.getElementById('seed').value = seed;
@@ -7058,6 +7082,7 @@ async function generate() {
     const id = await dbSaveImage(ab, meta, [...currentTags]);
     galleryData.unshift({ id, timestamp:Date.now(), data:ab, metadata:meta, tags:[...currentTags] });
     updateGalCount();
+    revealLatestInGenerateDock(id, { forceGallery: true });
 
     toast('生圖完成，已存入圖庫','ok');
 
