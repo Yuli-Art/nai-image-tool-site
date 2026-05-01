@@ -5031,6 +5031,24 @@ function insertTextIntoGeneratePrompt(text, target='prompt') {
   toast(`已插入到${target==='neg-prompt'?'負向':'正向'} prompt`, 'ok');
 }
 
+function copyDockText(text, label='內容') {
+  const finalText = String(text || '').trim();
+  if (!finalText) { toast(`沒有可複製的${label}`, 'warn'); return; }
+  navigator.clipboard.writeText(finalText)
+    .then(() => toast(`已複製${label}`, 'ok'))
+    .catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = finalText;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      toast(`已複製${label}`, 'ok');
+    });
+}
+
 function renderDockViewTabs(kind) {
   if (kind === 'gallery') {
     const allActive = activeGalViewId === 'all';
@@ -5165,7 +5183,7 @@ function renderGenerateDockCharacters(q) {
         <div class="dock-record-desc">${esc(c.prompt || '尚未填寫角色 Prompt')}</div>
         <div class="dock-record-tags">${tags}</div>
         <div class="dock-record-actions">
-          <button class="btn btn-s" type="button" data-text="${esc(c.prompt || '')}" onclick="event.stopPropagation();insertTextIntoGeneratePrompt(this.dataset.text)">插入正向</button>
+          <button class="btn btn-s" type="button" data-text="${esc(c.prompt || '')}" onclick="event.stopPropagation();copyDockText(this.dataset.text,'角色 Prompt')">複製 Prompt</button>
           <button class="btn btn-s btn-out" type="button" onclick="event.stopPropagation();openCharEditModal(${c.id})">查看角色</button>
         </div>
       </div>
@@ -5195,7 +5213,6 @@ function renderGenerateDockArtists(q) {
     .sort((a,b) => (b.timestamp||0) - (a.timestamp||0))
     .slice(0, 10);
   const blendBlocks = blendItems.map(b => {
-    const prompt = renderBlendPrompt(b.artistEntries || []);
     const mediaUrl = getBlendPreviewUrl(b);
     const tags = (b.tags||[]).slice(0,3).map(t => `<span class="char-card-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
     return `<div class="dock-gallery-card" onclick="openBlendDetailModal(${b.id})">
@@ -5204,7 +5221,10 @@ function renderGenerateDockArtists(q) {
         <div class="gcard-tags">${tags}</div>
         <div class="dock-record-title" style="font-size:.84rem;line-height:1.35;min-height:2.3em;">${esc(deriveBlendName(b))}</div>
         <div class="dock-record-sub">混搭記錄</div>
-        <div class="gcard-time" style="margin-top:6px;font-family:monospace;">${esc(prompt || '尚未設定混搭條目')}</div>
+        <div class="dock-record-actions" style="margin-top:8px;">
+          <button class="btn btn-s" type="button" data-text="${esc(renderBlendPrompt(b.artistEntries || []))}" onclick="event.stopPropagation();copyDockText(this.dataset.text,'混搭 Prompt')">複製 Prompt</button>
+          <button class="btn btn-s btn-out" type="button" onclick="event.stopPropagation();openBlendDetailModal(${b.id})">查看混搭</button>
+        </div>
       </div>
     </div>`;
   });
@@ -5219,7 +5239,7 @@ function renderGenerateDockArtists(q) {
         <div class="dock-record-sub">${esc(a.artistTag || '未設定 artist tag')}</div>
         <div class="dock-record-tags">${tags}</div>
         <div class="dock-record-actions">
-          <button class="btn btn-s" type="button" data-text="${esc(a.artistTag || '')}" onclick="event.stopPropagation();insertTextIntoGeneratePrompt(this.dataset.text)">插入正向</button>
+          <button class="btn btn-s" type="button" data-text="${esc(a.artistTag || '')}" onclick="event.stopPropagation();copyDockText(this.dataset.text,'Artist Tag')">複製 Tag</button>
           <button class="btn btn-s btn-out" type="button" onclick="event.stopPropagation();openArtistEditModal(${a.id})">查看風格</button>
         </div>
       </div>
@@ -5259,8 +5279,7 @@ function renderGenerateDockNotes(q) {
         <div class="dock-record-desc">${esc(n.fragment || '')}</div>
         <div class="dock-record-tags">${tags}</div>
         <div class="dock-record-actions">
-          <button class="btn btn-s" type="button" onclick="event.stopPropagation();insertNoteToPrompt(${n.id},'pos')">插入正向</button>
-          <button class="btn btn-s" type="button" onclick="event.stopPropagation();insertNoteToPrompt(${n.id},'neg')">插入負向</button>
+          <button class="btn btn-s" type="button" data-text="${esc(n.fragment || '')}" onclick="event.stopPropagation();copyDockText(this.dataset.text,'片段')">複製片段</button>
           <button class="btn btn-s btn-out" type="button" onclick="event.stopPropagation();openNoteEditModal(${n.id})">查看筆記</button>
         </div>
       </div>
