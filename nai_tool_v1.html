@@ -5229,18 +5229,19 @@ function renderGenerateDockArtists(q) {
     </div>`;
   });
   const artistBlocks = artistItems.map(a => {
-    const media = a._previewUrl ? `<img src="${a._previewUrl}" alt="">` : '🎨';
-    const tags = (a.tags||[]).slice(0,3).map(t => `<span class="char-card-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
+    const media = a._previewUrl
+      ? `<img src="${a._previewUrl}" alt="">`
+      : `<div class="dock-record-media" style="width:100%;height:auto;aspect-ratio:5/7;border-radius:0;">🎨</div>`;
+    const tags = (a.tags||[]).slice(0,3).map(t => `<span class="gcard-tag" style="${getTagChipStyle(t, 0.14)}">${esc(t)}</span>`).join('');
     const sel = artistSelected.has(a.id) ? ' selected' : '';
-    return `<div class="dock-record${sel}" onclick="onDockArtistCardClick(${a.id})">
-      <div class="dock-record-media">${media}</div>
-      <div class="dock-record-main">
-        <div class="dock-record-title">${esc(a.name)}</div>
+    return `<div class="dock-gallery-card${sel}" onclick="onDockArtistCardClick(${a.id})">
+      ${media}
+      <div class="gcard-footer">
+        <div class="gcard-tags">${tags}</div>
+        <div class="dock-record-title" style="font-size:.92rem;line-height:1.35;">${esc(a.name)}</div>
         <div class="dock-record-sub">${esc(a.artistTag || '未設定 artist tag')}</div>
-        <div class="dock-record-tags">${tags}</div>
-        <div class="dock-record-actions">
+        <div class="dock-record-actions" style="margin-top:8px;">
           <button class="btn btn-s" type="button" data-text="${esc(a.artistTag || '')}" onclick="event.stopPropagation();copyDockText(this.dataset.text,'Artist Tag')">複製 Tag</button>
-          <button class="btn btn-s btn-out" type="button" onclick="event.stopPropagation();openArtistEditModal(${a.id})">查看風格</button>
         </div>
       </div>
     </div>`;
