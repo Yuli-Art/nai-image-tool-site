@@ -2325,6 +2325,7 @@
       </div>
     </div>
     <div class="char-modal-ft">
+      <button class="btn btn-d" id="char-edit-delete-btn" onclick="deleteCharFromEdit()" style="margin-right:auto;display:none;">刪除角色</button>
       <button class="btn btn-s btn-out" onclick="closeCharEditModal()">取消</button>
       <button class="btn btn-p" onclick="saveCharEdit()">儲存</button>
     </div>
@@ -5171,20 +5172,20 @@ function renderGenerateDockCharacters(q) {
     return `<div class="dock-inline-tools"><div class="dock-chip-scroll">${renderDockViewTabs('characters')}</div><div class="dock-inline-bar"><button class="btn btn-s btn-out" type="button" onclick="openCharEditModal(null)">＋ 新增角色</button><button class="btn btn-s" type="button" onclick="toggleCharSelectMode()">${charSelectMode?'結束多選':'多選'}</button></div></div><div class="generate-dock-empty">${characterData.length ? '沒有符合條件的角色' : '角色庫目前是空的。'}</div>`;
   }
   const selectionBar = charSelectMode ? `<div class="dock-inline-bar"><span class="gallery-sel-count">已選 ${charSelected.size} 個</span><button class="btn btn-d" type="button" onclick="deleteSelectedChars()">刪除</button><button class="btn btn-s btn-out" type="button" onclick="clearCharSelection()">取消</button></div>` : '';
-  return `<div class="dock-inline-tools"><div class="dock-chip-scroll">${renderDockViewTabs('characters')}</div><div class="dock-inline-bar"><button class="btn btn-s btn-out" type="button" onclick="openCharEditModal(null)">＋ 新增角色</button><button class="btn btn-s" type="button" onclick="toggleCharSelectMode()">${charSelectMode?'結束多選':'多選'}</button></div>${selectionBar}</div><div class="generate-dock-list">${items.map(c => {
-    const media = c._thumbUrl ? `<img src="${c._thumbUrl}" alt="">` : '👤';
-    const tags = (c.tags||[]).slice(0,3).map(t => `<span class="char-card-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
+  return `<div class="dock-inline-tools"><div class="dock-chip-scroll">${renderDockViewTabs('characters')}</div><div class="dock-inline-bar"><button class="btn btn-s btn-out" type="button" onclick="openCharEditModal(null)">＋ 新增角色</button><button class="btn btn-s" type="button" onclick="toggleCharSelectMode()">${charSelectMode?'結束多選':'多選'}</button></div>${selectionBar}</div><div class="generate-dock-grid">${items.map(c => {
+    const media = c._thumbUrl
+      ? `<img src="${c._thumbUrl}" alt="">`
+      : `<div class="dock-record-media" style="width:100%;height:auto;aspect-ratio:5/7;border-radius:0;">👤</div>`;
+    const tags = (c.tags||[]).slice(0,3).map(t => `<span class="gcard-tag" style="${getTagChipStyle(t, 0.14)}">${esc(t)}</span>`).join('');
     const sel = charSelected.has(c.id) ? ' selected' : '';
-    return `<div class="dock-record${sel}" onclick="onDockCharCardClick(${c.id})">
-      <div class="dock-record-media">${media}</div>
-      <div class="dock-record-main">
-        <div class="dock-record-title">${esc(c.name)}</div>
+    return `<div class="dock-gallery-card${sel}" onclick="onDockCharCardClick(${c.id})">
+      ${media}
+      <div class="gcard-footer">
+        <div class="gcard-tags">${tags}</div>
+        <div class="dock-record-title" style="font-size:.92rem;line-height:1.35;">${esc(c.name)}</div>
         <div class="dock-record-sub">${esc(c.seriesName || '角色庫')}</div>
-        <div class="dock-record-desc">${esc(c.prompt || '尚未填寫角色 Prompt')}</div>
-        <div class="dock-record-tags">${tags}</div>
-        <div class="dock-record-actions">
+        <div class="dock-record-actions" style="margin-top:8px;">
           <button class="btn btn-s" type="button" data-text="${esc(c.prompt || '')}" onclick="event.stopPropagation();copyDockText(this.dataset.text,'角色 Prompt')">複製 Prompt</button>
-          <button class="btn btn-s btn-out" type="button" onclick="event.stopPropagation();openCharEditModal(${c.id})">查看角色</button>
         </div>
       </div>
     </div>`;
@@ -7082,12 +7083,14 @@ async function deleteSelectedChars() {
   updateCharLibCount(characterData.length);
   toast('已刪除','ok');
   renderCharPage();
+  renderGenerateDock();
 }
 function clearCharSelection() {
   charSelected.clear(); charSelectMode = false;
   document.getElementById('char-sel-mode-btn').textContent = '多選';
   document.getElementById('char-page-actions').classList.remove('visible');
   renderCharPage();
+  renderGenerateDock();
 }
 
 // ── Character Edit Modal ──
@@ -7096,11 +7099,13 @@ async function openCharEditModal(id) {
   charEditThumbImageId = null;
   charEditRefImageIds = [];
   charEditRefUrls = {};
+  const deleteBtn = document.getElementById('char-edit-delete-btn');
 
   if (id) {
     const c = characterData.find(x => x.id === id);
     if (!c) return;
     document.getElementById('char-edit-title').textContent = '編輯角色';
+    deleteBtn.style.display = '';
     document.getElementById('char-edit-name').value = c.name || '';
     document.getElementById('char-edit-series').value = c.seriesName || '';
     document.getElementById('char-edit-auto-tag').checked = !!c.primaryTagName;
@@ -7130,6 +7135,7 @@ async function openCharEditModal(id) {
     }
   } else {
     document.getElementById('char-edit-title').textContent = '新增角色';
+    deleteBtn.style.display = 'none';
     document.getElementById('char-edit-name').value = '';
     document.getElementById('char-edit-series').value = '';
     document.getElementById('char-edit-auto-tag').checked = false;
@@ -7249,6 +7255,21 @@ async function saveCharEdit() {
   }
   updateCharLibCount(characterData.length);
   renderCharPage();
+  renderGenerateDock();
+}
+
+async function deleteCharFromEdit() {
+  if (!charEditId) return;
+  const c = characterData.find(x => x.id === charEditId);
+  if (!c) return;
+  if (!confirm(`確定刪除角色「${c.name || `#${charEditId}`}」？`)) return;
+  await dbDeleteCharacter(charEditId);
+  closeCharEditModal();
+  characterData = await dbGetCharacters();
+  updateCharLibCount(characterData.length);
+  toast('角色已刪除','ok');
+  renderCharPage();
+  renderGenerateDock();
 }
 
 // ── Gallery Image Picker ──
