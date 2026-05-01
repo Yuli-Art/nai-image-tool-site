@@ -3417,6 +3417,7 @@ async function dbSaveBlend(b) {
     artistEntries: b.artistEntries || [],
     artistIds: b.artistIds||[], artistTags: b.artistTags||[],
     artistNames: b.artistNames||[], notes: b.notes||'',
+    tags: b.tags || [],
     previewImageId: b.previewImageId??null, timestamp: Date.now()
   }));
 }
@@ -3474,6 +3475,7 @@ function normalizeBlendRecord(record) {
     return {
       ...record,
       name: record.name || '',
+      tags: dedupeTags(record.tags || []),
       artistEntries
     };
   }
@@ -3492,6 +3494,7 @@ function normalizeBlendRecord(record) {
   return {
     ...record,
     name: record.name || '',
+    tags: dedupeTags(record.tags || []),
     artistEntries
   };
 }
@@ -3541,6 +3544,34 @@ async function hydrateBlendPreviewUrls(blends) {
       } catch (_) {}
     }
   }
+}
+
+function getBlendFallbackPreviewRecord(blend) {
+  if (!blend?.tags?.length || !galleryData?.length) return null;
+  const normalizedTags = dedupeTags(blend.tags);
+  let match = galleryData
+    .filter(img => normalizedTags.every(tag => (img.tags || []).includes(tag)))
+    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))[0];
+  if (match) return match;
+  return galleryData
+    .filter(img => normalizedTags.some(tag => (img.tags || []).includes(tag)))
+    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0))[0] || null;
+}
+
+function getBlendPreviewUrl(blend) {
+  if (blend?._previewUrl) return blend._previewUrl;
+  const fallbackImage = getBlendFallbackPreviewRecord(blend);
+  if (fallbackImage?._url) return fallbackImage._url;
+  if (fallbackImage?.data) {
+    try {
+      fallbackImage._url = URL.createObjectURL(new Blob([fallbackImage.data], { type: 'image/png' }));
+      return fallbackImage._url;
+    } catch (_) {}
+  }
+  const linkedArtist = getBlendEntriesSorted(blend)
+    .map(entry => artistData.find(a => a.id === entry.artistId))
+    .find(a => a?._previewUrl);
+  return linkedArtist?._previewUrl || '';
 }
 
 async function dbGetTags() {
@@ -5088,13 +5119,32 @@ function renderGenerateDockArtists(q) {
   const blendItems = blendData
     .filter(b => {
       const prompt = renderBlendPrompt(b.artistEntries || []).toLowerCase();
-      const matchQ = !q || deriveBlendName(b).toLowerCase().includes(q) || prompt.includes(q);
+      const matchQ = !q || deriveBlendName(b).toLowerCase().includes(q) || prompt.includes(q) || (b.tags||[]).some(t => t.toLowerCase().includes(q));
       const matchView = applyArtistViewFilter(b, activeView);
       return matchQ && matchView;
     })
     .sort((a,b) => (b.timestamp||0) - (a.timestamp||0))
     .slice(0, 10);
   const blocks = [];
+  blendItems.forEach(b => {
+    const prompt = renderBlendPrompt(b.artistEntries || []);
+    const mediaUrl = getBlendPreviewUrl(b);
+    const media = mediaUrl ? `<img src="${mediaUrl}" alt="">` : '🧪';
+    const tags = (b.tags||[]).slice(0,3).map(t => `<span class="char-card-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
+    blocks.push(`<div class="dock-record" onclick="openBlendDetailModal(${b.id})">
+      <div class="dock-record-media">${media}</div>
+      <div class="dock-record-main">
+        <div class="dock-record-title">${esc(deriveBlendName(b))}</div>
+        <div class="dock-record-sub">混搭記錄</div>
+        <div class="dock-record-tags">${tags}</div>
+        <div class="dock-record-desc">${esc(prompt || '尚未設定混搭條目')}</div>
+        <div class="dock-record-actions">
+          <button class="btn btn-s" type="button" data-text="${esc(prompt || '')}" onclick="event.stopPropagation();insertTextIntoGeneratePrompt(this.dataset.text)">插入正向</button>
+          <button class="btn btn-s btn-out" type="button" onclick="event.stopPropagation();openBlendDetailModal(${b.id})">查看混搭</button>
+        </div>
+      </div>
+    </div>`);
+  });
   artistItems.forEach(a => {
     const media = a._previewUrl ? `<img src="${a._previewUrl}" alt="">` : '🎨';
     const tags = (a.tags||[]).slice(0,3).map(t => `<span class="char-card-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
@@ -5108,21 +5158,6 @@ function renderGenerateDockArtists(q) {
         <div class="dock-record-actions">
           <button class="btn btn-s" type="button" data-text="${esc(a.artistTag || '')}" onclick="event.stopPropagation();insertTextIntoGeneratePrompt(this.dataset.text)">插入正向</button>
           <button class="btn btn-s btn-out" type="button" onclick="event.stopPropagation();openArtistEditModal(${a.id})">查看風格</button>
-        </div>
-      </div>
-    </div>`);
-  });
-  blendItems.forEach(b => {
-    const prompt = renderBlendPrompt(b.artistEntries || []);
-    blocks.push(`<div class="dock-record" onclick="openBlendDetailModal(${b.id})">
-      <div class="dock-record-media">🧪</div>
-      <div class="dock-record-main">
-        <div class="dock-record-title">${esc(deriveBlendName(b))}</div>
-        <div class="dock-record-sub">混搭記錄</div>
-        <div class="dock-record-desc">${esc(prompt || '尚未設定混搭條目')}</div>
-        <div class="dock-record-actions">
-          <button class="btn btn-s" type="button" data-text="${esc(prompt || '')}" onclick="event.stopPropagation();insertTextIntoGeneratePrompt(this.dataset.text)">插入正向</button>
-          <button class="btn btn-s btn-out" type="button" onclick="event.stopPropagation();openBlendDetailModal(${b.id})">查看混搭</button>
         </div>
       </div>
     </div>`);
@@ -6238,6 +6273,7 @@ function buildArtistFilterRow() {
   const row = document.getElementById('artist-filter-row');
   const tagCount = {};
   artistData.forEach(a => (a.tags||[]).forEach(t => tagCount[t]=(tagCount[t]||0)+1));
+  blendData.forEach(b => (b.tags||[]).forEach(t => tagCount[t]=(tagCount[t]||0)+1));
   let html = '';
   if (artistActiveStyle || artistActiveTags.size) {
     html += `<span class="tag-filter-chip active" onclick="clearArtistFilters()">✕ 清除篩選</span>`;
@@ -6426,6 +6462,7 @@ async function createManualBlend() {
     id: null,
     name: '',
     notes: '',
+    tags: [],
     previewImageId: null,
     artistEntries: [
       normalizeBlendEntry({
@@ -6454,15 +6491,18 @@ function renderBlendGrid() {
   wrap.style.display='';
   countEl.textContent = `(${visibleBlends.length})`;
   grid.innerHTML = visibleBlends.map(b => {
-    const preview = b._previewUrl
-      ? `<img class="blend-preview" src="${b._previewUrl}" alt="">`
+    const previewUrl = getBlendPreviewUrl(b);
+    const preview = previewUrl
+      ? `<img class="blend-preview" src="${previewUrl}" alt="">`
       : `<div class="blend-preview-ph">🎨</div>`;
     const names = deriveBlendName(b);
     const promptStr = renderBlendPrompt(b.artistEntries || []);
+    const tags = (b.tags || []).slice(0, 3).map(t => `<span class="char-card-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
     return `<div class="blend-card" onclick="openBlendDetailModal(${b.id})">
       ${preview}
       <div style="padding:7px 9px;">
         <div style="font-size:.78rem;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(names)}</div>
+        ${tags ? `<div class="char-card-tags">${tags}</div>` : ''}
         ${b.notes?`<div class="blend-artists">${esc(b.notes)}</div>`:''}
         <div class="blend-artists" style="font-family:monospace;margin-top:2px;">${esc(promptStr)}</div>
       </div>
@@ -6484,8 +6524,9 @@ function renderBlendDetail() {
   if (!b) return;
   const promptStr = renderBlendPrompt(b.artistEntries || []);
   const isNewBlend = !currentBlendId;
-  const previewHtml = b._previewUrl
-    ? `<img src="${b._previewUrl}" style="width:100%;border-radius:8px;margin-bottom:8px;">`
+  const previewUrl = getBlendPreviewUrl(b);
+  const previewHtml = previewUrl
+    ? `<img src="${previewUrl}" style="width:100%;border-radius:8px;margin-bottom:8px;">`
     : `<div style="width:100%;aspect-ratio:4/3;background:var(--bg3);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:2rem;margin-bottom:8px;">🎨</div>`;
   const entryRows = getBlendEntriesSorted(b).map((entry, index) => `
     <div class="blend-entry">
@@ -6526,6 +6567,13 @@ function renderBlendDetail() {
       <input class="inp" type="text" value="${esc(b.name || '')}" placeholder="可留空，會自動用條目名稱組合" onchange="updateBlendDraftField('name', this.value)" style="width:100%;">
     </div>
     <div>
+      <div class="char-field-label">混搭標籤</div>
+      <div id="blend-edit-tags-display" style="margin-top:4px;"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+        <button class="btn btn-s" onclick="openBlendTagsPicker()">選擇標籤</button>
+      </div>
+    </div>
+    <div>
       <div class="char-field-label">條目</div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
         ${entryRows || `<div style="font-size:.78rem;color:var(--txt2);">目前沒有條目，請先用下方按鈕新增手動條目。</div>`}
@@ -6545,6 +6593,7 @@ function renderBlendDetail() {
       <textarea class="inp" rows="3" style="width:100%;resize:vertical;" onchange="updateBlendDraftField('notes', this.value)">${esc(b.notes || '')}</textarea>
     </div>
   `;
+  renderBlendEditTags();
 }
 
 function updateBlendDraftField(field, value) {
@@ -6578,6 +6627,33 @@ function updateBlendEntryField(index, field, value) {
   if (!currentBlendDraft?.artistEntries?.[index]) return;
   currentBlendDraft.artistEntries[index][field] = value;
   refreshBlendPromptPreview();
+}
+
+function renderBlendEditTags() {
+  renderSimpleTagList('blend-edit-tags-display', currentBlendDraft?.tags || [], '尚未選擇標籤', 'removeBlendTag');
+}
+
+function removeBlendTag(tag) {
+  if (!currentBlendDraft) return;
+  currentBlendDraft.tags = dedupeTags((currentBlendDraft.tags || []).filter(t => t !== tag));
+  renderBlendEditTags();
+}
+
+function openBlendTagsPicker() {
+  openTagPicker({
+    title: '選擇混搭標籤',
+    help: '混搭標籤會幫你整理風格庫，也會用來替混搭自動尋找範例圖。建議至少放一個專屬 tag。',
+    initialTags: currentBlendDraft?.tags || [],
+    multi: true,
+    allowCreate: true,
+    createLabel: '建立新的混搭標籤',
+    onConfirm: tags => {
+      if (!currentBlendDraft) return;
+      currentBlendDraft.tags = dedupeTags(tags);
+      renderBlendEditTags();
+      renderBlendDetail();
+    }
+  });
 }
 
 function removeBlendEntry(index) {
@@ -6620,6 +6696,7 @@ async function saveCurrentBlend() {
   const payload = {
     name: String(currentBlendDraft.name || '').trim(),
     notes: String(currentBlendDraft.notes || '').trim(),
+    tags: await ensureKnownTagList(dedupeTags(currentBlendDraft.tags || [])),
     artistEntries,
     previewImageId: currentBlendDraft.previewImageId ?? null
   };
@@ -6632,7 +6709,7 @@ async function saveCurrentBlend() {
   await hydrateBlendPreviewUrls(blendData);
   const saved = blendData.find(x => x.id === currentBlendId);
   if (saved) currentBlendDraft = JSON.parse(JSON.stringify(saved));
-  renderBlendGrid();
+  renderArtistPage();
   renderBlendDetail();
   toast('混搭記錄已更新','ok');
 }
@@ -6653,7 +6730,7 @@ async function deleteCurrentBlend() {
   blendData = blendData.filter(b=>b.id!==currentBlendId);
   currentBlendId = null;
   closeBlendDetailModal();
-  renderBlendGrid();
+  renderArtistPage();
   toast('已刪除','ok');
 }
 
@@ -7152,6 +7229,13 @@ async function onGalPickerSelect(imgId) {
       openBlendDetailModal(currentBlendId);
       renderBlendGrid();
       toast('預覽圖已更新','ok');
+    } else if (currentBlendDraft) {
+      currentBlendDraft.previewImageId = imgId;
+      currentBlendDraft._previewUrl = url;
+      dbUpdateImage(imgId, { imageCategory: 'blend_preview' });
+      const gi = galleryData.find(x=>x.id===imgId); if (gi) gi.imageCategory='blend_preview';
+      renderBlendDetail();
+      toast('已指定預覽圖，儲存後會保留','ok');
     }
   } else if (galPickerPurpose === 'preciseRef') {
     // Load directly into Precise Reference
