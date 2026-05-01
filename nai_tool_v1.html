@@ -959,14 +959,21 @@
     .ab-result-single{display:block;}
     .ab-result-single.hidden{display:none;}
     #gen-controls-single.hidden{display:none!important;}
-    .ab-result-half{display:flex;flex-direction:column;gap:0;position:relative;min-height:0;}
+    .ab-result-half{display:flex;flex-direction:column;gap:0;min-height:0;height:100%;}
     .ab-result-half-head{display:flex;align-items:center;gap:6px;padding:6px 10px;
       background:var(--bg2);border:1px solid var(--border);border-radius:10px 10px 0 0;
-      border-bottom:none;font-size:.76rem;font-weight:600;}
-    .ab-result-half-body{flex:1;position:relative;border:1px solid var(--border);
-      border-radius:0 0 10px 10px;overflow:hidden;background:var(--bg2);}
-    .ab-result-half-body .result-area{border-radius:0 0 10px 10px;}
-    .ab-result-cards{display:flex;flex-direction:column;gap:8px;padding:8px;overflow-y:auto;max-height:100%;}
+      border-bottom:none;font-size:.76rem;font-weight:600;flex-shrink:0;}
+    .ab-result-half-body{flex:1;border:1px solid var(--border);
+      border-radius:0 0 10px 10px;overflow:hidden;background:var(--bg2);min-height:0;}
+    /* Override generic .result-area inside AB panels — scroll container, not centered */
+    .ab-result-half-body .result-area{
+      width:100%;height:100%;display:flex;flex-direction:column;
+      align-items:stretch;justify-content:flex-start;
+      overflow-y:auto;padding:0;gap:0;border-radius:0 0 10px 10px;}
+    .ab-result-half-body .result-placeholder{
+      width:100%;aspect-ratio:unset;max-height:unset;min-height:120px;
+      border-radius:0;border:none;border-bottom:1px dashed var(--border);}
+    .ab-result-cards{display:flex;flex-direction:column;gap:8px;padding:8px;}
     .ab-result-card img{width:100%;border-radius:6px;display:block;cursor:pointer;transition:opacity .15s;}
     .ab-result-card img:hover{opacity:.88;}
 
@@ -9731,9 +9738,15 @@ function stopAB() {
 }
 
 function abAddResultToGrid(side, arrayBuffer, imageId) {
-  const colId = side === 'a' ? 'ab-results-a' : 'ab-results-b';
+  const colId  = side === 'a' ? 'ab-results-a' : 'ab-results-b';
+  const phId   = side === 'a' ? 'ab-ph-a'      : 'ab-ph-b';
   const col = document.getElementById(colId);
   if (!col) return;
+  // Hide placeholder when first card arrives
+  if (!col.children.length) {
+    const ph = document.getElementById(phId);
+    if (ph) ph.style.display = 'none';
+  }
   const url = URL.createObjectURL(new Blob([arrayBuffer], { type: 'image/png' }));
   const card = document.createElement('div');
   card.className = 'ab-result-card';
@@ -9751,6 +9764,11 @@ function clearABResults() {
   const resB = document.getElementById('ab-results-b');
   if (resA) resA.innerHTML = '';
   if (resB) resB.innerHTML = '';
+  // Restore placeholders
+  const phA = document.getElementById('ab-ph-a');
+  const phB = document.getElementById('ab-ph-b');
+  if (phA) phA.style.display = '';
+  if (phB) phB.style.display = '';
   document.getElementById('ab-progress-row')?.classList.remove('visible');
   const labelA = document.getElementById('ab-a-done-label');
   const labelB = document.getElementById('ab-b-done-label');
