@@ -301,6 +301,7 @@
       padding:6px 14px;border-radius:6px;font-size:.875rem;font-family:inherit;font-weight:500;
       transition:all .15s;}
     .nav-tab.active{background:var(--accent-l);color:var(--accent);}
+    .nav-tab.library-tab{display:none;}
     .nav-right{display:flex;align-items:center;gap:12px;}
     .anlas-info{text-align:right;line-height:1.3;}
     .anlas-bal{font-size:.78rem;color:var(--txt2);} .anlas-bal b{color:var(--warn);}
@@ -315,6 +316,33 @@
     /* Pages */
     .page{display:none;flex:1;}
     .page.active{display:flex;flex-direction:column;min-height:0;}
+    .dock-overlay-open .page.overlay-active{
+      display:flex;
+      flex-direction:column;
+      position:fixed;
+      inset:44px 0 0 0;
+      z-index:500;
+      background:var(--bg);
+      min-height:0;
+      overflow-y:auto;
+    }
+    .dock-overlay-head{
+      display:none;
+      align-items:center;
+      gap:12px;
+      padding:10px 16px;
+      border-bottom:1px solid var(--border);
+      background:var(--bg2);
+      position:sticky;
+      top:0;
+      z-index:70;
+      flex-shrink:0;
+    }
+    .dock-overlay-open .page.overlay-active .dock-overlay-head{display:flex;}
+    .dock-overlay-title{font-size:.92rem;font-weight:700;}
+    .dock-overlay-open .page.overlay-active .gal-views-bar{position:sticky;top:53px;z-index:69;}
+    .dock-overlay-open .page.overlay-active .gallery-toolbar{top:94px;}
+    .dock-overlay-open .page.overlay-active .gallery-actions{position:sticky;top:147px;z-index:68;}
     #page-generate.active{
       --left-pane-width:360px;
       --right-pane-width:420px;
@@ -448,6 +476,12 @@
     .dock-record-tags{display:flex;flex-wrap:wrap;gap:4px;}
     .dock-record-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;}
     .dock-record-actions .btn{padding:6px 10px;font-size:.76rem;}
+    .dock-inline-tools{display:flex;flex-direction:column;gap:10px;flex-shrink:0;}
+    .dock-inline-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+    .dock-chip-scroll{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;}
+    .dock-chip-scroll::-webkit-scrollbar{height:6px;}
+    .dock-chip-scroll::-webkit-scrollbar-thumb{background:var(--scroll-thumb);border-radius:999px;}
+    .dock-record.selected,.dock-gallery-card.selected{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);}
     .left-panel::-webkit-scrollbar,
     .generate-dock-body::-webkit-scrollbar{
       width:0;
@@ -459,25 +493,18 @@
       -ms-overflow-style:none;
     }
     .generate-dock-body{
-      scrollbar-width:none;
-      -ms-overflow-style:none;
-    }
-    .generate-dock-body:hover,
-    .generate-dock-body:focus-within{
       scrollbar-width:thin;
       scrollbar-color:var(--scroll-thumb) transparent;
+      -ms-overflow-style:auto;
     }
-    .generate-dock-body:hover::-webkit-scrollbar,
-    .generate-dock-body:focus-within::-webkit-scrollbar{
+    .generate-dock-body::-webkit-scrollbar{
       width:10px;
       height:10px;
     }
-    .generate-dock-body:hover::-webkit-scrollbar-track,
-    .generate-dock-body:focus-within::-webkit-scrollbar-track{
+    .generate-dock-body::-webkit-scrollbar-track{
       background:transparent;
     }
-    .generate-dock-body:hover::-webkit-scrollbar-thumb,
-    .generate-dock-body:focus-within::-webkit-scrollbar-thumb{
+    .generate-dock-body::-webkit-scrollbar-thumb{
       background:color-mix(in srgb, var(--scroll-thumb) 72%, transparent);
       border:2px solid transparent;
       border-radius:999px;
@@ -781,8 +808,9 @@
 
     /* ── PROMPT 筆記本 ── */
     .note-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;
-      display:flex;flex-direction:column;transition:box-shadow .15s;}
+      display:flex;flex-direction:column;transition:box-shadow .15s,border-color .15s;}
     .note-card:hover{box-shadow:0 0 0 2px var(--accent-l);}
+    .note-card.selected{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);}
     .note-card-cover{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;cursor:pointer;flex-shrink:0;}
     .note-card-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px;flex:1;}
     .note-fragment{font-family:monospace;font-size:.82rem;color:var(--txt);background:var(--bg3);
@@ -919,7 +947,7 @@
     /* ── GEN SUB-NAV ── */
     .gen-sub-nav{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 12px;
       display:none;align-items:center;gap:0;flex-shrink:0;}
-    .gen-sub-nav.visible{display:flex;}
+    .gen-sub-nav.visible{display:none;}
     .gen-sub-tab{background:none;border:none;border-bottom:2px solid transparent;color:var(--txt2);
       cursor:pointer;padding:8px 16px;font-size:.82rem;font-weight:500;white-space:nowrap;
       transition:color .15s,border-color .15s;}
@@ -1046,10 +1074,11 @@
     <div class="nav-brand">🎨 NAI 生圖工具</div>
     <div class="nav-tabs">
       <button class="nav-tab active" id="tab-gen" onclick="showPage('generate')">生圖</button>
-      <button class="nav-tab" id="tab-gal" onclick="showPage('gallery')">圖庫 <span id="gal-count" style="font-size:.72rem;opacity:.7;"></span></button>
-      <button class="nav-tab" id="tab-char-page" onclick="showPage('characters')">角色庫 <span id="char-lib-count" style="font-size:.72rem;opacity:.7;"></span></button>
-      <button class="nav-tab" id="tab-artist-page" onclick="showPage('artists')">風格庫 <span id="artist-lib-count" style="font-size:.72rem;opacity:.7;"></span></button>
-      <button class="nav-tab" id="tab-notes-page" onclick="showPage('notes')">筆記本 <span id="notes-count" style="font-size:.72rem;opacity:.7;"></span></button>
+      <button class="nav-tab" id="tab-ab-top" onclick="showPage('ab')">A/B 比較</button>
+      <button class="nav-tab library-tab" id="tab-gal" onclick="showPage('gallery')">圖庫 <span id="gal-count" style="font-size:.72rem;opacity:.7;"></span></button>
+      <button class="nav-tab library-tab" id="tab-char-page" onclick="showPage('characters')">角色庫 <span id="char-lib-count" style="font-size:.72rem;opacity:.7;"></span></button>
+      <button class="nav-tab library-tab" id="tab-artist-page" onclick="showPage('artists')">風格庫 <span id="artist-lib-count" style="font-size:.72rem;opacity:.7;"></span></button>
+      <button class="nav-tab library-tab" id="tab-notes-page" onclick="showPage('notes')">筆記本 <span id="notes-count" style="font-size:.72rem;opacity:.7;"></span></button>
     </div>
     <div class="nav-right">
       <div class="anlas-info">
@@ -1466,6 +1495,10 @@
 
   <!-- ── GALLERY PAGE ── -->
   <div id="page-gallery" class="page">
+    <div class="dock-overlay-head">
+      <button class="btn btn-s btn-out" type="button" onclick="closeDockOverlayPage()">← 關閉</button>
+      <div class="dock-overlay-title">圖庫</div>
+    </div>
     <!-- View tabs -->
     <div class="gal-views-bar" id="gal-views-bar"></div>
     <!-- Toolbar -->
@@ -1497,6 +1530,11 @@
 
   <!-- ── 角色庫 PAGE ── -->
   <div id="page-characters" class="page">
+    <div class="dock-overlay-head">
+      <button class="btn btn-s btn-out" type="button" onclick="closeDockOverlayPage()">← 關閉</button>
+      <div class="dock-overlay-title">角色庫</div>
+    </div>
+    <div class="gal-views-bar" id="char-views-bar"></div>
     <div class="gallery-toolbar">
       <span style="font-size:.9rem;font-weight:700;">角色庫</span>
       <button class="btn btn-p" onclick="openCharEditModal(null)">＋ 新增角色</button>
@@ -1516,6 +1554,11 @@
 
   <!-- ── 風格庫 PAGE ── -->
   <div id="page-artists" class="page">
+    <div class="dock-overlay-head">
+      <button class="btn btn-s btn-out" type="button" onclick="closeDockOverlayPage()">← 關閉</button>
+      <div class="dock-overlay-title">風格庫</div>
+    </div>
+    <div class="gal-views-bar" id="artist-views-bar"></div>
     <div class="gallery-toolbar">
       <span style="font-size:.9rem;font-weight:700;">風格庫</span>
       <button class="btn btn-p" onclick="openArtistEditModal(null)">＋ 新增繪師</button>
@@ -1545,12 +1588,23 @@
 
   <!-- ── PROMPT 筆記本 PAGE ── -->
   <div id="page-notes" class="page">
+    <div class="dock-overlay-head">
+      <button class="btn btn-s btn-out" type="button" onclick="closeDockOverlayPage()">← 關閉</button>
+      <div class="dock-overlay-title">Prompt 筆記本</div>
+    </div>
     <!-- View tabs -->
     <div class="gal-views-bar" id="notes-views-bar"></div>
     <div class="gallery-toolbar">
       <span style="font-size:.9rem;font-weight:700;">Prompt 筆記本</span>
       <button class="btn btn-p" onclick="openNoteEditModal(null)">＋ 新增筆記</button>
       <input type="search" class="gallery-search" id="notes-search" placeholder="搜尋片段 / 說明..." oninput="renderNotesPage()" style="max-width:200px;">
+      <div style="flex:1;"></div>
+      <button class="btn btn-s" id="notes-sel-mode-btn" onclick="toggleNotesSelectMode()">多選</button>
+    </div>
+    <div class="gallery-actions" id="notes-page-actions">
+      <span class="gallery-sel-count" id="notes-sel-count">已選 0 筆</span>
+      <button class="btn btn-d" onclick="deleteSelectedNotes()">🗑 刪除選取</button>
+      <button class="btn btn-s" onclick="clearNotesSelection()">取消選取</button>
     </div>
     <!-- Category filter -->
     <div style="padding:6px 12px 0;display:flex;gap:6px;flex-wrap:wrap;" id="notes-filter-row"></div>
@@ -2535,6 +2589,54 @@
   </div>
 </div>
 
+<div class="gal-view-popup-overlay" id="char-view-popup" onclick="closeCharViewPopup(event)">
+  <div class="gal-view-popup" onclick="event.stopPropagation()">
+    <h3>新增角色分頁</h3>
+    <div style="font-size:.78rem;color:var(--txt2);margin-bottom:10px;">用 tag 建立角色自訂分頁，之後 dock 和展開頁面都能共用。</div>
+    <input type="text" id="char-view-name" placeholder="例：主線角色 / 原創男角" style="width:100%;">
+    <div class="gal-view-filter-block">
+      <div class="gal-view-filter-title">顯示這些 tag</div>
+      <div class="gal-view-filter-help">角色至少要包含其中一個 tag，才會出現在這個分頁。不選 = 不限制。</div>
+      <input type="search" id="char-view-include-search" placeholder="搜尋要顯示的 tag..." oninput="renderCharViewTagPicker('include')" style="width:100%;">
+      <div class="gal-view-tag-list" id="char-view-include-list"></div>
+    </div>
+    <div class="gal-view-filter-block">
+      <div class="gal-view-filter-title">隱藏這些 tag</div>
+      <div class="gal-view-filter-help">只要角色含有其中任一個 tag，就會被排除。隱藏條件優先。</div>
+      <input type="search" id="char-view-exclude-search" placeholder="搜尋要隱藏的 tag..." oninput="renderCharViewTagPicker('exclude')" style="width:100%;">
+      <div class="gal-view-tag-list" id="char-view-exclude-list"></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;">
+      <button class="btn btn-s" onclick="closeCharViewPopup()">取消</button>
+      <button class="btn btn-p" onclick="confirmAddCharView()">新增</button>
+    </div>
+  </div>
+</div>
+
+<div class="gal-view-popup-overlay" id="artist-view-popup" onclick="closeArtistViewPopup(event)">
+  <div class="gal-view-popup" onclick="event.stopPropagation()">
+    <h3>新增風格分頁</h3>
+    <div style="font-size:.78rem;color:var(--txt2);margin-bottom:10px;">用 tag 建立風格/混搭自訂分頁，之後 dock 和展開頁面都能共用。</div>
+    <input type="text" id="artist-view-name" placeholder="例：厚塗 / 男繪師 / 商稿風" style="width:100%;">
+    <div class="gal-view-filter-block">
+      <div class="gal-view-filter-title">顯示這些 tag</div>
+      <div class="gal-view-filter-help">繪師或混搭至少要包含其中一個 tag，才會出現在這個分頁。不選 = 不限制。</div>
+      <input type="search" id="artist-view-include-search" placeholder="搜尋要顯示的 tag..." oninput="renderArtistViewTagPicker('include')" style="width:100%;">
+      <div class="gal-view-tag-list" id="artist-view-include-list"></div>
+    </div>
+    <div class="gal-view-filter-block">
+      <div class="gal-view-filter-title">隱藏這些 tag</div>
+      <div class="gal-view-filter-help">只要繪師或混搭含有其中任一個 tag，就會被排除。隱藏條件優先。</div>
+      <input type="search" id="artist-view-exclude-search" placeholder="搜尋要隱藏的 tag..." oninput="renderArtistViewTagPicker('exclude')" style="width:100%;">
+      <div class="gal-view-tag-list" id="artist-view-exclude-list"></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;">
+      <button class="btn btn-s" onclick="closeArtistViewPopup()">取消</button>
+      <button class="btn btn-p" onclick="confirmAddArtistView()">新增</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── IMAGE MODAL ── -->
 <div class="modal-overlay" id="modal" onclick="closeModal(event)">
   <div class="modal-box" onclick="e=>e.stopPropagation()">
@@ -2681,6 +2783,8 @@ let selectedIds = new Set();
 let generateDockTab = 'gallery';
 let generateDockPanel = 'database'; // 'database' | 'batch'
 let generateDockPendingImageId = null;
+let dockOverlayPage = '';
+let dockOverlayReturnPage = 'generate';
 
 // Modal state
 let modalImageId = null;
@@ -4176,6 +4280,8 @@ function gdriveRefreshSettingsStatus() {
 
 async function showApp() {
   loadGalViews();
+  loadCharViews();
+  loadArtistViews();
   loadNotesViews();
   loadBatchTasks();
   await ensureDefaultTagTypes();
@@ -4382,10 +4488,13 @@ async function startQuickGenerate() {
 }
 
 function showPage(page) {
+  if (dockOverlayPage && page !== 'generate') {
+    closeDockOverlayPage(false);
+  }
   ['page-generate','page-gallery','page-characters','page-artists','page-notes','page-batch','page-ab'].forEach(id => {
     const el = document.getElementById(id); if (el) el.classList.remove('active');
   });
-  ['tab-gen','tab-gal','tab-char-page','tab-artist-page','tab-notes-page'].forEach(id => {
+  ['tab-gen','tab-gal','tab-char-page','tab-artist-page','tab-notes-page','tab-ab-top'].forEach(id => {
     const el = document.getElementById(id); if (el) el.classList.remove('active');
   });
   const show = id => { const el = document.getElementById(id); if (el) el.classList.add('active'); };
@@ -4402,7 +4511,6 @@ function showPage(page) {
   if (page === 'generate') {
     if (isAbMode) exitAbMode();
     show('page-generate'); activateTab('tab-gen');
-    const el = document.getElementById('gen-sub-gen'); if (el) el.classList.add('active');
     applyGenerateLayoutState();
     renderGenerateDock();
   } else if (page === 'gallery') {
@@ -4419,7 +4527,7 @@ function showPage(page) {
     renderBatchPage();
   } else if (page === 'ab') {
     show('page-generate'); activateTab('tab-gen');
-    const el = document.getElementById('gen-sub-ab'); if (el) el.classList.add('active');
+    activateTab('tab-ab-top');
     enterAbMode();
     applyGenerateLayoutState();
     renderGenerateDock();
@@ -4435,6 +4543,33 @@ const GENERATE_DOCK_PAGE_MAP = {
 
 function isGenerateDockAvailable() {
   return window.innerWidth > 768 && !!document.getElementById('generate-dock');
+}
+
+function openDockOverlayPage(page) {
+  dockOverlayReturnPage = isAbMode ? 'ab' : 'generate';
+  dockOverlayPage = page;
+  document.body.classList.add('dock-overlay-open');
+  ['page-gallery','page-characters','page-artists','page-notes'].forEach(id => {
+    document.getElementById(id)?.classList.remove('overlay-active');
+  });
+  const id = `page-${page}`;
+  const target = document.getElementById(id);
+  if (target) target.classList.add('overlay-active');
+  if (page === 'gallery') renderGallery();
+  else if (page === 'characters') renderCharPage();
+  else if (page === 'artists') renderArtistPage();
+  else if (page === 'notes') renderNotesPage();
+}
+
+function closeDockOverlayPage(restoreGenerate = true) {
+  ['page-gallery','page-characters','page-artists','page-notes'].forEach(id => {
+    document.getElementById(id)?.classList.remove('overlay-active');
+  });
+  document.body.classList.remove('dock-overlay-open');
+  dockOverlayPage = '';
+  if (restoreGenerate) {
+    showPage(dockOverlayReturnPage);
+  }
 }
 
 function refreshGenerateDockIfVisible() {
@@ -4765,7 +4900,7 @@ async function saveExternalBatchAssetsAndProceed() {
 }
 
 function openGenerateDockFullPage() {
-  showPage(GENERATE_DOCK_PAGE_MAP[generateDockTab] || 'gallery');
+  openDockOverlayPage(GENERATE_DOCK_PAGE_MAP[generateDockTab] || 'gallery');
 }
 
 function buildGenerateDockTabs() {
@@ -4796,23 +4931,103 @@ function insertTextIntoGeneratePrompt(text, target='prompt') {
   toast(`已插入到${target==='neg-prompt'?'負向':'正向'} prompt`, 'ok');
 }
 
+function renderDockViewTabs(kind) {
+  if (kind === 'gallery') {
+    const allActive = activeGalViewId === 'all';
+    let html = `<button class="gal-view-tab ${allActive?'active':''}" onclick="switchGalView('all')">全部</button>`;
+    galViews.forEach(v => {
+      const active = activeGalViewId === v.id;
+      const modeIcon = (v.excludeTags?.length && !v.includeTags?.length) ? '🚫 ' : '';
+      html += `<button class="gal-view-tab ${active?'active':''}" onclick="switchGalView('${v.id}')">${modeIcon}${esc(v.name)}</button>`;
+    });
+    html += `<button class="gal-view-add-btn" onclick="openGalViewPopup()">＋</button>`;
+    return html;
+  }
+  if (kind === 'characters') {
+    const allActive = activeCharViewId === 'all';
+    let html = `<button class="gal-view-tab ${allActive?'active':''}" onclick="switchCharView('all')">全部</button>`;
+    charViews.forEach(v => {
+      const active = activeCharViewId === v.id;
+      const modeIcon = (v.excludeTags?.length && !v.includeTags?.length) ? '🚫 ' : '';
+      html += `<button class="gal-view-tab ${active?'active':''}" onclick="switchCharView('${v.id}')">${modeIcon}${esc(v.name)}</button>`;
+    });
+    html += `<button class="gal-view-add-btn" onclick="openCharViewPopup()">＋</button>`;
+    return html;
+  }
+  if (kind === 'artists') {
+    const allActive = activeArtistViewId === 'all';
+    let html = `<button class="gal-view-tab ${allActive?'active':''}" onclick="switchArtistView('all')">全部</button>`;
+    artistViews.forEach(v => {
+      const active = activeArtistViewId === v.id;
+      const modeIcon = (v.excludeTags?.length && !v.includeTags?.length) ? '🚫 ' : '';
+      html += `<button class="gal-view-tab ${active?'active':''}" onclick="switchArtistView('${v.id}')">${modeIcon}${esc(v.name)}</button>`;
+    });
+    html += `<button class="gal-view-add-btn" onclick="openArtistViewPopup()">＋</button>`;
+    return html;
+  }
+  const allActive = activeNotesViewId === 'all';
+  let html = `<button class="gal-view-tab ${allActive?'active':''}" onclick="switchNotesView('all')">全部</button>`;
+  notesViews.forEach(v => {
+    const active = activeNotesViewId === v.id;
+    const modeIcon = (v.excludeTags?.length && !v.includeTags?.length) ? '🚫 ' : '';
+    html += `<button class="gal-view-tab ${active?'active':''}" onclick="switchNotesView('${v.id}')">${modeIcon}${esc(v.name)}</button>`;
+  });
+  html += `<button class="gal-view-add-btn" onclick="openNotesViewPopup()">＋</button>`;
+  return html;
+}
+
+function renderDockGalleryTagChips() {
+  const tagCount = {};
+  galleryData.forEach(img => (img.tags || []).forEach(t => tagCount[t] = (tagCount[t] || 0) + 1));
+  return Object.entries(tagCount).sort((a,b) => b[1] - a[1]).slice(0, 16).map(([t,c]) =>
+    `<span class="tag-filter-chip ${activeTagFilters.has(t)?'active':''}" ${activeTagFilters.has(t) ? '' : `style="${getTagChipStyle(t, 0.10)}"`} onclick="toggleTagFilter('${esc(t)}')">${esc(t)} <small>${c}</small></span>`
+  ).join('');
+}
+
+function onDockGalleryCardClick(id) {
+  if (selectMode) { toggleSelect(id); renderGenerateDock(); return; }
+  openModalFromDock(id);
+}
+
+function onDockCharCardClick(id) {
+  if (charSelectMode) { toggleCharSelect(id); renderGenerateDock(); return; }
+  openCharEditModal(id);
+}
+
+function onDockArtistCardClick(id) {
+  if (artistSelectMode) { toggleArtistSelect(id); renderGenerateDock(); return; }
+  openArtistEditModal(id);
+}
+
+function onDockNoteCardClick(id) {
+  if (notesSelectMode) { toggleNotesSelect(id); renderGenerateDock(); return; }
+  openNoteEditModal(id);
+}
+
 function renderGenerateDockGallery(q) {
+  const activeView = galViews.find(v => v.id === activeGalViewId);
   const items = galleryData
     .filter(img => {
+      const imgTags = img.tags || [];
+      const matchView = !activeView || applyGalViewFilter(img, activeView);
+      const matchTagFilter = activeTagFilters.size === 0 || [...activeTagFilters].every(t => imgTags.includes(t));
+      if (!matchView || !matchTagFilter) return false;
       if (!q) return true;
       const meta = img.metadata || {};
-      return (meta.prompt||'').toLowerCase().includes(q) || (img.tags||[]).some(t => t.toLowerCase().includes(q));
+      return (meta.prompt||'').toLowerCase().includes(q) || imgTags.some(t => t.toLowerCase().includes(q));
     })
     .sort((a,b) => (b.timestamp||0) - (a.timestamp||0))
     .slice(0, 24);
   if (!items.length) {
-    return `<div class="generate-dock-empty">${galleryData.length ? '沒有符合條件的圖片' : '圖庫還沒有圖片。生完圖後會自動出現在這裡。'}</div>`;
+    return `<div class="dock-inline-tools"><div class="dock-chip-scroll">${renderDockViewTabs('gallery')}</div><div class="dock-inline-bar"><button class="btn btn-s btn-out" type="button" onclick="uploadImagesToGallery()">📤 上傳</button><button class="btn btn-s" type="button" onclick="toggleSelectMode()">${selectMode?'結束多選':'多選'}</button></div><div class="dock-chip-scroll">${renderDockGalleryTagChips()}</div></div><div class="generate-dock-empty">${galleryData.length ? '沒有符合條件的圖片' : '圖庫還沒有圖片。生完圖後會自動出現在這裡。'}</div>`;
   }
-  return `<div class="generate-dock-grid">${items.map(img => {
+  const selectionBar = selectMode ? `<div class="dock-inline-bar"><span class="gallery-sel-count">已選 ${selectedIds.size} 張</span><button class="btn btn-s" type="button" onclick="selectAll()">全選</button><button class="btn btn-s" type="button" onclick="downloadSelected()">下載</button><button class="btn btn-d" type="button" onclick="deleteSelected()">刪除</button><button class="btn btn-s btn-out" type="button" onclick="clearSelection()">取消</button></div>` : '';
+  return `<div class="dock-inline-tools"><div class="dock-chip-scroll">${renderDockViewTabs('gallery')}</div><div class="dock-inline-bar"><button class="btn btn-s btn-out" type="button" onclick="uploadImagesToGallery()">📤 上傳</button><button class="btn btn-s" type="button" onclick="toggleSelectMode()">${selectMode?'結束多選':'多選'}</button></div>${selectionBar}<div class="dock-chip-scroll">${renderDockGalleryTagChips()}</div></div><div class="generate-dock-grid">${items.map(img => {
     const url = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
     const tags = (img.tags||[]).slice(0,3).map(t => `<span class="gcard-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
     const time = new Date(img.timestamp).toLocaleDateString('zh-TW',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-      return `<div class="dock-gallery-card${generateDockPendingImageId === img.id ? ' is-new' : ''}" data-image-id="${img.id}" onclick="openModalFromDock(${img.id})">
+      const selected = selectedIds.has(img.id) ? ' selected' : '';
+      return `<div class="dock-gallery-card${generateDockPendingImageId === img.id ? ' is-new' : ''}${selected}" data-image-id="${img.id}" onclick="onDockGalleryCardClick(${img.id})">
         <img src="${url}" loading="lazy" alt="">
         <div class="dock-gallery-meta">
           <div class="dock-gallery-tags">${tags}</div>
@@ -4823,17 +5038,26 @@ function renderGenerateDockGallery(q) {
 }
 
 function renderGenerateDockCharacters(q) {
+  const activeView = charViews.find(v => v.id === activeCharViewId);
   const items = characterData
-    .filter(c => !q || c.name.toLowerCase().includes(q) || (c.prompt||'').toLowerCase().includes(q) || (c.seriesName||'').toLowerCase().includes(q))
+    .filter(c => {
+      const matchQ = !q || c.name.toLowerCase().includes(q) || (c.prompt||'').toLowerCase().includes(q) || (c.seriesName||'').toLowerCase().includes(q);
+      const matchSeries = !charActiveSeries || c.seriesName === charActiveSeries;
+      const matchTags = charActiveTags.size===0 || [...charActiveTags].every(t => (c.tags||[]).includes(t));
+      const matchView = applyCharViewFilter(c, activeView);
+      return matchQ && matchSeries && matchTags && matchView;
+    })
     .sort((a,b) => (b.timestamp||0) - (a.timestamp||0))
     .slice(0, 18);
   if (!items.length) {
-    return `<div class="generate-dock-empty">${characterData.length ? '沒有符合條件的角色' : '角色庫目前是空的。'}</div>`;
+    return `<div class="dock-inline-tools"><div class="dock-chip-scroll">${renderDockViewTabs('characters')}</div><div class="dock-inline-bar"><button class="btn btn-s btn-out" type="button" onclick="openCharEditModal(null)">＋ 新增角色</button><button class="btn btn-s" type="button" onclick="toggleCharSelectMode()">${charSelectMode?'結束多選':'多選'}</button></div></div><div class="generate-dock-empty">${characterData.length ? '沒有符合條件的角色' : '角色庫目前是空的。'}</div>`;
   }
-  return `<div class="generate-dock-list">${items.map(c => {
+  const selectionBar = charSelectMode ? `<div class="dock-inline-bar"><span class="gallery-sel-count">已選 ${charSelected.size} 個</span><button class="btn btn-d" type="button" onclick="deleteSelectedChars()">刪除</button><button class="btn btn-s btn-out" type="button" onclick="clearCharSelection()">取消</button></div>` : '';
+  return `<div class="dock-inline-tools"><div class="dock-chip-scroll">${renderDockViewTabs('characters')}</div><div class="dock-inline-bar"><button class="btn btn-s btn-out" type="button" onclick="openCharEditModal(null)">＋ 新增角色</button><button class="btn btn-s" type="button" onclick="toggleCharSelectMode()">${charSelectMode?'結束多選':'多選'}</button></div>${selectionBar}</div><div class="generate-dock-list">${items.map(c => {
     const media = c._thumbUrl ? `<img src="${c._thumbUrl}" alt="">` : '👤';
     const tags = (c.tags||[]).slice(0,3).map(t => `<span class="char-card-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
-    return `<div class="dock-record">
+    const sel = charSelected.has(c.id) ? ' selected' : '';
+    return `<div class="dock-record${sel}" onclick="onDockCharCardClick(${c.id})">
       <div class="dock-record-media">${media}</div>
       <div class="dock-record-main">
         <div class="dock-record-title">${esc(c.name)}</div>
@@ -4841,8 +5065,8 @@ function renderGenerateDockCharacters(q) {
         <div class="dock-record-desc">${esc(c.prompt || '尚未填寫角色 Prompt')}</div>
         <div class="dock-record-tags">${tags}</div>
         <div class="dock-record-actions">
-          <button class="btn btn-s" type="button" data-text="${esc(c.prompt || '')}" onclick="insertTextIntoGeneratePrompt(this.dataset.text)">插入正向</button>
-          <button class="btn btn-s btn-out" type="button" onclick="openCharEditModal(${c.id})">查看角色</button>
+          <button class="btn btn-s" type="button" data-text="${esc(c.prompt || '')}" onclick="event.stopPropagation();insertTextIntoGeneratePrompt(this.dataset.text)">插入正向</button>
+          <button class="btn btn-s btn-out" type="button" onclick="event.stopPropagation();openCharEditModal(${c.id})">查看角色</button>
         </div>
       </div>
     </div>`;
@@ -4850,14 +5074,23 @@ function renderGenerateDockCharacters(q) {
 }
 
 function renderGenerateDockArtists(q) {
+  const activeView = artistViews.find(v => v.id === activeArtistViewId);
   const artistItems = artistData
-    .filter(a => !q || a.name.toLowerCase().includes(q) || (a.artistTag||'').toLowerCase().includes(q) || (a.tags||[]).some(t => t.toLowerCase().includes(q)))
+    .filter(a => {
+      const matchQ = !q || a.name.toLowerCase().includes(q) || (a.artistTag||'').toLowerCase().includes(q) || (a.tags||[]).some(t => t.toLowerCase().includes(q));
+      const matchStyle = !artistActiveStyle || a.styleType === artistActiveStyle;
+      const matchTags  = artistActiveTags.size===0 || [...artistActiveTags].every(t=>(a.tags||[]).includes(t));
+      const matchView = applyArtistViewFilter(a, activeView);
+      return matchQ && matchStyle && matchTags && matchView;
+    })
     .sort((a,b) => (b.timestamp||0) - (a.timestamp||0))
     .slice(0, 16);
   const blendItems = blendData
     .filter(b => {
       const prompt = renderBlendPrompt(b.artistEntries || []).toLowerCase();
-      return !q || deriveBlendName(b).toLowerCase().includes(q) || prompt.includes(q);
+      const matchQ = !q || deriveBlendName(b).toLowerCase().includes(q) || prompt.includes(q);
+      const matchView = applyArtistViewFilter(b, activeView);
+      return matchQ && matchView;
     })
     .sort((a,b) => (b.timestamp||0) - (a.timestamp||0))
     .slice(0, 10);
@@ -4865,52 +5098,62 @@ function renderGenerateDockArtists(q) {
   artistItems.forEach(a => {
     const media = a._previewUrl ? `<img src="${a._previewUrl}" alt="">` : '🎨';
     const tags = (a.tags||[]).slice(0,3).map(t => `<span class="char-card-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
-    blocks.push(`<div class="dock-record">
+    const sel = artistSelected.has(a.id) ? ' selected' : '';
+    blocks.push(`<div class="dock-record${sel}" onclick="onDockArtistCardClick(${a.id})">
       <div class="dock-record-media">${media}</div>
       <div class="dock-record-main">
         <div class="dock-record-title">${esc(a.name)}</div>
         <div class="dock-record-sub">${esc(a.artistTag || '未設定 artist tag')}</div>
         <div class="dock-record-tags">${tags}</div>
         <div class="dock-record-actions">
-          <button class="btn btn-s" type="button" data-text="${esc(a.artistTag || '')}" onclick="insertTextIntoGeneratePrompt(this.dataset.text)">插入正向</button>
-          <button class="btn btn-s btn-out" type="button" onclick="openArtistEditModal(${a.id})">查看風格</button>
+          <button class="btn btn-s" type="button" data-text="${esc(a.artistTag || '')}" onclick="event.stopPropagation();insertTextIntoGeneratePrompt(this.dataset.text)">插入正向</button>
+          <button class="btn btn-s btn-out" type="button" onclick="event.stopPropagation();openArtistEditModal(${a.id})">查看風格</button>
         </div>
       </div>
     </div>`);
   });
   blendItems.forEach(b => {
     const prompt = renderBlendPrompt(b.artistEntries || []);
-    blocks.push(`<div class="dock-record">
+    blocks.push(`<div class="dock-record" onclick="openBlendDetailModal(${b.id})">
       <div class="dock-record-media">🧪</div>
       <div class="dock-record-main">
         <div class="dock-record-title">${esc(deriveBlendName(b))}</div>
         <div class="dock-record-sub">混搭記錄</div>
         <div class="dock-record-desc">${esc(prompt || '尚未設定混搭條目')}</div>
         <div class="dock-record-actions">
-          <button class="btn btn-s" type="button" data-text="${esc(prompt || '')}" onclick="insertTextIntoGeneratePrompt(this.dataset.text)">插入正向</button>
-          <button class="btn btn-s btn-out" type="button" onclick="openBlendDetailModal(${b.id})">查看混搭</button>
+          <button class="btn btn-s" type="button" data-text="${esc(prompt || '')}" onclick="event.stopPropagation();insertTextIntoGeneratePrompt(this.dataset.text)">插入正向</button>
+          <button class="btn btn-s btn-out" type="button" onclick="event.stopPropagation();openBlendDetailModal(${b.id})">查看混搭</button>
         </div>
       </div>
     </div>`);
   });
   if (!blocks.length) {
-    return `<div class="generate-dock-empty">${artistData.length || blendData.length ? '沒有符合條件的風格或混搭' : '風格庫目前是空的。'}</div>`;
+    return `<div class="dock-inline-tools"><div class="dock-chip-scroll">${renderDockViewTabs('artists')}</div><div class="dock-inline-bar"><button class="btn btn-s btn-out" type="button" onclick="openArtistEditModal(null)">＋ 新增繪師</button><button class="btn btn-s btn-out" type="button" onclick="createManualBlend()">＋ 手動混搭</button><button class="btn btn-s" type="button" onclick="toggleArtistSelectMode()">${artistSelectMode?'結束多選':'多選'}</button></div></div><div class="generate-dock-empty">${artistData.length || blendData.length ? '沒有符合條件的風格或混搭' : '風格庫目前是空的。'}</div>`;
   }
-  return `<div class="generate-dock-list">${blocks.join('')}</div>`;
+  const selectionBar = artistSelectMode ? `<div class="dock-inline-bar"><span class="gallery-sel-count">已選 ${artistSelected.size} 個</span><button class="btn btn-p" type="button" onclick="createBlendFromSelected()">建立混搭</button><button class="btn btn-d" type="button" onclick="deleteSelectedArtists()">刪除</button><button class="btn btn-s btn-out" type="button" onclick="clearArtistSelection()">取消</button></div>` : '';
+  return `<div class="dock-inline-tools"><div class="dock-chip-scroll">${renderDockViewTabs('artists')}</div><div class="dock-inline-bar"><button class="btn btn-s btn-out" type="button" onclick="openArtistEditModal(null)">＋ 新增繪師</button><button class="btn btn-s btn-out" type="button" onclick="createManualBlend()">＋ 手動混搭</button><button class="btn btn-s" type="button" onclick="toggleArtistSelectMode()">${artistSelectMode?'結束多選':'多選'}</button></div>${selectionBar}</div><div class="generate-dock-list">${blocks.join('')}</div>`;
 }
 
 function renderGenerateDockNotes(q) {
+  const activeView = notesViews.find(v => v.id === activeNotesViewId);
   const items = notesData
-    .filter(n => !q || (n.fragment||'').toLowerCase().includes(q) || (n.description||'').toLowerCase().includes(q) || (n.tags||[]).some(t => t.toLowerCase().includes(q)))
+    .filter(n => {
+      const matchQ = !q || (n.fragment||'').toLowerCase().includes(q) || (n.description||'').toLowerCase().includes(q) || (n.tags||[]).some(t => t.toLowerCase().includes(q));
+      const matchCat = !notesActiveCategory || n.category === notesActiveCategory;
+      const matchView = applyNotesViewFilter(n, activeView);
+      return matchQ && matchCat && matchView;
+    })
     .sort((a,b) => (b.timestamp||0) - (a.timestamp||0))
     .slice(0, 18);
   if (!items.length) {
-    return `<div class="generate-dock-empty">${notesData.length ? '沒有符合條件的筆記' : '筆記本目前是空的。'}</div>`;
+    return `<div class="dock-inline-tools"><div class="dock-chip-scroll">${renderDockViewTabs('notes')}</div><div class="dock-inline-bar"><button class="btn btn-s btn-out" type="button" onclick="openNoteEditModal(null)">＋ 新增筆記</button><button class="btn btn-s" type="button" onclick="toggleNotesSelectMode()">${notesSelectMode?'結束多選':'多選'}</button></div></div><div class="generate-dock-empty">${notesData.length ? '沒有符合條件的筆記' : '筆記本目前是空的。'}</div>`;
   }
-  return `<div class="generate-dock-list">${items.map(n => {
+  const selectionBar = notesSelectMode ? `<div class="dock-inline-bar"><span class="gallery-sel-count">已選 ${notesSelected.size} 筆</span><button class="btn btn-d" type="button" onclick="deleteSelectedNotes()">刪除</button><button class="btn btn-s btn-out" type="button" onclick="clearNotesSelection()">取消</button></div>` : '';
+  return `<div class="dock-inline-tools"><div class="dock-chip-scroll">${renderDockViewTabs('notes')}</div><div class="dock-inline-bar"><button class="btn btn-s btn-out" type="button" onclick="openNoteEditModal(null)">＋ 新增筆記</button><button class="btn btn-s" type="button" onclick="toggleNotesSelectMode()">${notesSelectMode?'結束多選':'多選'}</button></div>${selectionBar}</div><div class="generate-dock-list">${items.map(n => {
+    const sel = notesSelected.has(n.id) ? ' selected' : '';
     const catLabel = NOTE_CATEGORIES[n.category] || n.category || '片段';
     const tags = (n.tags||[]).slice(0,3).map(t => `<span class="char-card-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
-    return `<div class="dock-record">
+    return `<div class="dock-record${sel}" onclick="onDockNoteCardClick(${n.id})">
       <div class="dock-record-media">📓</div>
       <div class="dock-record-main">
         <div class="dock-record-title">${esc(catLabel)}</div>
@@ -4918,9 +5161,9 @@ function renderGenerateDockNotes(q) {
         <div class="dock-record-desc">${esc(n.fragment || '')}</div>
         <div class="dock-record-tags">${tags}</div>
         <div class="dock-record-actions">
-          <button class="btn btn-s" type="button" onclick="insertNoteToPrompt(${n.id},'pos')">插入正向</button>
-          <button class="btn btn-s" type="button" onclick="insertNoteToPrompt(${n.id},'neg')">插入負向</button>
-          <button class="btn btn-s btn-out" type="button" onclick="openNoteEditModal(${n.id})">查看筆記</button>
+          <button class="btn btn-s" type="button" onclick="event.stopPropagation();insertNoteToPrompt(${n.id},'pos')">插入正向</button>
+          <button class="btn btn-s" type="button" onclick="event.stopPropagation();insertNoteToPrompt(${n.id},'neg')">插入負向</button>
+          <button class="btn btn-s btn-out" type="button" onclick="event.stopPropagation();openNoteEditModal(${n.id})">查看筆記</button>
         </div>
       </div>
     </div>`;
@@ -5828,18 +6071,133 @@ function updateArtistLibCount(n) {
 
 let artistActiveStyle = '';
 let artistActiveTags  = new Set();
+const ARTIST_VIEWS_KEY = 'nai_artist_views_v1';
+let artistViews = [];
+let activeArtistViewId = 'all';
+let artistViewIncludeTags = new Set();
+let artistViewExcludeTags = new Set();
+
+function loadArtistViews() {
+  try {
+    const raw = localStorage.getItem(ARTIST_VIEWS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    artistViews = Array.isArray(parsed) ? parsed.map(v => ({
+      id: v.id,
+      name: v.name,
+      includeTags: Array.isArray(v.includeTags) ? v.includeTags : [],
+      excludeTags: Array.isArray(v.excludeTags) ? v.excludeTags : []
+    })).filter(v => v.id && v.name) : [];
+  } catch { artistViews = []; }
+}
+
+function saveArtistViews() {
+  localStorage.setItem(ARTIST_VIEWS_KEY, JSON.stringify(artistViews));
+}
+
+function applyArtistViewFilter(item, view) {
+  if (!view) return true;
+  const itemTags = item.tags || [];
+  const hasExclude = view.excludeTags?.length && view.excludeTags.some(t => itemTags.includes(t));
+  if (hasExclude) return false;
+  if (view.includeTags?.length) return view.includeTags.some(t => itemTags.includes(t));
+  return true;
+}
+
+function renderArtistViewTabs() {
+  const bar = document.getElementById('artist-views-bar');
+  if (!bar) return;
+  const allActive = activeArtistViewId === 'all';
+  let html = `<button class="gal-view-tab ${allActive?'active':''}" onclick="switchArtistView('all')">全部</button>`;
+  artistViews.forEach(v => {
+    const active = activeArtistViewId === v.id;
+    const modeIcon = (v.excludeTags?.length && !v.includeTags?.length) ? '🚫 ' : '';
+    html += `<button class="gal-view-tab ${active?'active':''}" onclick="switchArtistView('${v.id}')">${modeIcon}${esc(v.name)}<span class="gal-view-tab-x" onclick="event.stopPropagation();deleteArtistView('${v.id}')" title="刪除">×</span></button>`;
+  });
+  html += `<button class="gal-view-add-btn" onclick="openArtistViewPopup()">＋ 新增分頁</button>`;
+  bar.innerHTML = html;
+}
+
+function switchArtistView(id) { activeArtistViewId = id; renderArtistViewTabs(); renderArtistPage(); }
+
+function deleteArtistView(id) {
+  artistViews = artistViews.filter(v => v.id !== id);
+  saveArtistViews();
+  if (activeArtistViewId === id) activeArtistViewId = 'all';
+  renderArtistViewTabs();
+  renderArtistPage();
+}
+
+function openArtistViewPopup() {
+  document.getElementById('artist-view-name').value = '';
+  artistViewIncludeTags = new Set();
+  artistViewExcludeTags = new Set();
+  document.getElementById('artist-view-include-search').value = '';
+  document.getElementById('artist-view-exclude-search').value = '';
+  renderArtistViewTagPicker('include');
+  renderArtistViewTagPicker('exclude');
+  document.getElementById('artist-view-popup').classList.add('open');
+}
+
+function closeArtistViewPopup(e) {
+  if (e && e.target !== document.getElementById('artist-view-popup')) return;
+  document.getElementById('artist-view-popup').classList.remove('open');
+}
+
+function toggleArtistViewTag(kind, tag) {
+  const targetSet = kind === 'exclude' ? artistViewExcludeTags : artistViewIncludeTags;
+  const otherSet = kind === 'exclude' ? artistViewIncludeTags : artistViewExcludeTags;
+  if (targetSet.has(tag)) targetSet.delete(tag);
+  else { targetSet.add(tag); otherSet.delete(tag); }
+  renderArtistViewTagPicker(kind === 'exclude' ? 'include' : 'exclude');
+  renderArtistViewTagPicker(kind);
+}
+
+function renderArtistViewTagPicker(kind) {
+  const isExclude = kind === 'exclude';
+  const q = (document.getElementById(isExclude ? 'artist-view-exclude-search' : 'artist-view-include-search').value || '').toLowerCase();
+  const blendTags = blendData.flatMap(b => b.tags || []);
+  const allTags = [...new Set(artistData.flatMap(a => a.tags || []).concat(blendTags))].sort();
+  const filtered = allTags.filter(t => !q || t.toLowerCase().includes(q));
+  const list = document.getElementById(isExclude ? 'artist-view-exclude-list' : 'artist-view-include-list');
+  const selected = isExclude ? artistViewExcludeTags : artistViewIncludeTags;
+  if (!filtered.length) {
+    list.innerHTML = `<span style="font-size:.75rem;color:var(--txt2);">${allTags.length ? '沒有符合的 tag' : '風格庫目前沒有 tag'}</span>`;
+    return;
+  }
+  list.innerHTML = filtered.map(t => {
+    const sel = selected.has(t);
+    return `<span class="gal-view-tag-chip ${sel?'sel':''}" ${sel ? '' : `style="${getTagChipStyle(t, 0.10)}"`} data-tag="${esc(t)}" onclick="toggleArtistViewTag('${kind}', this.dataset.tag)">${esc(t)}</span>`;
+  }).join('');
+}
+
+function confirmAddArtistView() {
+  const name = document.getElementById('artist-view-name').value.trim();
+  if (!name) { toast('請輸入分頁名稱','warn'); return; }
+  const includeTags = [...artistViewIncludeTags];
+  const excludeTags = [...artistViewExcludeTags];
+  const id = 'av_' + Date.now();
+  artistViews.push({ id, name, includeTags, excludeTags });
+  saveArtistViews();
+  document.getElementById('artist-view-popup').classList.remove('open');
+  activeArtistViewId = id;
+  renderArtistViewTabs();
+  renderArtistPage();
+}
 
 async function renderArtistPage() {
   if (!artistData.length && !blendData.length) await loadArtistData();
   updateArtistLibCount(artistData.length);
+  renderArtistViewTabs();
   buildArtistFilterRow();
 
   const q = (document.getElementById('artist-search')?.value||'').toLowerCase();
+  const activeView = artistViews.find(v => v.id === activeArtistViewId);
   let filtered = artistData.filter(a => {
     const matchQ = !q || a.name.toLowerCase().includes(q) || (a.artistTag||'').toLowerCase().includes(q);
     const matchStyle = !artistActiveStyle || a.styleType === artistActiveStyle;
     const matchTags  = artistActiveTags.size===0 || [...artistActiveTags].every(t=>(a.tags||[]).includes(t));
-    return matchQ && matchStyle && matchTags;
+    const matchView = applyArtistViewFilter(a, activeView);
+    return matchQ && matchStyle && matchTags && matchView;
   });
 
   const grid = document.getElementById('artist-page-grid');
@@ -6090,9 +6448,12 @@ function renderBlendGrid() {
   const countEl = document.getElementById('blend-count');
   const wrap = document.getElementById('blend-section-wrap');
   if (!blendData.length) { wrap.style.display='none'; return; }
+  const activeView = artistViews.find(v => v.id === activeArtistViewId);
+  const visibleBlends = blendData.filter(b => applyArtistViewFilter(b, activeView));
+  if (!visibleBlends.length) { wrap.style.display='none'; return; }
   wrap.style.display='';
-  countEl.textContent = `(${blendData.length})`;
-  grid.innerHTML = blendData.map(b => {
+  countEl.textContent = `(${visibleBlends.length})`;
+  grid.innerHTML = visibleBlends.map(b => {
     const preview = b._previewUrl
       ? `<img class="blend-preview" src="${b._previewUrl}" alt="">`
       : `<div class="blend-preview-ph">🎨</div>`;
@@ -6345,20 +6706,135 @@ function updateCharLibCount(n) {
   refreshGenerateDockIfVisible();
 }
 
+const CHAR_VIEWS_KEY = 'nai_char_views_v1';
+let charViews = [];
+let activeCharViewId = 'all';
+let charViewIncludeTags = new Set();
+let charViewExcludeTags = new Set();
+
+function loadCharViews() {
+  try {
+    const raw = localStorage.getItem(CHAR_VIEWS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    charViews = Array.isArray(parsed) ? parsed.map(v => ({
+      id: v.id,
+      name: v.name,
+      includeTags: Array.isArray(v.includeTags) ? v.includeTags : [],
+      excludeTags: Array.isArray(v.excludeTags) ? v.excludeTags : []
+    })).filter(v => v.id && v.name) : [];
+  } catch { charViews = []; }
+}
+
+function saveCharViews() {
+  localStorage.setItem(CHAR_VIEWS_KEY, JSON.stringify(charViews));
+}
+
+function applyCharViewFilter(item, view) {
+  if (!view) return true;
+  const itemTags = item.tags || [];
+  const hasExclude = view.excludeTags?.length && view.excludeTags.some(t => itemTags.includes(t));
+  if (hasExclude) return false;
+  if (view.includeTags?.length) return view.includeTags.some(t => itemTags.includes(t));
+  return true;
+}
+
+function renderCharViewTabs() {
+  const bar = document.getElementById('char-views-bar');
+  if (!bar) return;
+  const allActive = activeCharViewId === 'all';
+  let html = `<button class="gal-view-tab ${allActive?'active':''}" onclick="switchCharView('all')">全部</button>`;
+  charViews.forEach(v => {
+    const active = activeCharViewId === v.id;
+    const modeIcon = (v.excludeTags?.length && !v.includeTags?.length) ? '🚫 ' : '';
+    html += `<button class="gal-view-tab ${active?'active':''}" onclick="switchCharView('${v.id}')">${modeIcon}${esc(v.name)}<span class="gal-view-tab-x" onclick="event.stopPropagation();deleteCharView('${v.id}')" title="刪除">×</span></button>`;
+  });
+  html += `<button class="gal-view-add-btn" onclick="openCharViewPopup()">＋ 新增分頁</button>`;
+  bar.innerHTML = html;
+}
+
+function switchCharView(id) { activeCharViewId = id; renderCharViewTabs(); renderCharPage(); }
+
+function deleteCharView(id) {
+  charViews = charViews.filter(v => v.id !== id);
+  saveCharViews();
+  if (activeCharViewId === id) activeCharViewId = 'all';
+  renderCharViewTabs();
+  renderCharPage();
+}
+
+function openCharViewPopup() {
+  document.getElementById('char-view-name').value = '';
+  charViewIncludeTags = new Set();
+  charViewExcludeTags = new Set();
+  document.getElementById('char-view-include-search').value = '';
+  document.getElementById('char-view-exclude-search').value = '';
+  renderCharViewTagPicker('include');
+  renderCharViewTagPicker('exclude');
+  document.getElementById('char-view-popup').classList.add('open');
+}
+
+function closeCharViewPopup(e) {
+  if (e && e.target !== document.getElementById('char-view-popup')) return;
+  document.getElementById('char-view-popup').classList.remove('open');
+}
+
+function toggleCharViewTag(kind, tag) {
+  const targetSet = kind === 'exclude' ? charViewExcludeTags : charViewIncludeTags;
+  const otherSet = kind === 'exclude' ? charViewIncludeTags : charViewExcludeTags;
+  if (targetSet.has(tag)) targetSet.delete(tag);
+  else { targetSet.add(tag); otherSet.delete(tag); }
+  renderCharViewTagPicker(kind === 'exclude' ? 'include' : 'exclude');
+  renderCharViewTagPicker(kind);
+}
+
+function renderCharViewTagPicker(kind) {
+  const isExclude = kind === 'exclude';
+  const q = (document.getElementById(isExclude ? 'char-view-exclude-search' : 'char-view-include-search').value || '').toLowerCase();
+  const allTags = [...new Set(characterData.flatMap(c => c.tags || []))].sort();
+  const filtered = allTags.filter(t => !q || t.toLowerCase().includes(q));
+  const list = document.getElementById(isExclude ? 'char-view-exclude-list' : 'char-view-include-list');
+  const selected = isExclude ? charViewExcludeTags : charViewIncludeTags;
+  if (!filtered.length) {
+    list.innerHTML = `<span style="font-size:.75rem;color:var(--txt2);">${allTags.length ? '沒有符合的 tag' : '角色庫目前沒有 tag'}</span>`;
+    return;
+  }
+  list.innerHTML = filtered.map(t => {
+    const sel = selected.has(t);
+    return `<span class="gal-view-tag-chip ${sel?'sel':''}" ${sel ? '' : `style="${getTagChipStyle(t, 0.10)}"`} data-tag="${esc(t)}" onclick="toggleCharViewTag('${kind}', this.dataset.tag)">${esc(t)}</span>`;
+  }).join('');
+}
+
+function confirmAddCharView() {
+  const name = document.getElementById('char-view-name').value.trim();
+  if (!name) { toast('請輸入分頁名稱','warn'); return; }
+  const includeTags = [...charViewIncludeTags];
+  const excludeTags = [...charViewExcludeTags];
+  const id = 'cv_' + Date.now();
+  charViews.push({ id, name, includeTags, excludeTags });
+  saveCharViews();
+  document.getElementById('char-view-popup').classList.remove('open');
+  activeCharViewId = id;
+  renderCharViewTabs();
+  renderCharPage();
+}
+
 async function renderCharPage() {
   if (!characterData.length) await loadCharacterData();
   updateCharLibCount(characterData.length);
+  renderCharViewTabs();
   buildCharFilterRow();
   const grid = document.getElementById('char-page-grid');
   const q = (document.getElementById('char-search')?.value || '').toLowerCase();
   const activeSeries = charActiveSeries;
   const activeTags = charActiveTags;
+  const activeView = charViews.find(v => v.id === activeCharViewId);
 
   let filtered = characterData.filter(c => {
     const matchQ = !q || c.name.toLowerCase().includes(q) || (c.prompt||'').toLowerCase().includes(q) || (c.seriesName||'').toLowerCase().includes(q);
     const matchSeries = !activeSeries || c.seriesName === activeSeries;
     const matchTags = activeTags.size === 0 || [...activeTags].every(t => (c.tags||[]).includes(t));
-    return matchQ && matchSeries && matchTags;
+    const matchView = applyCharViewFilter(c, activeView);
+    return matchQ && matchSeries && matchTags && matchView;
   });
 
   if (!filtered.length) {
@@ -7963,6 +8439,8 @@ let noteEditPreviewImageIds = [];
 let noteInsertTargetId = 'prompt';
 let noteInsertCategory = '';
 let noteInsertDraft = '';
+let notesSelectMode = false;
+let notesSelected = new Set();
 
 async function loadNotesData() {
   notesData = await dbGetNotes();
@@ -8002,6 +8480,7 @@ function renderNotesPage() {
   }
 
   grid.innerHTML = filtered.map(n => {
+    const sel = notesSelected.has(n.id) ? ' selected' : '';
     const catClass = NOTE_CAT_CLASS[n.category] || 'nc-other';
     const catLabel = NOTE_CATEGORIES[n.category] || n.category;
     const tags = (n.tags||[]).map(t => `<span class="char-card-tag">${esc(t)}</span>`).join('');
@@ -8017,7 +8496,7 @@ function renderNotesPage() {
         coverHtml = `<img class="note-card-cover" src="${coverUrl}" onclick="openModal(${previewIds[0]})" title="點擊放大">`;
       }
     }
-    return `<div class="note-card">
+    return `<div class="note-card${sel}" onclick="onNoteCardClick(event,${n.id})">
       ${coverHtml}
       <div class="note-card-body">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
@@ -8030,14 +8509,55 @@ function renderNotesPage() {
         </div>
         ${n.description ? `<div class="note-desc">${esc(n.description)}</div>` : ''}
         <div class="note-insert-row">
-          <button class="note-ins-pos" onclick="insertNoteToPrompt(${n.id},'pos')" title="插入到正向 prompt">＋ 正向</button>
-          <button class="note-ins-neg" onclick="insertNoteToPrompt(${n.id},'neg')" title="插入到負向 prompt">＋ 負向</button>
-          <button class="note-edit-btn" onclick="openNoteEditModal(${n.id})">編輯</button>
+          <button class="note-ins-pos" onclick="event.stopPropagation();insertNoteToPrompt(${n.id},'pos')" title="插入到正向 prompt">＋ 正向</button>
+          <button class="note-ins-neg" onclick="event.stopPropagation();insertNoteToPrompt(${n.id},'neg')" title="插入到負向 prompt">＋ 負向</button>
+          <button class="note-edit-btn" onclick="event.stopPropagation();openNoteEditModal(${n.id})">編輯</button>
         </div>
       </div>
     </div>`;
   }).join('');
   refreshGenerateDockIfVisible();
+}
+
+function onNoteCardClick(e, id) {
+  if (notesSelectMode) { toggleNotesSelect(id); return; }
+  if (e.target.closest('button') || e.target.closest('img')) return;
+  openNoteEditModal(id);
+}
+
+function toggleNotesSelectMode() {
+  notesSelectMode = !notesSelectMode;
+  notesSelected.clear();
+  document.getElementById('notes-sel-mode-btn').textContent = notesSelectMode ? '結束多選' : '多選';
+  document.getElementById('notes-page-actions').classList.toggle('visible', notesSelectMode);
+  renderNotesPage();
+}
+
+function toggleNotesSelect(id) {
+  notesSelected.has(id) ? notesSelected.delete(id) : notesSelected.add(id);
+  document.getElementById('notes-sel-count').textContent = `已選 ${notesSelected.size} 筆`;
+  renderNotesPage();
+}
+
+function clearNotesSelection() {
+  notesSelected.clear();
+  notesSelectMode = false;
+  document.getElementById('notes-sel-mode-btn').textContent = '多選';
+  document.getElementById('notes-page-actions').classList.remove('visible');
+  renderNotesPage();
+}
+
+async function deleteSelectedNotes() {
+  if (!notesSelected.size) return;
+  if (!confirm(`確定刪除 ${notesSelected.size} 筆筆記？`)) return;
+  for (const id of notesSelected) await dbDeleteNote(id);
+  notesSelected.clear();
+  notesSelectMode = false;
+  document.getElementById('notes-sel-mode-btn').textContent = '多選';
+  document.getElementById('notes-page-actions').classList.remove('visible');
+  await loadNotesData();
+  toast('已刪除','ok');
+  renderNotesPage();
 }
 
 function buildNotesCategoryFilter() {
