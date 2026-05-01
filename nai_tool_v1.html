@@ -930,19 +930,57 @@
     .bt-insert-item:last-child{border-bottom:none;}
     .bt-insert-item:hover{background:var(--bg3);}
 
-    /* ── A/B TEST PAGE ── */
-    #page-ab.active{display:block;overflow-y:auto;}
-    .ab-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+    /* ── A/B MODE (inline, no separate page) ── */
     .ab-badge{display:inline-flex;align-items:center;gap:5px;font-size:.75rem;font-weight:700;
       padding:2px 9px;border-radius:8px;letter-spacing:.04em;}
     .ab-badge-a{background:rgba(59,130,246,.15);color:#3b82f6;border:1px solid rgba(59,130,246,.3);}
     .ab-badge-b{background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.25);}
-    .ab-result-img{width:100%;border-radius:6px;display:block;cursor:pointer;transition:opacity .15s;}
-    .ab-result-img:hover{opacity:.88;}
-    .ab-result-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:10px;}
-    .ab-result-col{display:flex;flex-direction:column;}
-    .ab-section-head{font-size:.75rem;font-weight:700;color:var(--txt2);text-transform:uppercase;
-      letter-spacing:.05em;margin-bottom:8px;display:flex;align-items:center;gap:7px;}
+
+    /* Side-tab bar inside left panel */
+    .ab-side-tabs-bar{display:none;flex-direction:column;gap:0;padding:10px 14px 0;border-bottom:1px solid var(--border);}
+    .ab-side-tabs-bar.visible{display:flex;}
+    .ab-side-row{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+    .ab-side-tab{flex:1;padding:6px 0;font-size:.8rem;font-weight:600;border:1px solid var(--border);
+      border-radius:8px;background:var(--bg2);color:var(--txt2);cursor:pointer;transition:all .15s;text-align:center;}
+    .ab-side-tab.active{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
+    .ab-side-tab:hover:not(.active){border-color:var(--accent);color:var(--txt);}
+    .ab-copy-btn{font-size:.72rem;padding:4px 8px;white-space:nowrap;}
+    .ab-clear-btn{font-size:.72rem;padding:4px 8px;white-space:nowrap;margin-left:auto;}
+
+    /* Shared toggle on Vibe / PreciseRef sections */
+    .ab-shared-row{display:none;align-items:center;gap:6px;padding:6px 0 2px;font-size:.75rem;color:var(--txt2);}
+    .ab-shared-row.visible{display:flex;}
+    .ab-shared-btn{font-size:.72rem;padding:3px 8px;border-radius:6px;}
+    .ab-shared-btn.active{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
+
+    /* Dual result panel */
+    .ab-dual-panel{display:none;grid-template-columns:1fr 1fr;gap:10px;height:100%;}
+    .ab-dual-panel.visible{display:grid;}
+    .ab-result-single{display:block;}
+    .ab-result-single.hidden{display:none;}
+    #gen-controls-single.hidden{display:none!important;}
+    .ab-result-half{display:flex;flex-direction:column;gap:0;position:relative;min-height:0;}
+    .ab-result-half-head{display:flex;align-items:center;gap:6px;padding:6px 10px;
+      background:var(--bg2);border:1px solid var(--border);border-radius:10px 10px 0 0;
+      border-bottom:none;font-size:.76rem;font-weight:600;}
+    .ab-result-half-body{flex:1;position:relative;border:1px solid var(--border);
+      border-radius:0 0 10px 10px;overflow:hidden;background:var(--bg2);}
+    .ab-result-half-body .result-area{border-radius:0 0 10px 10px;}
+    .ab-result-cards{display:flex;flex-direction:column;gap:8px;padding:8px;overflow-y:auto;max-height:100%;}
+    .ab-result-card img{width:100%;border-radius:6px;display:block;cursor:pointer;transition:opacity .15s;}
+    .ab-result-card img:hover{opacity:.88;}
+
+    /* A/B bottom controls */
+    .ab-gen-bar{display:none;flex-direction:column;gap:8px;}
+    .ab-gen-bar.visible{display:flex;}
+    .ab-gen-controls-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;}
+    .ab-progress-row{display:none;align-items:center;gap:8px;padding:0 4px;}
+    .ab-progress-row.visible{display:flex;}
+    .ab-progress-outer{flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;}
+    .ab-progress-inner{height:100%;background:var(--accent);border-radius:3px;transition:width .3s;}
+
+    /* Disabled dock tab */
+    .dock-panel-btn.ab-disabled{opacity:.35;cursor:not-allowed;pointer-events:none;}
 
     /* ── GOOGLE DRIVE PAGE ── */
     .gdrive-img-item{position:relative;cursor:pointer;border-radius:6px;overflow:hidden;
@@ -1014,6 +1052,23 @@
   <!-- ── GENERATE PAGE ── -->
   <div id="page-generate" class="page active">
     <div class="left-panel">
+
+      <!-- ── A/B side-tab bar (shown only in A/B mode) ── -->
+      <div class="ab-side-tabs-bar" id="ab-side-tabs-bar">
+        <div class="ab-side-row">
+          <button class="ab-side-tab active" id="ab-side-tab-a" onclick="switchAbSide('a')">
+            <span class="ab-badge ab-badge-a" style="font-size:.7rem;padding:1px 7px;">A</span> A 組
+          </button>
+          <button class="ab-side-tab" id="ab-side-tab-b" onclick="switchAbSide('b')">
+            <span class="ab-badge ab-badge-b" style="font-size:.7rem;padding:1px 7px;">B</span> B 組
+          </button>
+        </div>
+        <div class="ab-side-row" style="margin-bottom:10px;">
+          <button class="btn btn-s btn-out ab-copy-btn" onclick="abCopyState('a','b')" title="把 A 的設定套用到 B">A → B</button>
+          <button class="btn btn-s btn-out ab-copy-btn" onclick="abCopyState('b','a')" title="把 B 的設定套用到 A">B → A</button>
+          <button class="btn btn-s btn-out ab-clear-btn" onclick="abClearStates()" title="清除 A、B 的記憶，恢復預設">🗑 清除記憶</button>
+        </div>
+      </div>
 
       <!-- 模型 & 解析度 -->
       <div class="card">
@@ -1138,6 +1193,12 @@
           <span class="coll-arrow closed" id="vibe-arrow">▼</span>
         </div>
         <div class="coll-body closed" id="vibe-body">
+          <!-- A/B shared toggle (only visible in A/B mode) -->
+          <div class="ab-shared-row" id="ab-vibe-shared-row">
+            <span>A/B 共用：</span>
+            <button class="btn btn-s ab-shared-btn" id="ab-vibe-shared-btn" onclick="toggleAbVibeShared()">獨立</button>
+            <span style="font-size:.7rem;color:var(--txt2);" id="ab-vibe-shared-hint">A、B 各自有不同的 Vibe</span>
+          </div>
           <div id="vibe-list" style="margin-top:8px;"></div>
           <div style="display:flex;gap:6px;margin-top:6px;">
             <button class="btn btn-s" style="flex:1;" onclick="openVibePicker()">📚 從 Vibe 庫選取</button>
@@ -1152,6 +1213,12 @@
           <span class="coll-arrow closed" id="pref-arrow">▼</span>
         </div>
         <div class="coll-body closed" id="pref-body">
+          <!-- A/B shared toggle (only visible in A/B mode) -->
+          <div class="ab-shared-row" id="ab-pref-shared-row">
+            <span>A/B 共用：</span>
+            <button class="btn btn-s ab-shared-btn" id="ab-pref-shared-btn" onclick="toggleAbPrefShared()">獨立</button>
+            <span style="font-size:.7rem;color:var(--txt2);" id="ab-pref-shared-hint">A、B 各自有不同的精確參考</span>
+          </div>
           <div id="pref-dropzone" class="pref-dropzone"
                onclick="preciseRefUpload()"
                ondragover="event.preventDefault()"
@@ -1258,7 +1325,9 @@
     <div class="generate-main-panel">
       <div class="generate-main-shell">
         <div class="generate-stage">
-          <div class="result-area">
+
+          <!-- Single mode result (default) -->
+          <div class="result-area ab-result-single" id="ab-result-single">
             <div id="result-ph" class="result-placeholder">
               <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
                 <rect x="3" y="3" width="18" height="18" rx="2.5"/>
@@ -1270,10 +1339,59 @@
             <img id="result-img" alt="生成結果">
             <div id="status-bar" class="status-bar"></div>
           </div>
+
+          <!-- A/B dual mode result -->
+          <div class="ab-dual-panel" id="ab-dual-panel">
+            <!-- A side -->
+            <div class="ab-result-half">
+              <div class="ab-result-half-head">
+                <span class="ab-badge ab-badge-a">A</span>
+                <span id="ab-a-done-label" style="color:var(--txt2);font-weight:400;font-size:.72rem;"></span>
+              </div>
+              <div class="ab-result-half-body">
+                <div id="ab-status-bar-a" class="status-bar"></div>
+                <div class="result-area" id="ab-result-area-a">
+                  <div class="result-placeholder" id="ab-ph-a">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+                      <rect x="3" y="3" width="18" height="18" rx="2.5"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <span style="font-size:.8rem;">A 組結果</span>
+                  </div>
+                  <div id="ab-results-a" class="ab-result-cards"></div>
+                </div>
+              </div>
+            </div>
+            <!-- B side -->
+            <div class="ab-result-half">
+              <div class="ab-result-half-head">
+                <span class="ab-badge ab-badge-b">B</span>
+                <span id="ab-b-done-label" style="color:var(--txt2);font-weight:400;font-size:.72rem;"></span>
+              </div>
+              <div class="ab-result-half-body">
+                <div id="ab-status-bar-b" class="status-bar"></div>
+                <div class="result-area" id="ab-result-area-b">
+                  <div class="result-placeholder" id="ab-ph-b">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+                      <rect x="3" y="3" width="18" height="18" rx="2.5"/>
+                      <circle cx="8.5" cy="8.5" r="1.5"/>
+                      <polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    <span style="font-size:.8rem;">B 組結果</span>
+                  </div>
+                  <div id="ab-results-b" class="ab-result-cards"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
       <div class="generate-bottom-bar">
-        <div class="generate-primary-bar">
+
+        <!-- Single mode controls -->
+        <div class="generate-primary-bar" id="gen-controls-single">
           <button class="btn btn-p btn-gen" id="gen-btn" onclick="startQuickGenerate()">生圖</button>
           <div class="quick-count-wrap" title="連續生成張數">
             <button class="quick-count-btn" onclick="adjustQuickCount(-1)">−</button>
@@ -1283,6 +1401,30 @@
             <span class="quick-count-label">張</span>
           </div>
         </div>
+
+        <!-- A/B mode controls -->
+        <div class="ab-gen-bar" id="ab-gen-controls">
+          <div class="ab-gen-controls-row">
+            <button class="btn btn-p btn-gen" id="ab-run-btn" onclick="startAB()">▶ 開始 A/B</button>
+            <button class="btn btn-d" id="ab-stop-btn" style="display:none;" onclick="stopAB()">■ 停止</button>
+            <div class="quick-count-wrap" title="每組各生幾張">
+              <button class="quick-count-btn" onclick="adjustAbCount(-1)">−</button>
+              <input class="quick-count-input" id="ab-count-input" type="number" min="1" max="20" value="3"
+                onchange="clampAbCount()" onblur="clampAbCount()">
+              <button class="quick-count-btn" onclick="adjustAbCount(1)">+</button>
+              <span class="quick-count-label">張/組</span>
+            </div>
+            <button class="btn btn-s btn-out" onclick="clearABResults()" style="font-size:.75rem;">🗑 清除結果</button>
+          </div>
+          <div class="ab-progress-row" id="ab-progress-row">
+            <span id="ab-status-text" style="font-size:.78rem;color:var(--txt2);white-space:nowrap;"></span>
+            <div class="ab-progress-outer">
+              <div class="ab-progress-inner" id="ab-progress-bar" style="width:0%;"></div>
+            </div>
+            <span id="ab-progress-label" style="font-size:.76rem;color:var(--txt2);white-space:nowrap;"></span>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -1431,8 +1573,8 @@
   </div>
 
 
-  <!-- ── A/B TEST PAGE ── -->
-  <div id="page-ab" class="page">
+  <!-- page-ab is now a no-op; A/B runs inline in page-generate -->
+  <div id="page-ab" class="page" style="display:none!important;">
     <div style="padding:14px;display:flex;flex-direction:column;gap:12px;">
 
       <!-- Two-column: each side has its own prompt + params -->
@@ -4241,6 +4383,7 @@ function showPage(page) {
   });
 
   if (page === 'generate') {
+    if (isAbMode) exitAbMode();
     show('page-generate'); activateTab('tab-gen');
     const el = document.getElementById('gen-sub-gen'); if (el) el.classList.add('active');
     applyGenerateLayoutState();
@@ -4258,8 +4401,11 @@ function showPage(page) {
     const el = document.getElementById('gen-sub-batch'); if (el) el.classList.add('active');
     renderBatchPage();
   } else if (page === 'ab') {
-    show('page-ab'); activateTab('tab-gen');
+    show('page-generate'); activateTab('tab-gen');
     const el = document.getElementById('gen-sub-ab'); if (el) el.classList.add('active');
+    enterAbMode();
+    applyGenerateLayoutState();
+    renderGenerateDock();
   }
 }
 
@@ -9125,16 +9271,263 @@ function saveBatchTask() {
 }
 
 // ═══════════════════════════════════════════
+// ═══════════════════════════════════════════
+// A/B MODE — STATE MANAGEMENT
+// ═══════════════════════════════════════════
+
+let isAbMode       = false;    // true when on A/B tab
+let abCurrentSide  = 'a';      // 'a' or 'b'
+let genPageState   = null;     // snapshot of 生圖 page state
+let abStateA       = null;     // snapshot for A group
+let abStateB       = null;     // snapshot for B group
+let abVibeShared   = false;    // vibe transfer shared between A & B
+let abPrefShared   = false;    // precise ref shared between A & B
+
+// ── Snapshot capture ──────────────────────────────────────────────────────
+function capturePageState() {
+  return {
+    model:      document.getElementById('model')?.value || 'nai-diffusion-4-5-full',
+    res:        document.getElementById('res')?.value   || '832x1216',
+    prompt:     document.getElementById('prompt')?.value     || '',
+    negPrompt:  document.getElementById('neg-prompt')?.value || '',
+    steps:      document.getElementById('steps')?.value  || '28',
+    cfg:        document.getElementById('cfg')?.value    || '5',
+    cfgR:       document.getElementById('cfg-r')?.value  || '0',
+    sampler:    document.getElementById('sampler')?.value    || 'k_euler_ancestral',
+    noiseSch:   document.getElementById('noise-sch')?.value  || 'karras',
+    seed:       document.getElementById('seed')?.value   || '-1',
+    seedRandom: seedRandom,
+    genMode:    genMode,
+    i2iStrength: document.getElementById('i2i-strength')?.value || '0.5',
+    i2iNoise:    document.getElementById('i2i-noise')?.value    || '0',
+    enhStrength: document.getElementById('enh-strength')?.value || '0.2',
+    srcImgBase64:    srcImgBase64,
+    srcImgGalleryId: srcImgGalleryId,
+    vibeImages:  JSON.parse(JSON.stringify(vibeImages)),
+    preciseRef:  preciseRef ? { ...preciseRef } : null,
+    currentTags: [...currentTags],
+    adv2Open:    !document.getElementById('adv2-body')?.classList.contains('closed'),
+    vibeOpen:    !!vibeOpen,
+    prefOpen:    !!prefOpen,
+    advOpen:     !document.getElementById('adv-body')?.classList.contains('closed'),
+  };
+}
+
+// ── Snapshot restore ──────────────────────────────────────────────────────
+function applyPageState(s) {
+  if (!s) return;
+  // Basic selects / inputs
+  const set = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined) el.value = v; };
+  set('model', s.model); set('res', s.res); updateResNote?.();
+  set('prompt', s.prompt); set('neg-prompt', s.negPrompt);
+  set('steps', s.steps); set('cfg', s.cfg); set('cfg-r', s.cfgR);
+  set('sampler', s.sampler); set('noise-sch', s.noiseSch);
+
+  // Seed
+  setSeedMode(s.seedRandom !== false);
+  if (!s.seedRandom) { set('seed', s.seed); }
+
+  // genMode & i2i/enh sliders
+  setGenMode(s.genMode || 'txt2img');
+  set('i2i-strength', s.i2iStrength);
+  set('i2i-noise',    s.i2iNoise);
+  set('enh-strength', s.enhStrength);
+  const setVal = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined) el.textContent = parseFloat(v).toFixed(2); };
+  setVal('i2i-s-val', s.i2iStrength); setVal('i2i-n-val', s.i2iNoise); setVal('enh-s-val', s.enhStrength);
+
+  // Source image
+  srcImgBase64    = s.srcImgBase64    || null;
+  srcImgGalleryId = s.srcImgGalleryId || null;
+  if (srcImgBase64) {
+    // Rebuild blob URL from base64
+    try {
+      const bytes = Uint8Array.from(atob(srcImgBase64), c => c.charCodeAt(0));
+      const url   = URL.createObjectURL(new Blob([bytes], { type: 'image/png' }));
+      showSrcImgPreview(url);
+    } catch (_) { clearSrcImg(); }
+  } else {
+    clearSrcImg();
+  }
+
+  // Vibe images
+  vibeImages = s.vibeImages ? JSON.parse(JSON.stringify(s.vibeImages)) : [];
+  renderVibeList?.(); updateVibeCount?.();
+
+  // Precise ref
+  preciseRef = s.preciseRef ? { ...s.preciseRef } : null;
+  renderPreciseRef?.();
+
+  // Tags
+  currentTags = s.currentTags ? [...s.currentTags] : [];
+  renderTagChips?.();
+
+  // Collapsible open/close states
+  const setOpen = (bodyId, arrowId, open) => {
+    const body  = document.getElementById(bodyId);
+    const arrow = document.getElementById(arrowId);
+    if (!body) return;
+    if (open)  { body.classList.remove('closed'); arrow?.classList.remove('closed'); }
+    else       { body.classList.add('closed');    arrow?.classList.add('closed');    }
+  };
+  if (s.adv2Open !== undefined) setOpen('adv2-body', 'adv2-arrow', s.adv2Open);
+  if (s.advOpen  !== undefined) setOpen('adv-body',  'adv-arrow',  s.advOpen);
+  if (s.vibeOpen !== undefined) { if (s.vibeOpen !== vibeOpen) toggleVibe?.(); }
+  if (s.prefOpen !== undefined) { if (s.prefOpen !== prefOpen) togglePreciseRef?.(); }
+}
+
+// ── Default snapshot (blank B) ─────────────────────────────────────────────
+function defaultPageState() {
+  return {
+    model:'nai-diffusion-4-5-full', res:'832x1216',
+    prompt:'', negPrompt:'',
+    steps:'28', cfg:'5', cfgR:'0',
+    sampler:'k_euler_ancestral', noiseSch:'karras',
+    seed:'-1', seedRandom:true,
+    genMode:'txt2img',
+    i2iStrength:'0.5', i2iNoise:'0', enhStrength:'0.2',
+    srcImgBase64:null, srcImgGalleryId:null,
+    vibeImages:[], preciseRef:null, currentTags:[],
+    adv2Open:false, vibeOpen:false, prefOpen:false, advOpen:true,
+  };
+}
+
+// ── Enter / exit A/B mode ─────────────────────────────────────────────────
+function enterAbMode() {
+  if (isAbMode) return;
+  // Save current gen page state
+  genPageState = capturePageState();
+  isAbMode = true;
+  abCurrentSide = 'a';
+  // Init A state from current page if not already stored
+  if (!abStateA) abStateA = capturePageState();
+  // Init B state as copy of A if not stored
+  if (!abStateB) abStateB = { ...abStateA, vibeImages: JSON.parse(JSON.stringify(abStateA.vibeImages)), preciseRef: abStateA.preciseRef ? {...abStateA.preciseRef} : null, currentTags: [...(abStateA.currentTags||[])] };
+  // Load A into panel
+  applyPageState(abStateA);
+  _applyAbModeUI();
+}
+
+function exitAbMode() {
+  if (!isAbMode) return;
+  // Save current side state
+  if (abCurrentSide === 'a') abStateA = capturePageState();
+  else abStateB = capturePageState();
+  isAbMode = false;
+  // Restore gen page
+  if (genPageState) applyPageState(genPageState);
+  _applyAbModeUI();
+}
+
+function switchAbSide(side) {
+  if (!isAbMode || side === abCurrentSide) return;
+  // Save current side
+  if (abCurrentSide === 'a') abStateA = capturePageState();
+  else abStateB = capturePageState();
+  abCurrentSide = side;
+  // Handle shared sections
+  if (abVibeShared) {
+    const target = (side === 'a') ? abStateA : abStateB;
+    const source = (side === 'a') ? abStateB : abStateA;
+    if (source) { target.vibeImages = JSON.parse(JSON.stringify(source.vibeImages || [])); }
+  }
+  if (abPrefShared) {
+    const target = (side === 'a') ? abStateA : abStateB;
+    const source = (side === 'a') ? abStateB : abStateA;
+    if (source) { target.preciseRef = source.preciseRef ? {...source.preciseRef} : null; }
+  }
+  // Load target side
+  const targetState = (side === 'a') ? abStateA : abStateB;
+  if (targetState) applyPageState(targetState);
+  _applyAbModeUI();
+}
+
+function abCopyState(from, to) {
+  // Save current into the 'from' side first
+  if (from === abCurrentSide) {
+    if (from === 'a') abStateA = capturePageState(); else abStateB = capturePageState();
+  }
+  const src = (from === 'a') ? abStateA : abStateB;
+  if (!src) { toast('來源組沒有資料', 'warn'); return; }
+  const copy = { ...src, vibeImages: JSON.parse(JSON.stringify(src.vibeImages||[])), preciseRef: src.preciseRef ? {...src.preciseRef} : null, currentTags: [...(src.currentTags||[])] };
+  if (to === 'a') abStateA = copy; else abStateB = copy;
+  // If currently on the 'to' side, apply immediately
+  if (to === abCurrentSide) applyPageState(copy);
+  toast(`已將 ${from.toUpperCase()} 組設定複製到 ${to.toUpperCase()} 組`, 'ok');
+}
+
+function abClearStates() {
+  if (abRunning) { toast('請先停止 A/B 比較', 'warn'); return; }
+  abStateA = defaultPageState();
+  abStateB = defaultPageState();
+  applyPageState((abCurrentSide === 'a') ? abStateA : abStateB);
+  toast('已清除 A/B 記憶，恢復預設值', 'ok');
+}
+
+// ── Shared toggle ──────────────────────────────────────────────────────────
+function toggleAbVibeShared() {
+  abVibeShared = !abVibeShared;
+  const btn  = document.getElementById('ab-vibe-shared-btn');
+  const hint = document.getElementById('ab-vibe-shared-hint');
+  if (btn)  { btn.textContent = abVibeShared ? '🔗 共用' : '獨立'; btn.classList.toggle('active', abVibeShared); }
+  if (hint) hint.textContent = abVibeShared ? 'A、B 使用相同的 Vibe' : 'A、B 各自有不同的 Vibe';
+}
+function toggleAbPrefShared() {
+  abPrefShared = !abPrefShared;
+  const btn  = document.getElementById('ab-pref-shared-btn');
+  const hint = document.getElementById('ab-pref-shared-hint');
+  if (btn)  { btn.textContent = abPrefShared ? '🔗 共用' : '獨立'; btn.classList.toggle('active', abPrefShared); }
+  if (hint) hint.textContent = abPrefShared ? 'A、B 使用相同的精確參考' : 'A、B 各自有不同的精確參考';
+}
+
+// ── UI toggle helper ───────────────────────────────────────────────────────
+function _applyAbModeUI() {
+  // Side-tab bar
+  document.getElementById('ab-side-tabs-bar')?.classList.toggle('visible', isAbMode);
+  // Side-tab active state
+  document.getElementById('ab-side-tab-a')?.classList.toggle('active', isAbMode && abCurrentSide === 'a');
+  document.getElementById('ab-side-tab-b')?.classList.toggle('active', isAbMode && abCurrentSide === 'b');
+  // Single vs dual result panel
+  document.getElementById('ab-result-single')?.classList.toggle('hidden', isAbMode);
+  document.getElementById('ab-dual-panel')?.classList.toggle('visible', isAbMode);
+  // Bottom controls
+  document.getElementById('gen-controls-single')?.classList.toggle('hidden', isAbMode);
+  document.getElementById('ab-gen-controls')?.classList.toggle('visible', isAbMode);
+  // Shared-toggle rows (Vibe, PreciseRef)
+  document.getElementById('ab-vibe-shared-row')?.classList.toggle('visible', isAbMode);
+  document.getElementById('ab-pref-shared-row')?.classList.toggle('visible', isAbMode);
+  // Right dock: disable 排程 tab in A/B mode
+  document.getElementById('dock-panel-batch-btn')?.classList.toggle('ab-disabled', isAbMode);
+  // Sub-tab active state
+  document.getElementById('gen-sub-gen')?.classList.toggle('active', !isAbMode);
+  document.getElementById('gen-sub-ab')?.classList.toggle('active',  isAbMode);
+}
+
+// ── A/B count stepper ──────────────────────────────────────────────────────
+function adjustAbCount(delta) {
+  const inp = document.getElementById('ab-count-input');
+  if (!inp) return;
+  let v = Math.max(1, Math.min(20, (parseInt(inp.value, 10) || 3) + delta));
+  inp.value = v;
+}
+function clampAbCount() {
+  const inp = document.getElementById('ab-count-input');
+  if (!inp) return;
+  let v = parseInt(inp.value, 10);
+  if (isNaN(v) || v < 1) v = 1;
+  if (v > 20) v = 20;
+  inp.value = v;
+}
+
+// ═══════════════════════════════════════════
 // A/B COMPARISON
 // ═══════════════════════════════════════════
 
-let abRunning     = false;
-let abShouldStop  = false;
+let abRunning       = false;
+let abShouldStop    = false;
 const abAbortHolder = { ctrl: null };
 let abDoneA = 0, abDoneB = 0, abTotalA = 0, abTotalB = 0;
-let abSeedRandomA = true;
-let abSeedRandomB = true;
 let abTags = [];
+let abSeedRandomA = true, abSeedRandomB = true; // kept for legacy stubs
 
 function abToggleSeed(side) {
   if (side === 'a') { abSeedRandomA = !abSeedRandomA; abSetSeedUI('a', abSeedRandomA); }
@@ -9162,45 +9555,97 @@ function abVal(id) {
 
 async function startAB() {
   if (abRunning) return;
-  const promptA = abVal('ab-a-prompt').trim();
-  const promptB = abVal('ab-b-prompt').trim();
-  if (!promptA) { toast('請先填寫 A 的 Prompt', 'warn'); return; }
-  if (!promptB) { toast('請先填寫 B 的 Prompt', 'warn'); return; }
 
-  abTotalA = parseInt(abVal('ab-a-count')) || 3;
-  abTotalB = parseInt(abVal('ab-b-count')) || 3;
+  // Save current side state before starting
+  if (abCurrentSide === 'a') abStateA = capturePageState();
+  else abStateB = capturePageState();
+
+  const sA = abStateA || defaultPageState();
+  const sB = abStateB || defaultPageState();
+
+  if (!sA.prompt?.trim()) { toast('請先在 A 組填寫 Prompt', 'warn'); return; }
+  if (!sB.prompt?.trim()) { toast('請先在 B 組填寫 Prompt', 'warn'); return; }
+
+  clampAbCount();
+  const count = parseInt(document.getElementById('ab-count-input')?.value, 10) || 3;
+  abTotalA = count; abTotalB = count;
   abDoneA = 0; abDoneB = 0;
   abRunning = true; abShouldStop = false;
 
   document.getElementById('ab-run-btn').style.display  = 'none';
   document.getElementById('ab-stop-btn').style.display = '';
-  document.getElementById('ab-progress-wrap').style.display = '';
-  document.getElementById('ab-results-wrap').style.display  = '';
-  document.getElementById('ab-results-a').innerHTML = '';
-  document.getElementById('ab-results-b').innerHTML = '';
-  document.getElementById('ab-a-done-label').textContent = '';
-  document.getElementById('ab-b-done-label').textContent = '';
+  document.getElementById('ab-progress-row')?.classList.add('visible');
+  const resA = document.getElementById('ab-results-a');
+  const resB = document.getElementById('ab-results-b');
+  if (resA) resA.innerHTML = '';
+  if (resB) resB.innerHTML = '';
+  const labelA = document.getElementById('ab-a-done-label');
+  const labelB = document.getElementById('ab-b-done-label');
+  if (labelA) labelA.textContent = '';
+  if (labelB) labelB.textContent = '';
   abUpdateProgress();
 
-  const negPromptA = abVal('ab-a-neg').trim();
-  const negPromptB = abVal('ab-b-neg').trim();
-  const cfgA = { prompt: promptA, negPrompt: negPromptA, model: abVal('ab-a-model'), res: abVal('ab-a-res'), steps: parseInt(abVal('ab-a-steps'))||28, scale: parseFloat(abVal('ab-a-cfg'))||5, sampler: abVal('ab-a-sampler'), noiseSch: abVal('ab-a-noise-sch'), seed: abSeedRandomA ? -1 : coerceSeedValue(abVal('ab-a-seed'), -1), count: abTotalA };
-  const cfgB = { prompt: promptB, negPrompt: negPromptB, model: abVal('ab-b-model'), res: abVal('ab-b-res'), steps: parseInt(abVal('ab-b-steps'))||28, scale: parseFloat(abVal('ab-b-cfg'))||5, sampler: abVal('ab-b-sampler'), noiseSch: abVal('ab-b-noise-sch'), seed: abSeedRandomB ? -1 : coerceSeedValue(abVal('ab-b-seed'), -1), count: abTotalB };
+  // Build param objects from snapshots
+  const makeCfg = s => {
+    const [w, h] = (s.res || '832x1216').split('x').map(Number);
+    return {
+      prompt: s.prompt || '', negPrompt: s.negPrompt || '',
+      model: s.model || 'nai-diffusion-4-5-full',
+      width: w, height: h,
+      steps: parseInt(s.steps) || 28,
+      scale: parseFloat(s.cfg) || 5,
+      cfgR:  parseFloat(s.cfgR) || 0,
+      sampler:  s.sampler  || 'k_euler_ancestral',
+      noiseSch: s.noiseSch || 'karras',
+      seedRandom: s.seedRandom !== false,
+      seed: coerceSeedValue(s.seed, -1),
+      vibeData: (s.vibeImages || []).map(v => ({
+        vibeLibId: v.id    || null,
+        galleryId: v.galleryId || null,
+        base64:    v.base64    || null,
+        infoExtracted: v.infoExtracted ?? 1.0,
+        refStrength:   v.refStrength   ?? 0.6
+      })),
+      preciseRef:      s.preciseRef      || null,
+      srcImgBase64:    s.srcImgBase64    || null,
+      srcImgGalleryId: s.srcImgGalleryId || null,
+      genMode:      s.genMode      || 'txt2img',
+      i2iStrength:  parseFloat(s.i2iStrength) || 0.7,
+      i2iNoise:     parseFloat(s.i2iNoise)    || 0,
+      enhStrength:  parseFloat(s.enhStrength) || 0.5
+    };
+  };
+
+  const cfgA = makeCfg(sA);
+  const cfgB = makeCfg(sB);
 
   const maxCount = Math.max(abTotalA, abTotalB);
   for (let i = 0; i < maxCount && !abShouldStop; i++) {
-    // Generate A[i]
+    // ── Generate A[i] ──────────────────────────────────────────────────────
     if (i < abTotalA && !abShouldStop) {
-      const seed = (cfgA.seed ?? -1) === -1 ? Math.floor(Math.random() * 9999999999) : (cfgA.seed + i);
-      const [w, h] = cfgA.res.split('x').map(Number);
+      const seed = cfgA.seedRandom ? Math.floor(Math.random() * 9999999999) : (cfgA.seed + i);
       abUpdateStatus(`生 A 第 ${i + 1}/${abTotalA} 張`);
       abUpdateProgress();
       try {
+        const srcImageTask = cfgA.srcImgBase64
+          ? { base64: cfgA.srcImgBase64 }
+          : cfgA.srcImgGalleryId
+            ? await resolveBatchImageAsset(cfgA.srcImgGalleryId, '來源圖 A')
+            : null;
+        const preciseRefTask = cfgA.preciseRef?.base64 ? {
+          base64:    cfgA.preciseRef.base64,
+          mode:      cfgA.preciseRef.mode      || 'character&style',
+          strength:  cfgA.preciseRef.strength  ?? 1.0,
+          fidelity:  cfgA.preciseRef.fidelity  ?? 1.0
+        } : null;
         const ab = await callGenerateSimple({
           prompt: cfgA.prompt, negPrompt: cfgA.negPrompt,
-          model: cfgA.model, width: w, height: h,
-          steps: cfgA.steps, scale: cfgA.scale, cfgR: 0,
+          model: cfgA.model, width: cfgA.width, height: cfgA.height,
+          steps: cfgA.steps, scale: cfgA.scale, cfgR: cfgA.cfgR,
           sampler: cfgA.sampler, noiseSch: cfgA.noiseSch, seed,
+          vibeData: cfgA.vibeData, preciseRefTask, srcImageTask,
+          genMode: cfgA.genMode, i2iStrength: cfgA.i2iStrength,
+          i2iNoise: cfgA.i2iNoise, enhStrength: cfgA.enhStrength,
           _stopFn: () => abShouldStop, _abortHolder: abAbortHolder
         });
         const meta = extractPNGMeta(ab);
@@ -9220,18 +9665,31 @@ async function startAB() {
       }
     }
 
-    // Generate B[i]
+    // ── Generate B[i] ──────────────────────────────────────────────────────
     if (i < abTotalB && !abShouldStop) {
-      const seed = (cfgB.seed ?? -1) === -1 ? Math.floor(Math.random() * 9999999999) : (cfgB.seed + i);
-      const [w, h] = cfgB.res.split('x').map(Number);
+      const seed = cfgB.seedRandom ? Math.floor(Math.random() * 9999999999) : (cfgB.seed + i);
       abUpdateStatus(`生 B 第 ${i + 1}/${abTotalB} 張`);
       abUpdateProgress();
       try {
+        const srcImageTask = cfgB.srcImgBase64
+          ? { base64: cfgB.srcImgBase64 }
+          : cfgB.srcImgGalleryId
+            ? await resolveBatchImageAsset(cfgB.srcImgGalleryId, '來源圖 B')
+            : null;
+        const preciseRefTask = cfgB.preciseRef?.base64 ? {
+          base64:    cfgB.preciseRef.base64,
+          mode:      cfgB.preciseRef.mode      || 'character&style',
+          strength:  cfgB.preciseRef.strength  ?? 1.0,
+          fidelity:  cfgB.preciseRef.fidelity  ?? 1.0
+        } : null;
         const ab = await callGenerateSimple({
           prompt: cfgB.prompt, negPrompt: cfgB.negPrompt,
-          model: cfgB.model, width: w, height: h,
-          steps: cfgB.steps, scale: cfgB.scale, cfgR: 0,
+          model: cfgB.model, width: cfgB.width, height: cfgB.height,
+          steps: cfgB.steps, scale: cfgB.scale, cfgR: cfgB.cfgR,
           sampler: cfgB.sampler, noiseSch: cfgB.noiseSch, seed,
+          vibeData: cfgB.vibeData, preciseRefTask, srcImageTask,
+          genMode: cfgB.genMode, i2iStrength: cfgB.i2iStrength,
+          i2iNoise: cfgB.i2iNoise, enhStrength: cfgB.enhStrength,
           _stopFn: () => abShouldStop, _abortHolder: abAbortHolder
         });
         const meta = extractPNGMeta(ab);
@@ -9258,7 +9716,7 @@ async function startAB() {
 
   if (abShouldStop) {
     abUpdateStatus('已停止');
-    document.getElementById('ab-progress-wrap').style.display = 'none';
+    document.getElementById('ab-progress-row')?.classList.remove('visible');
     toast('A/B 已停止', 'warn');
   } else {
     abUpdateStatus(`完成！A：${abDoneA} 張 / B：${abDoneB} 張`);
@@ -9289,12 +9747,15 @@ function abAddResultToGrid(side, arrayBuffer, imageId) {
 
 function clearABResults() {
   if (abRunning) { toast('請先停止 A/B 比較', 'warn'); return; }
-  document.getElementById('ab-results-a').innerHTML = '';
-  document.getElementById('ab-results-b').innerHTML = '';
-  document.getElementById('ab-results-wrap').style.display = 'none';
-  document.getElementById('ab-progress-wrap').style.display = 'none';
-  document.getElementById('ab-a-done-label').textContent = '';
-  document.getElementById('ab-b-done-label').textContent = '';
+  const resA = document.getElementById('ab-results-a');
+  const resB = document.getElementById('ab-results-b');
+  if (resA) resA.innerHTML = '';
+  if (resB) resB.innerHTML = '';
+  document.getElementById('ab-progress-row')?.classList.remove('visible');
+  const labelA = document.getElementById('ab-a-done-label');
+  const labelB = document.getElementById('ab-b-done-label');
+  if (labelA) labelA.textContent = '';
+  if (labelB) labelB.textContent = '';
   abUpdateStatus('');
   abDoneA = 0; abDoneB = 0;
 }
