@@ -5223,7 +5223,6 @@ function renderGenerateDockArtists(q) {
         <div class="dock-record-sub">混搭記錄</div>
         <div class="dock-record-actions" style="margin-top:8px;">
           <button class="btn btn-s" type="button" data-text="${esc(renderBlendPrompt(b.artistEntries || []))}" onclick="event.stopPropagation();copyDockText(this.dataset.text,'混搭 Prompt')">複製 Prompt</button>
-          <button class="btn btn-s btn-out" type="button" onclick="event.stopPropagation();openBlendDetailModal(${b.id})">查看混搭</button>
         </div>
       </div>
     </div>`;
