@@ -2340,9 +2340,13 @@
       <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeGalleryPicker()">✕</button>
     </div>
     <div style="padding:8px 18px;border-bottom:1px solid var(--border);flex-shrink:0;">
-      <input type="search" class="gallery-search" id="gal-picker-search" placeholder="搜尋..." oninput="renderGalleryPickerGrid()" style="width:100%;max-width:none;">
+      <input type="search" class="gallery-search" id="gal-picker-search" placeholder="搜尋標題或 tag…" oninput="galPickerOnSearch()" style="width:100%;max-width:none;">
     </div>
-    <div id="gal-picker-grid" style="overflow-y:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;flex:1;"></div>
+    <div id="gal-picker-grid" style="overflow-y:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;flex:1;min-height:0;"></div>
+    <div id="gal-picker-footer" style="padding:8px 14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:10px;">
+      <span id="gal-picker-count" style="font-size:.76rem;color:var(--txt2);"></span>
+      <button id="gal-picker-more-btn" class="btn btn-s btn-out" onclick="galPickerLoadMore()" style="display:none;font-size:.78rem;">載入更多</button>
+    </div>
   </div>
 </div>
 
@@ -6846,6 +6850,10 @@ let charEditRefUrls = {};     // imageId → blob URL cache
 // ── Gallery Image Picker ──
 let galPickerPurpose = null;  // 'charThumb' | 'charRef' | 'preciseRef'
 let galPickerCallback = null; // (imageRecord) => void
+let galPickerOffset   = 0;
+let galPickerCached   = null; // filtered snapshot，search 變才重算
+let galPickerBlobUrls = [];   // 追蹤已建立的 blob URLs，關閉時統一 revoke
+const GAL_PICKER_PAGE = 10;
 
 // ── Char Ref Sub-picker ──
 // used when selecting a character for preciseRef and it has multiple refs
@@ -7280,33 +7288,91 @@ function openGalleryPicker(purpose, callback) {
   const titles = { charThumb:'選擇縮圖', charRef:'選擇 Precise Reference 圖', preciseRef:'從圖庫選圖' };
   document.getElementById('gal-picker-title').textContent = titles[purpose] || '從圖庫選圖';
   document.getElementById('gal-picker-search').value = '';
-  renderGalleryPickerGrid();
+  _galPickerReset();
   document.getElementById('gal-picker-modal').classList.add('open');
 }
 
 function closeGalleryPicker() {
   document.getElementById('gal-picker-modal').classList.remove('open');
+  _galPickerRevokeUrls();
 }
 
-function renderGalleryPickerGrid() {
+// search 輸入時重置，從頭開始
+function galPickerOnSearch() {
+  _galPickerReset();
+}
+
+// 載入更多：接著上次的 offset 繼續 append
+function galPickerLoadMore() {
+  _galPickerAppendPage();
+}
+
+// 完整重置（重新過濾 + 清空 grid）
+function _galPickerReset() {
+  _galPickerRevokeUrls();
+  galPickerOffset = 0;
+  galPickerCached = null;
+  document.getElementById('gal-picker-grid').innerHTML = '';
+  _galPickerAppendPage();
+}
+
+function _galPickerRevokeUrls() {
+  galPickerBlobUrls.forEach(u => URL.revokeObjectURL(u));
+  galPickerBlobUrls = [];
+}
+
+// 過濾 + 渲染下一批（每批 GAL_PICKER_PAGE 張），append 到 grid
+function _galPickerAppendPage() {
   const q = (document.getElementById('gal-picker-search').value||'').toLowerCase();
   const grid = document.getElementById('gal-picker-grid');
-  const items = galleryData.filter(img => {
-    if (!q) return true;
-    return (img.metadata?.prompt||'').toLowerCase().includes(q) ||
-           (img.tags||[]).some(t=>t.toLowerCase().includes(q));
-  });
-  if (!items.length) {
+
+  // 第一次呼叫才建 cache（search 沒變就沿用）
+  if (galPickerCached === null) {
+    galPickerCached = galleryData.filter(img => {
+      if (!q) return true;
+      return (img.metadata?.prompt||'').toLowerCase().includes(q) ||
+             (img.tags||[]).some(t => t.toLowerCase().includes(q));
+    });
+  }
+
+  const total = galPickerCached.length;
+
+  if (!total) {
     grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--txt2);padding:30px;font-size:.85rem;">圖庫是空的或沒有符合的圖片</div>`;
+    _galPickerUpdateFooter(0, 0);
     return;
   }
-  grid.innerHTML = items.map(img => {
-    const url = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
-    return `<div class="gcard" onclick="onGalPickerSelect(${img.id})" style="cursor:pointer;">
-      <img class="gcard-img" src="${url}" alt="">
-    </div>`;
-  }).join('');
+
+  const slice = galPickerCached.slice(galPickerOffset, galPickerOffset + GAL_PICKER_PAGE);
+  slice.forEach(img => {
+    const url = URL.createObjectURL(new Blob([img.data], {type:'image/png'}));
+    galPickerBlobUrls.push(url);
+    const card = document.createElement('div');
+    card.className = 'gcard';
+    card.style.cursor = 'pointer';
+    card.addEventListener('click', () => onGalPickerSelect(img.id));
+    const imgEl = document.createElement('img');
+    imgEl.className = 'gcard-img';
+    imgEl.src = url;
+    imgEl.alt = '';
+    card.appendChild(imgEl);
+    grid.appendChild(card);
+  });
+  galPickerOffset += slice.length;
+
+  _galPickerUpdateFooter(galPickerOffset, total);
 }
+
+// 更新底部計數 + 按鈕顯示
+function _galPickerUpdateFooter(shown, total) {
+  document.getElementById('gal-picker-count').textContent =
+    total > 0 ? `${shown} / ${total} 張` : '';
+  document.getElementById('gal-picker-more-btn').style.display =
+    shown < total ? '' : 'none';
+}
+
+// 舊函數名留著，避免外部殘留呼叫出錯
+function renderGalleryPickerGrid() { _galPickerReset(); }
 
 async function onGalPickerSelect(imgId) {
   closeGalleryPicker();
