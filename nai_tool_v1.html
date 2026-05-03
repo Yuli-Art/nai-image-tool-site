@@ -2122,7 +2122,10 @@
     <div class="char-modal-body prompt-popout-body">
       <div class="prompt-popout-fixed">
         <div>
-        <div class="char-field-label">目前 Prompt</div>
+        <div class="char-field-label" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>目前 Prompt</span>
+          <button class="btn btn-s btn-out" type="button" style="font-size:.72rem;padding:2px 9px;" onclick="savePromptToNote()">📓 存到筆記</button>
+        </div>
         <textarea id="note-insert-editor" class="inp prompt-editor" data-manual-resize="true" rows="10" placeholder="在這裡編輯完整 Prompt..." style="width:100%;resize:vertical;font-family:monospace;font-size:.84rem;min-height:220px;"></textarea>
         </div>
         <div>
@@ -2132,6 +2135,11 @@
         <div>
         <div class="char-field-label">來源</div>
         <div id="note-insert-cat-row" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+        </div>
+        <div id="note-insert-tag-section">
+          <div class="char-field-label" style="margin-bottom:5px;">Tag 類型篩選</div>
+          <div id="note-insert-type-tabs" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;"></div>
+          <div id="note-insert-tag-chips" style="display:flex;flex-wrap:wrap;gap:5px;min-height:0;"></div>
         </div>
       </div>
       <div class="prompt-popout-scroll">
@@ -2677,7 +2685,8 @@
       </div>
       <div class="tag-picker-create" id="tag-picker-create" style="display:none;"></div>
       <div>
-        <div class="char-field-label">既有 Tag</div>
+        <div class="char-field-label" style="margin-bottom:6px;">既有 Tag</div>
+        <div id="tag-picker-type-filter" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;"></div>
         <div class="tag-picker-list" id="tag-picker-list"></div>
       </div>
     </div>
@@ -3828,7 +3837,8 @@ function openTagPicker(options) {
     allowCreate: options.allowCreate !== false,
     onConfirm: options.onConfirm || (() => {}),
     createLabel: options.createLabel || '建立新 tag',
-    createTypeId: options.createTypeId || 'custom'
+    createTypeId: options.createTypeId || 'custom',
+    typeFilter: ''
   };
   document.getElementById('tag-picker-title').textContent = tagPickerState.title;
   document.getElementById('tag-picker-help').textContent = tagPickerState.help;
@@ -3856,8 +3866,30 @@ function renderTagPicker() {
   const sourceTags = tagPickerState.availableTags
     ? tagPickerState.availableTags.map(name => getTagMeta(name))
     : allKnownTags;
+
+  // ── type filter tabs ──
+  const typeFilterEl = document.getElementById('tag-picker-type-filter');
+  if (typeFilterEl) {
+    // 只顯示 sourceTags 中實際出現的類型
+    const usedTypeIds = [...new Set(sourceTags.map(t => t.typeId || 'custom'))];
+    const usedTypes = getSortedTagTypes(false).filter(tp => usedTypeIds.includes(tp.id));
+    if (usedTypes.length > 1) {
+      const cur = tagPickerState.typeFilter;
+      let html = `<span class="tag-filter-chip ${cur===''?'active':''}" onclick="setTagPickerTypeFilter('')">全部</span>`;
+      usedTypes.forEach(tp => {
+        html += `<span class="tag-filter-chip ${cur===tp.id?'active':''}" onclick="setTagPickerTypeFilter('${esc(tp.id)}')">${esc(tp.label)}</span>`;
+      });
+      typeFilterEl.innerHTML = html;
+      typeFilterEl.style.display = 'flex';
+    } else {
+      typeFilterEl.innerHTML = '';
+      typeFilterEl.style.display = 'none';
+    }
+  }
+
   const matches = sourceTags.filter(t => {
     if (tagPickerState.selected.has(t.name)) return false;
+    if (tagPickerState.typeFilter && (t.typeId || 'custom') !== tagPickerState.typeFilter) return false;
     if (!search) return true;
     return normalizeTagName(t.name).includes(normalizeTagName(search));
   }).slice(0, 120);
@@ -3897,6 +3929,12 @@ function toggleTagPickerSelection(tag) {
     if (!tagPickerState.multi) tagPickerState.selected.clear();
     tagPickerState.selected.add(tag);
   }
+  renderTagPicker();
+}
+
+function setTagPickerTypeFilter(typeId) {
+  if (!tagPickerState) return;
+  tagPickerState.typeFilter = typeId;
   renderTagPicker();
 }
 
@@ -8785,6 +8823,8 @@ let noteEditPreviewImageIds = [];
 let noteInsertTargetId = 'prompt';
 let noteInsertCategory = '';
 let noteInsertDraft = '';
+let noteInsertTypeTab = '';   // 目前選中的 tag 類型 tab
+let noteInsertTagFilter = ''; // 目前選中的 tag 篩選值（空=不篩選）
 let notesSelectMode = false;
 let notesSelected = new Set();
 
@@ -8939,9 +8979,21 @@ function getNoteInsertTargetLabel(targetId) {
   return labels[targetId] || '目前欄位';
 }
 
+function savePromptToNote() {
+  const text = (document.getElementById('note-insert-editor')?.value || '').trim();
+  if (!text) { toast('編輯框是空的，無法存入筆記', 'warn'); return; }
+  // 預設標題：「Prompt MM/DD HH:MM」
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const defaultTitle = `Prompt ${pad(now.getMonth()+1)}/${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  openNoteEditModal(null, { fragment: text, description: defaultTitle });
+}
+
 function openNoteInsertModal(targetId='prompt') {
   noteInsertTargetId = targetId;
   noteInsertCategory = '';
+  noteInsertTypeTab = '';
+  noteInsertTagFilter = '';
   const searchEl = document.getElementById('note-insert-search');
   if (searchEl) searchEl.value = '';
   const targetEl = document.getElementById(targetId);
@@ -8962,6 +9014,19 @@ function closeNoteInsertModal(e) {
 
 function setNoteInsertCategory(cat) {
   noteInsertCategory = cat;
+  renderNoteInsertModal();
+}
+
+function setNoteInsertTypeTab(typeId) {
+  noteInsertTypeTab = typeId;
+  // 切換類型時清除已選 tag filter（避免留著選不到的 tag）
+  noteInsertTagFilter = '';
+  renderNoteInsertModal();
+}
+
+function setNoteInsertTagFilter(tag) {
+  // 點同一個 tag 再點一次 → 取消
+  noteInsertTagFilter = noteInsertTagFilter === tag ? '' : tag;
   renderNoteInsertModal();
 }
 
@@ -9066,8 +9131,49 @@ function renderNoteInsertModal() {
   });
   catRow.innerHTML = catHtml;
 
+  // ── tag 類型 tab + chips ──
+  const typeTabsEl  = document.getElementById('note-insert-type-tabs');
+  const tagChipsEl  = document.getElementById('note-insert-tag-chips');
+  if (typeTabsEl && tagChipsEl) {
+    // 收集所有 items 的 tags，再找出各類型
+    const allItemTags = [...new Set(allItems.flatMap(i => i.tags || []))];
+    const usedTypeIds = [...new Set(allItemTags.map(name => (getTagMeta(name).typeId || 'custom')))];
+    const usedTypes = getSortedTagTypes(false).filter(tp => usedTypeIds.includes(tp.id));
+
+    if (usedTypes.length) {
+      // 類型 tabs
+      let tabHtml = `<span class="tag-filter-chip ${noteInsertTypeTab===''?'active':''}" onclick="setNoteInsertTypeTab('')">全部類型</span>`;
+      usedTypes.forEach(tp => {
+        tabHtml += `<span class="tag-filter-chip ${noteInsertTypeTab===tp.id?'active':''}" onclick="setNoteInsertTypeTab('${esc(tp.id)}')">${esc(tp.label)}</span>`;
+      });
+      typeTabsEl.innerHTML = tabHtml;
+      typeTabsEl.style.display = 'flex';
+
+      // tag chips（該類型下的 tag）
+      const chipsForType = allItemTags.filter(name => {
+        const meta = getTagMeta(name);
+        return !noteInsertTypeTab || (meta.typeId || 'custom') === noteInsertTypeTab;
+      });
+      if (chipsForType.length) {
+        tagChipsEl.innerHTML = chipsForType.map(name => {
+          const active = noteInsertTagFilter === name;
+          return `<span class="tag-filter-chip ${active?'active':''}" ${active ? '' : `style="${getTagChipStyle(name, 0.10)}"`} onclick="setNoteInsertTagFilter('${esc(name)}')">${esc(name)}</span>`;
+        }).join('');
+        tagChipsEl.style.display = 'flex';
+      } else {
+        tagChipsEl.innerHTML = '';
+        tagChipsEl.style.display = 'none';
+      }
+    } else {
+      typeTabsEl.innerHTML = '';
+      tagChipsEl.innerHTML = '';
+      typeTabsEl.style.display = tagChipsEl.style.display = 'none';
+    }
+  }
+
   const filtered = allItems.filter(item => {
     const matchCat = !noteInsertCategory || item.source === noteInsertCategory;
+    const matchTag = !noteInsertTagFilter || (item.tags || []).includes(noteInsertTagFilter);
     const haystack = [
       item.title,
       item.subtitle,
@@ -9075,7 +9181,7 @@ function renderNoteInsertModal() {
       ...(item.tags || [])
     ].join('\n').toLowerCase();
     const matchQ = !q || haystack.includes(q);
-    return matchCat && matchQ;
+    return matchCat && matchTag && matchQ;
   });
 
   if (!filtered.length) {
@@ -9126,7 +9232,7 @@ function insertNoteToPrompt(noteId, target) {
 }
 
 // ── Edit modal ──
-function openNoteEditModal(id) {
+function openNoteEditModal(id, prefill) {
   noteEditId = id;
   noteEditTags = [];
   noteEditPreviewImageIds = [];
@@ -9141,9 +9247,10 @@ function openNoteEditModal(id) {
     noteEditPreviewImageIds = [...(n.previewImageIds||[])];
   } else {
     document.getElementById('note-edit-title').textContent = '新增筆記';
-    document.getElementById('note-edit-fragment').value = '';
-    document.getElementById('note-edit-desc').value = '';
-    document.getElementById('note-edit-category').value = 'effect';
+    document.getElementById('note-edit-fragment').value = prefill?.fragment || '';
+    document.getElementById('note-edit-desc').value = prefill?.description || '';
+    document.getElementById('note-edit-category').value = prefill?.category || 'effect';
+    if (prefill?.tags) noteEditTags = [...prefill.tags];
   }
   renderNoteEditTagChips();
   renderNoteEditPreviews();
