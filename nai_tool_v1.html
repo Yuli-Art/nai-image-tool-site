@@ -2719,9 +2719,17 @@
           <input type="search" id="tag-manager-search" class="inp" placeholder="搜尋 tag..." style="width:240px;max-width:100%;" oninput="renderTagManager()">
           <select id="tag-manager-type-filter" class="sel" style="width:180px;max-width:100%;" onchange="renderTagManager()"></select>
         </div>
+        <div class="tag-manager-section" style="margin-bottom:10px;">
+          <div class="tag-manager-section-title">新增 Tag</div>
+          <div class="tag-type-create" style="flex-wrap:wrap;gap:8px;">
+            <input type="text" id="tag-new-name" class="inp" placeholder="Tag 名稱" style="flex:1;min-width:150px;">
+            <select id="tag-new-type" class="sel" style="width:150px;max-width:100%;"></select>
+            <button class="btn btn-s" type="button" onclick="createTagFromManager()">＋ 新增</button>
+          </div>
+        </div>
         <div class="tag-manager-section">
         <div class="tag-manager-section-title">Tag 清單</div>
-        <div class="tag-manager-section-help">可直接改 tag 顏色與類型。之後如果角色 / 繪師越來越多，可以先用上方類型篩選再整理。</div>
+        <div class="tag-manager-section-help">可直接改 tag 顏色與類型。最新建立的 tag 排最上面。</div>
         <div class="tag-manager-list" id="tag-manager-list"></div>
       </div>
       </div>
@@ -3240,6 +3248,7 @@ async function dbSaveTag(name, options) {
     typeId: existing?.typeId || options.typeId || 'custom',
     source: existing?.source || options.source || 'manual',
     count: (existing?.count||0)+1,
+    createdAt: existing?.createdAt || Date.now(),
     lastUsed: Date.now()
   }));
 }
@@ -3951,6 +3960,16 @@ function renderTagTypeFilterOptions() {
   );
   sel.innerHTML = opts.join('');
   sel.value = current;
+
+  // 同步填充新增 tag 的類型下拉
+  const newTypeSel = document.getElementById('tag-new-type');
+  if (newTypeSel) {
+    const prevType = newTypeSel.value || 'custom';
+    const newOpts = getSortedTagTypes(false).map(t => `<option value="${esc(t.id)}">${esc(t.label)}</option>`);
+    newTypeSel.innerHTML = newOpts.join('');
+    newTypeSel.value = prevType;
+    if (!newTypeSel.value) newTypeSel.value = 'custom';
+  }
 }
 
 function renderTagTypeManager() {
@@ -4014,10 +4033,10 @@ function renderTagManager() {
       return true;
     })
     .sort((a, b) => {
-      const ua = usage[a] || {};
-      const ub = usage[b] || {};
-      const ta = (ua.images || 0) + (ua.characters || 0) + (ua.artists || 0) + (ua.views || 0);
-      const tb = (ub.images || 0) + (ub.characters || 0) + (ub.artists || 0) + (ub.views || 0);
+      const ma = getTagMeta(a);
+      const mb = getTagMeta(b);
+      const ta = ma.createdAt || ma.lastUsed || 0;
+      const tb = mb.createdAt || mb.lastUsed || 0;
       return tb - ta || a.localeCompare(b, 'zh-Hant');
     });
   if (!rows.length) {
@@ -4075,6 +4094,45 @@ async function createTagType() {
   await refreshAllTagTypes();
   renderTagManager();
   toast(`已新增類型「${label}」`, 'ok');
+}
+
+async function createTagFromManager() {
+  const nameInput = document.getElementById('tag-new-name');
+  const typeSel   = document.getElementById('tag-new-type');
+  const name = normalizeTagName(nameInput.value || '');
+  if (!name) { toast('請填寫 tag 名稱', 'warn'); return; }
+  const typeId = typeSel?.value || 'custom';
+
+  // 已存在就只更新類型，不覆蓋 createdAt
+  const existing = allKnownTags.find(t => normalizeTagName(t.name) === name);
+  if (existing) {
+    if ((existing.typeId || 'custom') !== typeId) {
+      await dbUpdateTagMeta(existing.name, { typeId });
+      allKnownTags = await dbGetTags();
+      renderTagManager();
+      toast(`「${existing.name}」類型已更新`, 'ok');
+    } else {
+      toast(`「${existing.name}」已存在`, 'warn');
+    }
+    nameInput.value = '';
+    return;
+  }
+
+  // 全新 tag：直接寫入 DB，count=0，createdAt=now
+  const db = await getDB();
+  await dbOp(db, 'tags', 'readwrite', s => s.put({
+    name,
+    color: defaultTagColor(name),
+    typeId,
+    source: 'manual',
+    count: 0,
+    createdAt: Date.now(),
+    lastUsed: Date.now()
+  }));
+  allKnownTags = await dbGetTags();
+  nameInput.value = '';
+  renderTagManager();
+  toast(`已新增 tag「${name}」`, 'ok');
 }
 
 async function renameTagType(typeId, label) {
