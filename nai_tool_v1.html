@@ -656,13 +656,7 @@
       color:#f8f4ff;
     }
     html[data-ui-theme="deep-purple-beta"] .nav-brand::after{
-      content:"AI-NATIVE STUDIO";
-      display:block;
-      margin-top:3px;
-      font-family:"Consolas","Courier New",monospace;
-      font-size:.58rem;
-      letter-spacing:.18em;
-      color:rgba(233,224,255,.72);
+      display:none;
     }
     html[data-ui-theme="deep-purple-beta"] .nav-tab{
       color:rgba(233,224,255,.78);
@@ -736,10 +730,11 @@
       padding-bottom:0;
     }
     html[data-ui-theme="deep-purple-beta"] .card-title{
-      font-size:1rem;
-      letter-spacing:-.02em;
+      font-size:.9rem;
+      font-weight:600;
+      letter-spacing:-.01em;
       text-transform:none;
-      color:#fff;
+      color:#d9cdf6;
       margin-bottom:12px;
     }
     html[data-ui-theme="deep-purple-beta"] .coll-hd{
@@ -747,6 +742,7 @@
     }
     html[data-ui-theme="deep-purple-beta"] .coll-hd .card-title{
       font-size:.9rem;
+      font-weight:600;
       text-transform:none;
       letter-spacing:-.01em;
       color:#d9cdf6;
@@ -1957,7 +1953,7 @@
 
   <!-- Navbar -->
   <nav class="navbar">
-    <div class="nav-brand">🎨 NAI 生圖工具</div>
+    <div class="nav-brand">AI-NATIVE STUDIO</div>
     <div class="nav-tabs">
       <button class="nav-tab active" id="tab-gen" onclick="showPage('generate')">生圖</button>
       <button class="nav-tab" id="tab-ab-top" onclick="showPage('ab')">A/B 比較</button>
