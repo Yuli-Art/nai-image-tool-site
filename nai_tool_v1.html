@@ -670,6 +670,36 @@
       color:#fff;
       background:rgba(157,107,255,.14);
     }
+    html[data-ui-theme="deep-purple-beta"] .beta-top-config-wrap{
+      display:flex;
+    }
+    html[data-ui-theme="deep-purple-beta"] .beta-top-config-btn{
+      display:flex;
+      background:rgba(255,255,255,.04);
+      border-color:rgba(193,163,255,.12);
+      color:#fff;
+    }
+    html[data-ui-theme="deep-purple-beta"] .beta-top-config-btn:hover{
+      border-color:rgba(157,107,255,.38);
+      background:rgba(157,107,255,.12);
+    }
+    html[data-ui-theme="deep-purple-beta"] .beta-top-config-btn-label{
+      color:var(--txt2);
+    }
+    html[data-ui-theme="deep-purple-beta"] .beta-top-config-btn-value{
+      color:#fff;
+    }
+    html[data-ui-theme="deep-purple-beta"] .beta-top-config-pop{
+      border-color:rgba(193,163,255,.12);
+      background:linear-gradient(180deg, rgba(34,20,58,.97), rgba(18,11,32,.98));
+      box-shadow:0 18px 40px rgba(4,0,18,.42);
+    }
+    html[data-ui-theme="deep-purple-beta"] .beta-top-config-title{
+      color:#fff;
+    }
+    html[data-ui-theme="deep-purple-beta"] .beta-top-config-note{
+      color:var(--txt2);
+    }
     html[data-ui-theme="deep-purple-beta"] .anlas-bal,
     html[data-ui-theme="deep-purple-beta"] .anlas-cost,
     html[data-ui-theme="deep-purple-beta"] .btn-settings{
@@ -724,6 +754,9 @@
     }
     html[data-ui-theme="deep-purple-beta"] .left-panel > .card:first-of-type{
       padding-top:6px;
+    }
+    html[data-ui-theme="deep-purple-beta"] .model-config-card{
+      display:none;
     }
     html[data-ui-theme="deep-purple-beta"] .left-panel > .card:last-child{
       border-bottom:none;
@@ -1175,6 +1208,42 @@
     .nav-tab.active{background:var(--accent-l);color:var(--accent);}
     .nav-tab.library-tab{display:none;}
     .nav-right{display:flex;align-items:center;gap:12px;}
+    .beta-top-config-wrap{display:none;position:relative;align-items:center;}
+    .beta-top-config-btn{
+      display:none;
+      align-items:flex-start;
+      justify-content:center;
+      flex-direction:column;
+      gap:2px;
+      min-width:154px;
+      padding:7px 12px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:var(--bg);
+      color:var(--txt);
+      cursor:pointer;
+      font:inherit;
+      text-align:left;
+    }
+    .beta-top-config-btn-label{font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;color:var(--txt2);}
+    .beta-top-config-btn-value{font-size:.8rem;font-weight:600;line-height:1.2;color:var(--txt);}
+    .beta-top-config-pop{
+      display:none;
+      position:absolute;
+      top:calc(100% + 10px);
+      right:0;
+      width:260px;
+      padding:12px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:var(--bg2);
+      box-shadow:0 18px 40px rgba(0,0,0,.3);
+      z-index:180;
+    }
+    .beta-top-config-pop.open{display:block;}
+    .beta-top-config-title{font-size:.82rem;font-weight:700;margin-bottom:10px;color:var(--txt);}
+    .beta-top-config-field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;}
+    .beta-top-config-note{font-size:.76rem;color:var(--txt2);}
     .anlas-info{text-align:right;line-height:1.3;}
     .anlas-bal{font-size:.78rem;color:var(--txt2);} .anlas-bal b{color:var(--warn);}
     .anlas-cost{font-size:.72rem;color:var(--txt2);} .anlas-cost b{color:var(--accent);}
@@ -1963,6 +2032,24 @@
       <button class="nav-tab library-tab" id="tab-notes-page" onclick="showPage('notes')">筆記本 <span id="notes-count" style="font-size:.72rem;opacity:.7;"></span></button>
     </div>
     <div class="nav-right">
+      <div class="beta-top-config-wrap">
+        <button class="beta-top-config-btn" id="beta-top-config-btn" type="button" onclick="toggleBetaTopConfig(event)">
+          <span class="beta-top-config-btn-label">模型</span>
+          <span class="beta-top-config-btn-value" id="beta-top-config-btn-value">V4.5 Full · 832×1216</span>
+        </button>
+        <div class="beta-top-config-pop" id="beta-top-config-pop" onclick="event.stopPropagation()">
+          <div class="beta-top-config-title">模型與解析度</div>
+          <div class="beta-top-config-field">
+            <label for="beta-model">模型</label>
+            <select id="beta-model" onchange="applyBetaTopModel(this.value)"></select>
+          </div>
+          <div class="beta-top-config-field">
+            <label for="beta-res">解析度</label>
+            <select id="beta-res" onchange="applyBetaTopRes(this.value)"></select>
+          </div>
+          <div class="beta-top-config-note" id="beta-top-config-note">✓ 免費（Opus 方案）</div>
+        </div>
+      </div>
       <div class="anlas-info">
         <div class="anlas-bal">ANLAS：<b id="anlas-val">---</b></div>
         <div class="anlas-cost" id="cost-row" style="display:none;">上次扣：<b id="cost-val">0</b> 點</div>
@@ -2018,7 +2105,7 @@
       </div>
 
       <!-- 模型 & 解析度 -->
-      <div class="card">
+      <div class="card model-config-card">
         <div class="card-title">模型與解析度</div>
         <div class="fg">
           <label>模型 Model</label>
@@ -3944,6 +4031,8 @@ function applyUITheme(theme) {
   document.documentElement.dataset.uiTheme = finalTheme;
   const sel = document.getElementById('ui-theme-sel');
   if (sel) sel.value = finalTheme;
+  syncBetaTopConfigFromMain();
+  if (finalTheme !== 'deep-purple-beta') closeBetaTopConfig();
 }
 
 function setUITheme(theme) {
@@ -3975,6 +4064,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   setAdv(!isMob);
   setSeedMode(true);
   bindDraftAutosave();
+  syncBetaTopConfigFromMain();
 
   // prompt autocomplete events
   const promptTA = document.getElementById('prompt');
@@ -4020,10 +4110,17 @@ window.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('vibe-picker-modal').classList.remove('open');
       document.getElementById('settings-modal')?.classList.remove('open');
       document.getElementById('drive-upload-modal')?.classList.remove('open');
+      closeBetaTopConfig();
     }
+  });
+  document.addEventListener('click', e => {
+    const wrap = document.querySelector('.beta-top-config-wrap');
+    if (!wrap || wrap.contains(e.target)) return;
+    closeBetaTopConfig();
   });
 
   applyDraftState(loadDraftState(), isMob);
+  syncBetaTopConfigFromMain();
   draftSaveReady = true;
   saveDraftState();
   document.querySelectorAll('textarea').forEach(ta => {
@@ -5525,6 +5622,74 @@ function updateResNote() {
   const n = document.getElementById('res-note');
   if (FREE_RES.has(v)) { n.textContent='✓ 免費（Opus 方案）'; n.className='res-note res-free'; }
   else { n.textContent='⚡ 消耗 ANLAS'; n.className='res-note res-cost'; }
+  syncBetaTopConfigFromMain();
+}
+
+function betaThemeActive() {
+  return document.documentElement.dataset.uiTheme === 'deep-purple-beta';
+}
+
+function summarizeModelForBeta(optionText) {
+  if (!optionText) return '';
+  return optionText
+    .replace('NAI Diffusion ', '')
+    .replace('（最新）', '')
+    .trim();
+}
+
+function summarizeResForBeta(optionText) {
+  if (!optionText) return '';
+  return optionText.split('（')[0].trim();
+}
+
+function syncBetaTopConfigFromMain() {
+  const model = document.getElementById('model');
+  const res = document.getElementById('res');
+  const betaModel = document.getElementById('beta-model');
+  const betaRes = document.getElementById('beta-res');
+  const betaNote = document.getElementById('beta-top-config-note');
+  const betaValue = document.getElementById('beta-top-config-btn-value');
+  const mainNote = document.getElementById('res-note');
+  if (!model || !res || !betaModel || !betaRes || !betaNote || !betaValue) return;
+
+  betaModel.innerHTML = model.innerHTML;
+  betaRes.innerHTML = res.innerHTML;
+  betaModel.value = model.value;
+  betaRes.value = res.value;
+  betaNote.textContent = mainNote ? mainNote.textContent : '';
+  betaValue.textContent = `${summarizeModelForBeta(model.options[model.selectedIndex]?.textContent)} · ${summarizeResForBeta(res.options[res.selectedIndex]?.textContent)}`;
+}
+
+function toggleBetaTopConfig(event) {
+  if (event) event.stopPropagation();
+  if (!betaThemeActive()) return;
+  const pop = document.getElementById('beta-top-config-pop');
+  if (!pop) return;
+  const willOpen = !pop.classList.contains('open');
+  document.querySelectorAll('.beta-top-config-pop.open').forEach(el => el.classList.remove('open'));
+  if (willOpen) {
+    syncBetaTopConfigFromMain();
+    pop.classList.add('open');
+  }
+}
+
+function closeBetaTopConfig() {
+  document.querySelectorAll('.beta-top-config-pop.open').forEach(el => el.classList.remove('open'));
+}
+
+function applyBetaTopModel(value) {
+  const model = document.getElementById('model');
+  if (!model) return;
+  model.value = value;
+  syncBetaTopConfigFromMain();
+}
+
+function applyBetaTopRes(value) {
+  const res = document.getElementById('res');
+  if (!res) return;
+  res.value = value;
+  updateResNote();
+  syncBetaTopConfigFromMain();
 }
 
 let advOpen = true;
