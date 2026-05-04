@@ -689,6 +689,10 @@
     html[data-ui-theme="deep-purple-beta"] .beta-top-config-btn-value{
       color:#fff;
     }
+    html[data-ui-theme="deep-purple-beta"] .beta-top-config-field.res-field,
+    html[data-ui-theme="deep-purple-beta"] .beta-top-config-note{
+      display:none;
+    }
     html[data-ui-theme="deep-purple-beta"] .beta-top-config-pop{
       border-color:rgba(193,163,255,.12);
       background:linear-gradient(180deg, rgba(34,20,58,.97), rgba(18,11,32,.98));
@@ -755,7 +759,19 @@
     html[data-ui-theme="deep-purple-beta"] .left-panel > .card:first-of-type{
       padding-top:6px;
     }
-    html[data-ui-theme="deep-purple-beta"] .model-config-card{
+    html[data-ui-theme="deep-purple-beta"] .model-config-card .card-title{
+      font-size:0;
+      margin-bottom:12px;
+    }
+    html[data-ui-theme="deep-purple-beta"] .model-config-card .card-title::after{
+      content:"圖片大小";
+      display:block;
+      font-size:.9rem;
+      font-weight:600;
+      letter-spacing:-.01em;
+      color:#d9cdf6;
+    }
+    html[data-ui-theme="deep-purple-beta"] .model-config-card .fg:first-of-type{
       display:none;
     }
     html[data-ui-theme="deep-purple-beta"] .left-panel > .card:last-child{
@@ -2043,7 +2059,7 @@
             <label for="beta-model">模型</label>
             <select id="beta-model" onchange="applyBetaTopModel(this.value)"></select>
           </div>
-          <div class="beta-top-config-field">
+          <div class="beta-top-config-field res-field">
             <label for="beta-res">解析度</label>
             <select id="beta-res" onchange="applyBetaTopRes(this.value)"></select>
           </div>
@@ -5657,7 +5673,7 @@ function syncBetaTopConfigFromMain() {
   betaModel.value = model.value;
   betaRes.value = res.value;
   betaNote.textContent = mainNote ? mainNote.textContent : '';
-  betaValue.textContent = `${summarizeModelForBeta(model.options[model.selectedIndex]?.textContent)} · ${summarizeResForBeta(res.options[res.selectedIndex]?.textContent)}`;
+  betaValue.textContent = summarizeModelForBeta(model.options[model.selectedIndex]?.textContent);
 }
 
 function toggleBetaTopConfig(event) {
