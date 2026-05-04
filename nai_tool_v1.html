@@ -1799,10 +1799,10 @@
 
     /* ── PROMPT 筆記本 ── */
     .note-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;
-      display:grid;grid-template-columns:112px minmax(0,1fr);transition:box-shadow .15s,border-color .15s;min-height:156px;}
+      display:flex;flex-direction:column;transition:box-shadow .15s,border-color .15s;}
     .note-card:hover{box-shadow:0 0 0 2px var(--accent-l);}
     .note-card.selected{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);}
-    .note-card-cover,.note-card-cover-ph{width:100%;height:100%;min-height:156px;object-fit:cover;display:block;cursor:pointer;flex-shrink:0;background:var(--bg3);}
+    .note-card-cover,.note-card-cover-ph{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;cursor:pointer;flex-shrink:0;background:var(--bg3);}
     .note-card-cover-ph{display:flex;align-items:center;justify-content:center;font-size:1.45rem;color:var(--txt2);}
     .note-card-body{padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0;}
     .note-card-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
@@ -1833,10 +1833,11 @@
     .note-edit-btn{background:none;border:1px solid var(--border);border-radius:6px;
       color:var(--txt2);font-size:.75rem;padding:4px 8px;cursor:pointer;transition:background .15s;}
     .note-edit-btn:hover{background:var(--bg3);color:var(--txt);}
-    @media (max-width: 720px){
-      .note-card{grid-template-columns:88px minmax(0,1fr);min-height:132px;}
-      .note-card-cover,.note-card-cover-ph{min-height:132px;}
-    }
+    .dock-note-record{background:var(--bg);border:1px solid var(--border);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;}
+    .dock-note-record.selected{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);}
+    .dock-note-record-cover,.dock-note-record-cover-ph{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:var(--bg3);}
+    .dock-note-record-cover-ph{display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--txt2);}
+    .dock-note-record-main{padding:12px;display:flex;flex-direction:column;gap:6px;min-width:0;}
 
     /* ── GALLERY VIEW TABS ── */
     .gal-views-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 10px;
@@ -6758,21 +6759,21 @@ function renderGenerateDockNotes(q) {
       const tags = (n.tags||[]).slice(0,3).map(t => `<span class="char-card-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
       const preview = getNotePreviewImageInfo(n);
       const media = preview
-        ? `<div class="dock-record-media"><img src="${preview.url}" alt=""></div>`
-        : `<div class="dock-record-media">📓</div>`;
-      return `<div class="dock-record${sel}" onclick="onDockNoteCardClick(${n.id})">
+        ? `<img class="dock-note-record-cover" src="${preview.url}" alt="">`
+        : `<div class="dock-note-record-cover-ph">📓</div>`;
+      return `<div class="dock-note-record${sel}" onclick="onDockNoteCardClick(${n.id})">
         ${media}
-        <div class="dock-record-main">
+        <div class="dock-note-record-main">
           <div class="dock-record-title">${esc(catLabel)}</div>
           <div class="dock-record-sub">${esc(n.description || 'Prompt 片段')}</div>
-        <div class="dock-record-desc">${esc(n.fragment || '')}</div>
-        <div class="dock-record-tags">${tags}</div>
-        <div class="dock-record-actions">
-          <button class="btn btn-s" type="button" data-text="${esc(n.fragment || '')}" onclick="event.stopPropagation();copyDockText(this.dataset.text,'片段')">複製片段</button>
-          <button class="btn btn-s btn-out" type="button" onclick="event.stopPropagation();openNoteEditModal(${n.id})">查看筆記</button>
+          <div class="dock-record-desc">${esc(n.fragment || '')}</div>
+          <div class="dock-record-tags">${tags}</div>
+          <div class="dock-record-actions">
+            <button class="btn btn-s" type="button" data-text="${esc(n.fragment || '')}" onclick="event.stopPropagation();copyDockText(this.dataset.text,'片段')">複製片段</button>
+            <button class="btn btn-s btn-out" type="button" onclick="event.stopPropagation();openNoteEditModal(${n.id})">查看筆記</button>
+          </div>
         </div>
-      </div>
-    </div>`;
+      </div>`;
   }).join('')}</div>`;
 }
 
