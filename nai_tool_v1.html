@@ -1435,6 +1435,7 @@
     .dock-inline-tools{display:flex;flex-direction:column;gap:10px;flex-shrink:0;}
     .dock-inline-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
     .dock-chip-scroll{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;}
+    .dock-chip-scroll > *{flex:0 0 auto;}
     .dock-chip-scroll::-webkit-scrollbar{height:6px;}
     .dock-chip-scroll::-webkit-scrollbar-thumb{background:var(--scroll-thumb);border-radius:999px;}
     .dock-record.selected,.dock-gallery-card.selected{border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);}
@@ -1495,9 +1496,16 @@
     .tag-chip-wrap:focus-within{border-color:var(--accent);}
     .tag-chip{background:var(--accent-l);border:1px solid var(--accent);color:var(--accent);
       border-radius:20px;padding:2px 8px 2px 10px;font-size:.78rem;display:inline-flex;
-      align-items:center;gap:4px;}
+      align-items:center;justify-content:center;gap:4px;flex:0 0 auto;white-space:nowrap;
+      writing-mode:horizontal-tb;text-orientation:mixed;line-height:1.2;}
     .tag-chip-x{background:none;border:none;color:var(--accent);cursor:pointer;
       padding:0 2px;font-size:1rem;line-height:1;}
+    .tag-clear-chip{background:var(--bg3);border:1px solid var(--border);color:var(--txt2);
+      border-radius:999px;padding:4px 10px;font-size:.75rem;display:inline-flex;align-items:center;
+      justify-content:center;gap:4px;flex:0 0 auto;white-space:nowrap;writing-mode:horizontal-tb;
+      text-orientation:mixed;line-height:1.2;cursor:pointer;font-family:inherit;
+      transition:all .15s;}
+    .tag-clear-chip:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-l);}
     .tag-text-in{background:none;border:none;outline:none;color:var(--txt);
       font-size:.875rem;flex:1;min-width:80px;padding:2px 4px;font-family:inherit;}
     .tag-dropdown{background:var(--bg2);border:1px solid var(--border);border-radius:8px;
@@ -1557,7 +1565,9 @@
     .gallery-search:focus{border-color:var(--accent);}
     .tag-filter-list{display:flex;gap:6px;flex-wrap:wrap;flex:1;}
     .tag-filter-chip{background:var(--bg3);border:1px solid var(--border);color:var(--txt2);
-      border-radius:20px;padding:3px 10px;font-size:.78rem;cursor:pointer;transition:all .15s;}
+      border-radius:20px;padding:3px 10px;font-size:.78rem;cursor:pointer;transition:all .15s;
+      display:inline-flex;align-items:center;justify-content:center;gap:4px;flex:0 0 auto;
+      white-space:nowrap;writing-mode:horizontal-tb;text-orientation:mixed;line-height:1.2;}
     .tag-filter-chip.active{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
     .gallery-grid{padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
     .gallery-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -1573,7 +1583,8 @@
     .gcard-footer{padding:8px;}
     .gcard-tags{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:4px;}
     .gcard-tag{background:var(--accent-l);color:var(--accent);border-radius:10px;
-      padding:1px 7px;font-size:.7rem;}
+      padding:1px 7px;font-size:.7rem;display:inline-flex;align-items:center;justify-content:center;
+      flex:0 0 auto;white-space:nowrap;writing-mode:horizontal-tb;text-orientation:mixed;line-height:1.2;}
     .gcard-time{font-size:.72rem;color:var(--txt2);}
     .gcard-check{position:absolute;top:6px;left:6px;width:22px;height:22px;
       background:var(--accent);border-radius:50%;display:none;align-items:center;
@@ -1676,7 +1687,9 @@
     .char-card-name{font-size:.8rem;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
     .char-card-series{font-size:.7rem;color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;}
     .char-card-tags{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;}
-    .char-card-tag{font-size:.65rem;padding:1px 6px;border-radius:8px;background:var(--bg3);color:var(--txt2);}
+    .char-card-tag{font-size:.65rem;padding:1px 6px;border-radius:8px;background:var(--bg3);color:var(--txt2);
+      display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;white-space:nowrap;
+      writing-mode:horizontal-tb;text-orientation:mixed;line-height:1.2;}
     .char-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1310;display:flex;align-items:center;justify-content:center;}
     .char-modal-overlay:not(.open){display:none;}
     .char-modal-box{background:var(--bg2);border-radius:14px;width:min(96vw,560px);max-height:90vh;display:flex;flex-direction:column;overflow:hidden;}
@@ -1823,7 +1836,9 @@
     .gal-view-filter-help{font-size:.72rem;color:var(--txt2);margin-bottom:8px;line-height:1.45;}
     .gal-view-tag-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;max-height:120px;overflow-y:auto;padding:2px;}
     .gal-view-tag-chip{background:var(--bg3);border:1px solid var(--border);border-radius:5px;
-      padding:3px 9px;font-size:.75rem;cursor:pointer;transition:background .15s,border-color .15s;}
+      padding:3px 9px;font-size:.75rem;cursor:pointer;transition:background .15s,border-color .15s;
+      display:inline-flex;align-items:center;justify-content:center;gap:4px;flex:0 0 auto;
+      white-space:nowrap;writing-mode:horizontal-tb;text-orientation:mixed;line-height:1.2;}
     .gal-view-tag-chip.sel{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
     .tag-mini-editor{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px;min-height:44px;}
     .tag-mini-list{display:flex;flex-wrap:wrap;gap:6px;}
@@ -1837,7 +1852,7 @@
     .tag-picker-selected{display:flex;flex-wrap:wrap;gap:6px;min-height:26px;}
     .tag-picker-help{font-size:.75rem;color:var(--txt2);line-height:1.45;}
     .tag-picker-list{display:flex;flex-wrap:wrap;gap:6px;max-height:220px;overflow-y:auto;padding:2px 0;}
-    .tag-picker-chip{background:var(--bg3);border:1px solid var(--border);border-radius:999px;padding:5px 10px;font-size:.78rem;cursor:pointer;color:var(--txt);transition:background .15s,border-color .15s,color .15s;}
+    .tag-picker-chip{background:var(--bg3);border:1px solid var(--border);border-radius:999px;padding:5px 10px;font-size:.78rem;cursor:pointer;color:var(--txt);transition:background .15s,border-color .15s,color .15s;display:inline-flex;align-items:center;justify-content:center;gap:4px;flex:0 0 auto;white-space:nowrap;writing-mode:horizontal-tb;text-orientation:mixed;line-height:1.2;}
     .tag-picker-chip.sel{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
     .tag-picker-chip small{color:var(--txt2);margin-left:4px;}
     .tag-picker-create{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg);border:1px dashed var(--border);border-radius:10px;padding:10px 12px;}
@@ -1850,7 +1865,7 @@
     .tag-manager-hd{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;}
     .tag-manager-body{padding:14px 18px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;}
     .tag-manager-tabs{display:flex;gap:6px;flex-wrap:wrap;}
-    .tag-manager-tab{background:var(--bg3);border:1px solid var(--border);border-radius:999px;padding:7px 14px;font-size:.8rem;font-weight:600;color:var(--txt2);cursor:pointer;transition:all .15s;font-family:inherit;}
+    .tag-manager-tab{background:var(--bg3);border:1px solid var(--border);border-radius:999px;padding:7px 14px;font-size:.8rem;font-weight:600;color:var(--txt2);cursor:pointer;transition:all .15s;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:4px;flex:0 0 auto;white-space:nowrap;writing-mode:horizontal-tb;text-orientation:mixed;line-height:1.2;}
     .tag-manager-tab.active{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
     .tag-manager-pane{display:none;}
     .tag-manager-pane.active{display:block;}
@@ -1993,7 +2008,9 @@
       color:#fff;font-size:.68rem;transition:background .15s;}
     .gdrive-img-item.sel .gdrive-img-cb{background:var(--accent);}
     .gdrive-tag-chip{background:var(--bg3);border:1px solid var(--border);border-radius:999px;
-      padding:3px 10px;font-size:.74rem;cursor:pointer;color:var(--txt2);transition:background .15s,border-color .15s,color .15s;}
+      padding:3px 10px;font-size:.74rem;cursor:pointer;color:var(--txt2);transition:background .15s,border-color .15s,color .15s;
+      display:inline-flex;align-items:center;justify-content:center;gap:4px;flex:0 0 auto;
+      white-space:nowrap;writing-mode:horizontal-tb;text-orientation:mixed;line-height:1.2;}
     .gdrive-tag-chip.active{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
 
     /* ── MOBILE ── */
@@ -4827,14 +4844,19 @@ async function ensureKnownTagList(tags, optionsMap) {
   return dedupeTags(out);
 }
 
-function renderSimpleTagList(containerId, tags, emptyText, removeFnName) {
+function renderClearTagChip(onclickExpr, label = '全部取消') {
+  return `<button type="button" class="tag-clear-chip" onclick="${onclickExpr}">✕ ${esc(label)}</button>`;
+}
+
+function renderSimpleTagList(containerId, tags, emptyText, removeFnName, clearFnName) {
   const el = document.getElementById(containerId);
   if (!el) return;
   if (!tags.length) {
     el.innerHTML = `<span class="tag-mini-empty">${esc(emptyText)}</span>`;
     return;
   }
-  el.innerHTML = tags.map(t => `<span class="tag-chip" style="${getTagChipStyle(t)}">${esc(t)}${removeFnName ? `<button class="tag-chip-x" data-tag="${esc(t)}" style="color:${getTagColor(t)}" onclick="${removeFnName}(this.dataset.tag)">×</button>` : ''}</span>`).join('');
+  const clearHtml = clearFnName ? renderClearTagChip(`${clearFnName}()`) : '';
+  el.innerHTML = clearHtml + tags.map(t => `<span class="tag-chip" style="${getTagChipStyle(t)}">${esc(t)}${removeFnName ? `<button class="tag-chip-x" data-tag="${esc(t)}" style="color:${getTagColor(t)}" onclick="${removeFnName}(this.dataset.tag)">×</button>` : ''}</span>`).join('');
 }
 
 function openTagPicker(options) {
@@ -4871,7 +4893,7 @@ function renderTagPicker() {
   const selected = [...tagPickerState.selected];
   const selectedEl = document.getElementById('tag-picker-selected');
   selectedEl.innerHTML = selected.length
-    ? selected.map(t => `<span class="tag-chip" style="${getTagChipStyle(t)}">${esc(t)}<button class="tag-chip-x" data-tag="${esc(t)}" style="color:${getTagColor(t)}" onclick="toggleTagPickerSelection(this.dataset.tag)">×</button></span>`).join('')
+    ? renderClearTagChip('clearTagPickerSelection()') + selected.map(t => `<span class="tag-chip" style="${getTagChipStyle(t)}">${esc(t)}<button class="tag-chip-x" data-tag="${esc(t)}" style="color:${getTagColor(t)}" onclick="toggleTagPickerSelection(this.dataset.tag)">×</button></span>`).join('')
     : `<span class="tag-mini-empty">尚未選擇 tag</span>`;
 
   const sourceTags = tagPickerState.availableTags
@@ -4931,6 +4953,12 @@ function renderTagPicker() {
       ${similar.length ? `<div class="tag-picker-similar">可能和既有 tag 太像：${similar.map(t => esc(t.name)).join('、')}</div>` : ''}
     </div>
     <button class="btn btn-s btn-out" type="button" onclick="createTagFromPicker()">建立</button>`;
+}
+
+function clearTagPickerSelection() {
+  if (!tagPickerState?.selected?.size) return;
+  tagPickerState.selected.clear();
+  renderTagPicker();
 }
 
 function toggleTagPickerSelection(tag) {
@@ -6277,7 +6305,8 @@ function renderDockViewTabs(kind) {
 function renderDockGalleryTagChips() {
   const tagCount = {};
   galleryData.forEach(img => (img.tags || []).forEach(t => tagCount[t] = (tagCount[t] || 0) + 1));
-  return Object.entries(tagCount).sort((a,b) => b[1] - a[1]).slice(0, 16).map(([t,c]) =>
+  const clearHtml = activeTagFilters.size ? renderClearTagChip('clearTagFilters()') : '';
+  return clearHtml + Object.entries(tagCount).sort((a,b) => b[1] - a[1]).slice(0, 16).map(([t,c]) =>
     `<span class="tag-filter-chip ${activeTagFilters.has(t)?'active':''}" ${activeTagFilters.has(t) ? '' : `style="${getTagChipStyle(t, 0.10)}"`} onclick="toggleTagFilter('${esc(t)}')">${esc(t)} <small>${c}</small></span>`
   ).join('');
 }
@@ -6548,8 +6577,15 @@ function removeTag(name) {
   saveDraftState();
 }
 
+function clearCurrentTags() {
+  if (!currentTags.length) return;
+  currentTags = [];
+  renderTagChips();
+  saveDraftState();
+}
+
 function renderTagChips() {
-  renderSimpleTagList('tag-chips-display', currentTags, '尚未選擇 tag', 'removeTag');
+  renderSimpleTagList('tag-chips-display', currentTags, '尚未選擇 tag', 'removeTag', 'clearCurrentTags');
 }
 
 function renderTagDD(matches, input) {
@@ -6587,11 +6623,11 @@ function openGenerateTagPicker(prefill='') {
 }
 
 function renderArtistEditTags() {
-  renderSimpleTagList('artist-edit-tags-display', artistEditTagsState, '尚未選擇標籤', 'removeArtistEditTag');
+  renderSimpleTagList('artist-edit-tags-display', artistEditTagsState, '尚未選擇標籤', 'removeArtistEditTag', 'clearArtistEditTags');
 }
 
 function renderCharEditTags() {
-  renderSimpleTagList('char-edit-tags-display', charEditTagsState, '尚未選擇標籤', 'removeCharEditTag');
+  renderSimpleTagList('char-edit-tags-display', charEditTagsState, '尚未選擇標籤', 'removeCharEditTag', 'clearCharEditTags');
 }
 
 function removeArtistEditTag(tag) {
@@ -6601,6 +6637,18 @@ function removeArtistEditTag(tag) {
 
 function removeCharEditTag(tag) {
   charEditTagsState = charEditTagsState.filter(t => t !== tag);
+  renderCharEditTags();
+}
+
+function clearArtistEditTags() {
+  if (!artistEditTagsState.length) return;
+  artistEditTagsState = [];
+  renderArtistEditTags();
+}
+
+function clearCharEditTags() {
+  if (!charEditTagsState.length) return;
+  charEditTagsState = [];
   renderCharEditTags();
 }
 
@@ -6730,14 +6778,16 @@ function openBtTagsPicker() {
 }
 
 function renderAbTagChips() {
-  const el = document.getElementById('ab-tags-chips');
-  if (!el) return;
-  el.innerHTML = abTags.map(t =>
-    `<span class="tag-chip" style="${getTagChipStyle(t)}">${esc(t)}<button class="tag-chip-x" data-tag="${esc(t)}" style="color:${getTagColor(t)}" onclick="removeAbTag(this.dataset.tag)">×</button></span>`
-  ).join('');
+  renderSimpleTagList('ab-tags-chips', abTags, '尚未選擇標籤', 'removeAbTag', 'clearAbTags');
 }
 
 function removeAbTag(name) { abTags = abTags.filter(t => t !== name); renderAbTagChips(); }
+
+function clearAbTags() {
+  if (!abTags.length) return;
+  abTags = [];
+  renderAbTagChips();
+}
 
 function openAbTagsPicker() {
   openTagPicker({
@@ -7298,13 +7348,20 @@ function renderGalViewTagPicker(kind) {
   const list = document.getElementById(isExclude ? 'gal-view-exclude-list' : 'gal-view-include-list');
   const selected = isExclude ? galViewExcludeTags : galViewIncludeTags;
   if (!filtered.length) {
-    list.innerHTML = `<span style="font-size:.75rem;color:var(--txt2);">${allTags.length?'沒有符合的 tag':'圖庫目前沒有 tag'}</span>`;
+    list.innerHTML = `${selected.size ? renderClearTagChip(`clearGalViewTags('${kind}')`) : ''}<span style="font-size:.75rem;color:var(--txt2);">${allTags.length?'沒有符合的 tag':'圖庫目前沒有 tag'}</span>`;
     return;
   }
-  list.innerHTML = filtered.map(t => {
+  list.innerHTML = `${selected.size ? renderClearTagChip(`clearGalViewTags('${kind}')`) : ''}` + filtered.map(t => {
     const sel = selected.has(t);
     return `<span class="gal-view-tag-chip ${sel?'sel':''}" ${sel ? '' : `style="${getTagChipStyle(t, 0.10)}"`} data-tag="${esc(t)}" onclick="toggleGalViewTag('${kind}', this.dataset.tag)">${esc(t)}</span>`;
   }).join('');
+}
+
+function clearGalViewTags(kind) {
+  const targetSet = kind === 'exclude' ? galViewExcludeTags : galViewIncludeTags;
+  if (!targetSet.size) return;
+  targetSet.clear();
+  renderGalViewTagPicker(kind);
 }
 
 function confirmAddGalView() {
@@ -7458,13 +7515,20 @@ function renderArtistViewTagPicker(kind) {
   const list = document.getElementById(isExclude ? 'artist-view-exclude-list' : 'artist-view-include-list');
   const selected = isExclude ? artistViewExcludeTags : artistViewIncludeTags;
   if (!filtered.length) {
-    list.innerHTML = `<span style="font-size:.75rem;color:var(--txt2);">${allTags.length ? '沒有符合的 tag' : '風格庫目前沒有 tag'}</span>`;
+    list.innerHTML = `${selected.size ? renderClearTagChip(`clearArtistViewTags('${kind}')`) : ''}<span style="font-size:.75rem;color:var(--txt2);">${allTags.length ? '沒有符合的 tag' : '風格庫目前沒有 tag'}</span>`;
     return;
   }
-  list.innerHTML = filtered.map(t => {
+  list.innerHTML = `${selected.size ? renderClearTagChip(`clearArtistViewTags('${kind}')`) : ''}` + filtered.map(t => {
     const sel = selected.has(t);
     return `<span class="gal-view-tag-chip ${sel?'sel':''}" ${sel ? '' : `style="${getTagChipStyle(t, 0.10)}"`} data-tag="${esc(t)}" onclick="toggleArtistViewTag('${kind}', this.dataset.tag)">${esc(t)}</span>`;
   }).join('');
+}
+
+function clearArtistViewTags(kind) {
+  const targetSet = kind === 'exclude' ? artistViewExcludeTags : artistViewIncludeTags;
+  if (!targetSet.size) return;
+  targetSet.clear();
+  renderArtistViewTagPicker(kind);
 }
 
 function confirmAddArtistView() {
@@ -7896,12 +7960,18 @@ function updateBlendEntryField(index, field, value) {
 }
 
 function renderBlendEditTags() {
-  renderSimpleTagList('blend-edit-tags-display', currentBlendDraft?.tags || [], '尚未選擇標籤', 'removeBlendTag');
+  renderSimpleTagList('blend-edit-tags-display', currentBlendDraft?.tags || [], '尚未選擇標籤', 'removeBlendTag', 'clearBlendTags');
 }
 
 function removeBlendTag(tag) {
   if (!currentBlendDraft) return;
   currentBlendDraft.tags = dedupeTags((currentBlendDraft.tags || []).filter(t => t !== tag));
+  renderBlendEditTags();
+}
+
+function clearBlendTags() {
+  if (!currentBlendDraft?.tags?.length) return;
+  currentBlendDraft.tags = [];
   renderBlendEditTags();
 }
 
@@ -8142,13 +8212,20 @@ function renderCharViewTagPicker(kind) {
   const list = document.getElementById(isExclude ? 'char-view-exclude-list' : 'char-view-include-list');
   const selected = isExclude ? charViewExcludeTags : charViewIncludeTags;
   if (!filtered.length) {
-    list.innerHTML = `<span style="font-size:.75rem;color:var(--txt2);">${allTags.length ? '沒有符合的 tag' : '角色庫目前沒有 tag'}</span>`;
+    list.innerHTML = `${selected.size ? renderClearTagChip(`clearCharViewTags('${kind}')`) : ''}<span style="font-size:.75rem;color:var(--txt2);">${allTags.length ? '沒有符合的 tag' : '角色庫目前沒有 tag'}</span>`;
     return;
   }
-  list.innerHTML = filtered.map(t => {
+  list.innerHTML = `${selected.size ? renderClearTagChip(`clearCharViewTags('${kind}')`) : ''}` + filtered.map(t => {
     const sel = selected.has(t);
     return `<span class="gal-view-tag-chip ${sel?'sel':''}" ${sel ? '' : `style="${getTagChipStyle(t, 0.10)}"`} data-tag="${esc(t)}" onclick="toggleCharViewTag('${kind}', this.dataset.tag)">${esc(t)}</span>`;
   }).join('');
+}
+
+function clearCharViewTags(kind) {
+  const targetSet = kind === 'exclude' ? charViewExcludeTags : charViewIncludeTags;
+  if (!targetSet.size) return;
+  targetSet.clear();
+  renderCharViewTagPicker(kind);
 }
 
 function confirmAddCharView() {
@@ -9296,7 +9373,8 @@ function buildTagFilterList() {
   galleryData.forEach(img => (img.tags||[]).forEach(t => tagCount[t] = (tagCount[t]||0)+1));
   const sorted = Object.entries(tagCount).sort((a,b)=>b[1]-a[1]);
   const list = document.getElementById('tag-filter-list');
-  list.innerHTML = sorted.map(([t,c]) =>
+  const clearHtml = activeTagFilters.size ? renderClearTagChip('clearTagFilters()') : '';
+  list.innerHTML = clearHtml + sorted.map(([t,c]) =>
     `<span class="tag-filter-chip ${activeTagFilters.has(t)?'active':''}" ${activeTagFilters.has(t) ? '' : `style="${getTagChipStyle(t, 0.10)}"`} onclick="toggleTagFilter('${esc(t)}')">${esc(t)} <small>${c}</small></span>`
   ).join('');
 }
@@ -9304,6 +9382,13 @@ function buildTagFilterList() {
 function toggleTagFilter(tag) {
   if (activeTagFilters.has(tag)) activeTagFilters.delete(tag);
   else activeTagFilters.add(tag);
+  buildTagFilterList();
+  filterGallery();
+}
+
+function clearTagFilters() {
+  if (!activeTagFilters.size) return;
+  activeTagFilters.clear();
   buildTagFilterList();
   filterGallery();
 }
@@ -9865,13 +9950,20 @@ function renderNotesViewTagPicker(kind) {
   const list = document.getElementById(isExclude ? 'notes-view-exclude-list' : 'notes-view-include-list');
   const selected = isExclude ? notesViewExcludeTags : notesViewIncludeTags;
   if (!filtered.length) {
-    list.innerHTML = `<span style="font-size:.75rem;color:var(--txt2);">${allTags.length?'沒有符合的 tag':'筆記目前沒有 tag'}</span>`;
+    list.innerHTML = `${selected.size ? renderClearTagChip(`clearNotesViewTags('${kind}')`) : ''}<span style="font-size:.75rem;color:var(--txt2);">${allTags.length?'沒有符合的 tag':'筆記目前沒有 tag'}</span>`;
     return;
   }
-  list.innerHTML = filtered.map(t => {
+  list.innerHTML = `${selected.size ? renderClearTagChip(`clearNotesViewTags('${kind}')`) : ''}` + filtered.map(t => {
     const sel = selected.has(t);
-    return `<span class="gal-view-tag-chip ${sel?'sel':''}" data-tag="${esc(t)}" onclick="toggleNotesViewTag('${kind}', this.dataset.tag)">${esc(t)}</span>`;
+    return `<span class="gal-view-tag-chip ${sel?'sel':''}" ${sel ? '' : `style="${getTagChipStyle(t, 0.10)}"`} data-tag="${esc(t)}" onclick="toggleNotesViewTag('${kind}', this.dataset.tag)">${esc(t)}</span>`;
   }).join('');
+}
+
+function clearNotesViewTags(kind) {
+  const targetSet = kind === 'exclude' ? notesViewExcludeTags : notesViewIncludeTags;
+  if (!targetSet.size) return;
+  targetSet.clear();
+  renderNotesViewTagPicker(kind);
 }
 
 function confirmAddNotesView() {
@@ -10109,6 +10201,12 @@ function setNoteInsertTagFilter(tag) {
   renderNoteInsertModal();
 }
 
+function clearNoteInsertTagFilter() {
+  if (!noteInsertTagFilter) return;
+  noteInsertTagFilter = '';
+  renderNoteInsertModal();
+}
+
 function insertPromptItemToTarget(text) {
   const el = document.getElementById('note-insert-editor');
   if (!el) return;
@@ -10234,7 +10332,7 @@ function renderNoteInsertModal() {
         return !noteInsertTypeTab || (meta.typeId || 'custom') === noteInsertTypeTab;
       });
       if (chipsForType.length) {
-        tagChipsEl.innerHTML = chipsForType.map(name => {
+        tagChipsEl.innerHTML = `${noteInsertTagFilter ? renderClearTagChip('clearNoteInsertTagFilter()') : ''}` + chipsForType.map(name => {
           const active = noteInsertTagFilter === name;
           return `<span class="tag-filter-chip ${active?'active':''}" ${active ? '' : `style="${getTagChipStyle(name, 0.10)}"`} onclick="setNoteInsertTagFilter('${esc(name)}')">${esc(name)}</span>`;
         }).join('');
@@ -10356,10 +10454,7 @@ function closeNoteEditModal() {
 }
 
 function renderNoteEditTagChips() {
-  document.getElementById('note-edit-tag-chips').innerHTML =
-    noteEditTags.map(t =>
-      `<span class="tag-chip">${esc(t)}<button class="tag-chip-x" onclick="removeNoteEditTag('${esc(t)}')">×</button></span>`
-    ).join('');
+  renderSimpleTagList('note-edit-tag-chips', noteEditTags, '尚未選擇標籤', 'removeNoteEditTag', 'clearNoteEditTags');
 }
 
 function renderNoteEditPreviews() {
@@ -10384,6 +10479,12 @@ function removeNotePreviewImage(imgId) {
 
 function removeNoteEditTag(name) {
   noteEditTags = noteEditTags.filter(t => t !== name);
+  renderNoteEditTagChips();
+}
+
+function clearNoteEditTags() {
+  if (!noteEditTags.length) return;
+  noteEditTags = [];
   renderNoteEditTagChips();
 }
 
@@ -11273,13 +11374,16 @@ function deletePreset(id) {
 }
 
 function renderBtTagChips() {
-  document.getElementById('bt-tags-chips').innerHTML =
-    btTags.map(t =>
-      `<span class="tag-chip" style="${getTagChipStyle(t)}">${esc(t)}<button class="tag-chip-x" data-tag="${esc(t)}" style="color:${getTagColor(t)}" onclick="removeBtTag(this.dataset.tag)">×</button></span>`
-    ).join('');
+  renderSimpleTagList('bt-tags-chips', btTags, '尚未選擇標籤', 'removeBtTag', 'clearBtTags');
 }
 
 function removeBtTag(name) { btTags = btTags.filter(t => t !== name); renderBtTagChips(); }
+
+function clearBtTags() {
+  if (!btTags.length) return;
+  btTags = [];
+  renderBtTagChips();
+}
 
 function btImportGenParams() {
   document.getElementById('bt-model').value     = document.getElementById('model').value;
@@ -12050,7 +12154,8 @@ function gdriveRenderTagFilter() {
   const bar = document.getElementById('gdrive-tag-filter');
   if (!bar) return;
   const tags = [...new Set(galleryData.flatMap(img => img.tags || []))].sort();
-  bar.innerHTML = `<span class="gdrive-tag-chip${!gdriveFilterTag?' active':''}" onclick="gdriveSetFilter('')">全部</span>` +
+  const clearHtml = gdriveFilterTag ? renderClearTagChip("gdriveSetFilter('')") : '';
+  bar.innerHTML = clearHtml + `<span class="gdrive-tag-chip${!gdriveFilterTag?' active':''}" onclick="gdriveSetFilter('')">全部</span>` +
     tags.map(t => `<span class="gdrive-tag-chip${gdriveFilterTag===t?' active':''}" onclick="gdriveSetFilter(${JSON.stringify(t)})">${esc(t)}</span>`).join('');
 }
 
