@@ -771,10 +771,10 @@
       letter-spacing:-.01em;
       color:#d9cdf6;
     }
-    html[data-ui-theme="deep-purple-beta"] .model-config-card .fg:first-of-type{
+    html[data-ui-theme="deep-purple-beta"] .model-config-card .model-field{
       display:none;
     }
-    html[data-ui-theme="deep-purple-beta"] .model-config-card .fg:first-of-type + .fg{
+    html[data-ui-theme="deep-purple-beta"] .model-config-card .size-field{
       margin-top:0;
     }
     html[data-ui-theme="deep-purple-beta"] .left-panel > .card:last-child{
@@ -2126,7 +2126,7 @@
       <!-- 模型 & 解析度 -->
       <div class="card model-config-card">
         <div class="card-title">模型與解析度</div>
-        <div class="fg">
+        <div class="fg model-field">
           <label>模型 Model</label>
           <select id="model">
             <option value="nai-diffusion-4-5-full">NAI Diffusion V4.5 Full（最新）</option>
@@ -2134,7 +2134,7 @@
             <option value="nai-diffusion-4">NAI Diffusion V4</option>
           </select>
         </div>
-        <div class="fg">
+        <div class="fg size-field">
           <label>解析度 Resolution</label>
           <select id="res" onchange="updateResNote()">
             <optgroup label="✓ 免費（Opus 方案）">
