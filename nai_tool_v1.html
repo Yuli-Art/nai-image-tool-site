@@ -4862,9 +4862,9 @@ function getUsedTagTypes(tagNames) {
 function renderTagTypeFilterChips(tagNames, currentType, buildOnclick, allLabel = '全部') {
   const usedTypes = getUsedTagTypes(tagNames);
   if (usedTypes.length <= 1) return '';
-  let html = `<span class="tag-filter-chip ${currentType === '' ? 'active' : ''}" onclick="${buildOnclick('')}">${esc(allLabel)}</span>`;
+  let html = `<span class="tag-filter-chip ${currentType === '' ? 'active' : ''}" onclick="${esc(buildOnclick(''))}">${esc(allLabel)}</span>`;
   usedTypes.forEach(tp => {
-    html += `<span class="tag-filter-chip ${currentType === tp.id ? 'active' : ''}" onclick="${buildOnclick(tp.id)}">${esc(tp.label)}</span>`;
+    html += `<span class="tag-filter-chip ${currentType === tp.id ? 'active' : ''}" onclick="${esc(buildOnclick(tp.id))}">${esc(tp.label)}</span>`;
   });
   return html;
 }
