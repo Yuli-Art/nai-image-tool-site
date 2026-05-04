@@ -608,6 +608,98 @@
       border-color:rgba(157,107,255,.4);
       color:#fff;
     }
+    /* Deep purple refinement: keep the new theme, but restore old workflow density */
+    html[data-ui-theme="deep-purple"] .theme-hero{
+      display:none;
+    }
+    html[data-ui-theme="deep-purple"] .left-panel{
+      min-height:0;
+      padding:14px 10px 120px 10px;
+      gap:10px;
+      overflow-y:auto;
+      overscroll-behavior:contain;
+      scrollbar-width:thin;
+      -ms-overflow-style:auto;
+    }
+    html[data-ui-theme="deep-purple"] .left-panel::-webkit-scrollbar{
+      width:10px;
+      height:10px;
+    }
+    html[data-ui-theme="deep-purple"] .left-panel::-webkit-scrollbar-track{
+      background:transparent;
+    }
+    html[data-ui-theme="deep-purple"] .left-panel::-webkit-scrollbar-thumb{
+      background:color-mix(in srgb, var(--scroll-thumb) 80%, transparent);
+      border:2px solid transparent;
+      border-radius:999px;
+    }
+    html[data-ui-theme="deep-purple"] .card{
+      padding:14px;
+      border-radius:10px;
+      background:linear-gradient(180deg, rgba(37,23,64,.92) 0%, rgba(26,16,45,.96) 100%);
+    }
+    html[data-ui-theme="deep-purple"] .card-title{
+      margin-bottom:12px;
+    }
+    html[data-ui-theme="deep-purple"] .generate-main-panel{
+      padding:18px 18px 14px;
+      gap:10px;
+      background:transparent;
+    }
+    html[data-ui-theme="deep-purple"] .generate-main-panel::before{
+      display:none;
+    }
+    html[data-ui-theme="deep-purple"] .generate-main-shell{
+      background:none;
+    }
+    html[data-ui-theme="deep-purple"] .generate-stage{
+      padding:0;
+      background:none;
+    }
+    html[data-ui-theme="deep-purple"] .result-area{
+      width:100%;
+      max-width:none;
+      background:none;
+      border:none;
+      box-shadow:none;
+    }
+    html[data-ui-theme="deep-purple"] .ab-result-half-body{
+      background:none;
+      border:1px solid rgba(193,163,255,.08);
+      box-shadow:none;
+    }
+    html[data-ui-theme="deep-purple"] .result-placeholder{
+      border:none;
+      border-radius:0;
+      background:none;
+    }
+    html[data-ui-theme="deep-purple"] #result-img{
+      border:1px solid rgba(193,163,255,.12);
+      box-shadow:0 18px 40px rgba(4,0,18,.34);
+    }
+    html[data-ui-theme="deep-purple"] .generate-bottom-bar{
+      min-height:92px;
+      padding:8px 0 0;
+      background:none;
+      border:none;
+      box-shadow:none;
+      backdrop-filter:none;
+    }
+    html[data-ui-theme="deep-purple"] .status-bar{
+      background:rgba(255,255,255,.04);
+      border-color:rgba(193,163,255,.1);
+    }
+    html[data-ui-theme="deep-purple"] .quick-count-wrap{
+      background:rgba(255,255,255,.04);
+      border-color:rgba(193,163,255,.12);
+    }
+    html[data-ui-theme="deep-purple"] .generate-dock::before{
+      display:none;
+    }
+    html[data-ui-theme="deep-purple"] .generate-dock-toolbar,
+    html[data-ui-theme="deep-purple"] .generate-dock-head{
+      background:transparent;
+    }
     html[data-ui-theme^="design-md"] .card-title{
       font-size:1.05rem;
       text-transform:none;
