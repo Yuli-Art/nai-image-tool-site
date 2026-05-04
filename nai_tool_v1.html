@@ -87,6 +87,27 @@
       --sunset-b: rgba(239,44,193,.22);
       --sunset-c: rgba(96,65,180,.42);
     }
+    html[data-ui-theme="deep-purple-beta"] {
+      --bg:       #11081f;
+      --bg2:      rgba(28,18,49,.9);
+      --bg3:      #24163f;
+      --accent:   #9d6bff;
+      --accent-h: #8a58f3;
+      --accent-l: rgba(157,107,255,.2);
+      --txt:      #f7f1ff;
+      --txt2:     #b8add3;
+      --border:   rgba(193,163,255,.15);
+      --ok:       #51c796;
+      --warn:     #f2ab57;
+      --err:      #ff7ca8;
+      --info:     #8ea2ff;
+      --font-body: "Segoe UI","Noto Sans TC",sans-serif;
+      --font-display: Georgia,"Times New Roman","Noto Serif TC",serif;
+      --shadow-soft: 0 18px 44px rgba(4,0,18,.45);
+      --scroll-track: #0e0918;
+      --scroll-thumb: #5c468f;
+      --scroll-thumb-hover: #7b5ec2;
+    }
     *{margin:0;padding:0;box-sizing:border-box;}
     *{
       scrollbar-width:thin;
@@ -604,6 +625,311 @@
       color:var(--txt2);
     }
     html[data-ui-theme="deep-purple"] .gdrive-tag-chip.active{
+      background:rgba(157,107,255,.24);
+      border-color:rgba(157,107,255,.4);
+      color:#fff;
+    }
+    html[data-ui-theme="deep-purple-beta"] body{
+      background:
+        radial-gradient(circle at 14% 12%, rgba(173,87,255,.22), transparent 28%),
+        radial-gradient(circle at 82% 0%, rgba(122,85,255,.12), transparent 24%),
+        linear-gradient(180deg, #160a29 0%, #11081f 38%, #0d0819 100%);
+      color:var(--txt);
+    }
+    html[data-ui-theme="deep-purple-beta"] .nav-brand,
+    html[data-ui-theme="deep-purple-beta"] .login-title,
+    html[data-ui-theme="deep-purple-beta"] .card-title,
+    html[data-ui-theme="deep-purple-beta"] .char-modal-hd,
+    html[data-ui-theme="deep-purple-beta"] .ab-section-head{
+      font-family:var(--font-display);
+    }
+    html[data-ui-theme="deep-purple-beta"] .navbar{
+      height:64px;
+      padding:0 20px;
+      background:rgba(18,11,32,.86);
+      border-bottom:1px solid rgba(193,163,255,.12);
+      backdrop-filter:blur(18px);
+      box-shadow:0 14px 30px rgba(2,0,12,.28);
+    }
+    html[data-ui-theme="deep-purple-beta"] .nav-brand{
+      position:relative;
+      color:#f8f4ff;
+    }
+    html[data-ui-theme="deep-purple-beta"] .nav-brand::after{
+      content:"AI-NATIVE STUDIO";
+      display:block;
+      margin-top:3px;
+      font-family:"Consolas","Courier New",monospace;
+      font-size:.58rem;
+      letter-spacing:.18em;
+      color:rgba(233,224,255,.72);
+    }
+    html[data-ui-theme="deep-purple-beta"] .nav-tab{
+      color:rgba(233,224,255,.78);
+    }
+    html[data-ui-theme="deep-purple-beta"] .nav-tab.active{
+      background:linear-gradient(135deg, #a56eff, #7d4bff);
+      color:#fff;
+      box-shadow:0 10px 24px rgba(88,45,181,.32);
+    }
+    html[data-ui-theme="deep-purple-beta"] .nav-tab:hover:not(.active){
+      color:#fff;
+      background:rgba(157,107,255,.14);
+    }
+    html[data-ui-theme="deep-purple-beta"] .anlas-bal,
+    html[data-ui-theme="deep-purple-beta"] .anlas-cost,
+    html[data-ui-theme="deep-purple-beta"] .btn-settings{
+      color:var(--txt2);
+    }
+    html[data-ui-theme="deep-purple-beta"] .anlas-bal b,
+    html[data-ui-theme="deep-purple-beta"] .anlas-cost b{
+      color:#fff;
+    }
+    html[data-ui-theme="deep-purple-beta"] .btn-settings:hover{
+      color:#fff;
+      background:rgba(157,107,255,.16);
+    }
+    html[data-ui-theme]:not([data-ui-theme="deep-purple"]) .theme-hero{
+      display:none;
+    }
+    html[data-ui-theme="deep-purple-beta"] .left-panel{
+      min-height:0;
+      background:linear-gradient(180deg, rgba(24,14,41,.94) 0%, rgba(17,11,31,.97) 100%);
+      border-right:1px solid rgba(193,163,255,.12);
+      padding:10px 8px 112px;
+      gap:10px;
+      overflow-y:auto;
+      overscroll-behavior:contain;
+      scrollbar-width:thin;
+      -ms-overflow-style:auto;
+    }
+    html[data-ui-theme="deep-purple-beta"] .left-panel > .card,
+    html[data-ui-theme="deep-purple-beta"] .left-panel > .ab-side-tabs-bar,
+    html[data-ui-theme="deep-purple-beta"] .left-panel > .theme-hero{
+      flex:0 0 auto;
+    }
+    html[data-ui-theme="deep-purple-beta"] .left-panel::-webkit-scrollbar{
+      width:10px;
+      height:10px;
+    }
+    html[data-ui-theme="deep-purple-beta"] .left-panel::-webkit-scrollbar-track{
+      background:transparent;
+    }
+    html[data-ui-theme="deep-purple-beta"] .left-panel::-webkit-scrollbar-thumb{
+      background:color-mix(in srgb, var(--scroll-thumb) 80%, transparent);
+      border:2px solid transparent;
+      border-radius:999px;
+    }
+    html[data-ui-theme="deep-purple-beta"] .card{
+      padding:12px 8px 14px;
+      border-radius:0;
+      background:transparent;
+      border:none;
+      border-bottom:1px solid rgba(193,163,255,.1);
+      box-shadow:none;
+    }
+    html[data-ui-theme="deep-purple-beta"] .left-panel > .card:first-of-type{
+      padding-top:6px;
+    }
+    html[data-ui-theme="deep-purple-beta"] .left-panel > .card:last-child{
+      border-bottom:none;
+      padding-bottom:0;
+    }
+    html[data-ui-theme="deep-purple-beta"] .card-title{
+      font-size:1rem;
+      letter-spacing:-.02em;
+      text-transform:none;
+      color:#fff;
+      margin-bottom:12px;
+    }
+    html[data-ui-theme="deep-purple-beta"] .coll-hd{
+      padding:0;
+    }
+    html[data-ui-theme="deep-purple-beta"] .coll-hd .card-title{
+      font-size:.9rem;
+      text-transform:none;
+      letter-spacing:-.01em;
+      color:#d9cdf6;
+      margin-bottom:0;
+    }
+    html[data-ui-theme="deep-purple-beta"] .coll-body.open{
+      margin-top:10px;
+    }
+    html[data-ui-theme="deep-purple-beta"] label{
+      font-size:.75rem;
+      color:var(--txt2);
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    html[data-ui-theme="deep-purple-beta"] input[type=text],
+    html[data-ui-theme="deep-purple-beta"] input[type=password],
+    html[data-ui-theme="deep-purple-beta"] input[type=number],
+    html[data-ui-theme="deep-purple-beta"] textarea,
+    html[data-ui-theme="deep-purple-beta"] select,
+    html[data-ui-theme="deep-purple-beta"] .gallery-search,
+    html[data-ui-theme="deep-purple-beta"] .generate-dock-search{
+      background:rgba(15,9,27,.72);
+      color:#fff;
+      border-color:rgba(193,163,255,.12);
+      border-radius:8px;
+      box-shadow:none;
+    }
+    html[data-ui-theme="deep-purple-beta"] input:focus,
+    html[data-ui-theme="deep-purple-beta"] textarea:focus,
+    html[data-ui-theme="deep-purple-beta"] select:focus{
+      border-color:rgba(157,107,255,.55);
+      box-shadow:0 0 0 3px rgba(157,107,255,.16);
+    }
+    html[data-ui-theme="deep-purple-beta"] select option{
+      background:#1b1030;
+      color:#fff;
+    }
+    html[data-ui-theme="deep-purple-beta"] .btn{
+      border-radius:8px;
+    }
+    html[data-ui-theme="deep-purple-beta"] .btn-p{
+      background:linear-gradient(135deg, #a56eff, #7c4bff);
+      color:#fff;
+      box-shadow:0 12px 24px rgba(88,45,181,.34);
+    }
+    html[data-ui-theme="deep-purple-beta"] .btn-p:hover:not(:disabled){
+      background:linear-gradient(135deg, #b37dff, #8a58f3);
+    }
+    html[data-ui-theme="deep-purple-beta"] .btn-s{
+      background:rgba(255,255,255,.05);
+      color:#fff;
+      border:1px solid rgba(193,163,255,.12);
+    }
+    html[data-ui-theme="deep-purple-beta"] .btn-s:hover{
+      border-color:rgba(157,107,255,.42);
+      background:rgba(157,107,255,.14);
+    }
+    html[data-ui-theme="deep-purple-beta"] .btn-d{
+      background:rgba(255,124,168,.1);
+      border-color:rgba(255,124,168,.22);
+      color:#ff94b9;
+    }
+    html[data-ui-theme="deep-purple-beta"] .theme-picker-sel{
+      background:rgba(15,9,27,.8);
+      color:#fff;
+    }
+    html[data-ui-theme="deep-purple-beta"] .generate-main-panel{
+      padding:18px 18px 14px;
+      gap:10px;
+      background:transparent;
+    }
+    html[data-ui-theme="deep-purple-beta"] .generate-main-shell,
+    html[data-ui-theme="deep-purple-beta"] .generate-stage,
+    html[data-ui-theme="deep-purple-beta"] .result-area{
+      background:none;
+      border:none;
+      box-shadow:none;
+    }
+    html[data-ui-theme="deep-purple-beta"] .generate-stage{
+      padding:0;
+    }
+    html[data-ui-theme="deep-purple-beta"] .result-area{
+      width:100%;
+      max-width:none;
+    }
+    html[data-ui-theme="deep-purple-beta"] .result-placeholder{
+      border:none;
+      border-radius:0;
+      background:none;
+      color:var(--txt2);
+    }
+    html[data-ui-theme="deep-purple-beta"] #result-img{
+      border:1px solid rgba(193,163,255,.12);
+      box-shadow:0 18px 40px rgba(4,0,18,.34);
+    }
+    html[data-ui-theme="deep-purple-beta"] .generate-bottom-bar{
+      min-height:92px;
+      padding:8px 0 0;
+      background:none;
+      border:none;
+      box-shadow:none;
+      backdrop-filter:none;
+    }
+    html[data-ui-theme="deep-purple-beta"] .status-bar,
+    html[data-ui-theme="deep-purple-beta"] .quick-count-wrap{
+      background:rgba(255,255,255,.04);
+      border-color:rgba(193,163,255,.1);
+    }
+    html[data-ui-theme="deep-purple-beta"] .generate-dock{
+      background:linear-gradient(180deg, #11081f 0%, #090512 100%);
+      border-left:1px solid rgba(193,163,255,.1);
+      color:#fff;
+    }
+    html[data-ui-theme="deep-purple-beta"] .generate-dock-head,
+    html[data-ui-theme="deep-purple-beta"] .generate-dock-toolbar{
+      background:transparent;
+      border-bottom-color:rgba(193,163,255,.1);
+    }
+    html[data-ui-theme="deep-purple-beta"] .generate-dock-title,
+    html[data-ui-theme="deep-purple-beta"] .generate-dock-tab,
+    html[data-ui-theme="deep-purple-beta"] .dock-panel-btn,
+    html[data-ui-theme="deep-purple-beta"] .dock-record-title,
+    html[data-ui-theme="deep-purple-beta"] .dock-record,
+    html[data-ui-theme="deep-purple-beta"] .dock-gallery-meta,
+    html[data-ui-theme="deep-purple-beta"] .dock-gallery-title{
+      color:#fff;
+    }
+    html[data-ui-theme="deep-purple-beta"] .generate-dock-search,
+    html[data-ui-theme="deep-purple-beta"] .dock-gallery-card,
+    html[data-ui-theme="deep-purple-beta"] .dock-record{
+      background:rgba(255,255,255,.04);
+      border-color:rgba(193,163,255,.1);
+    }
+    html[data-ui-theme="deep-purple-beta"] .generate-dock-tab.active,
+    html[data-ui-theme="deep-purple-beta"] .dock-panel-btn.active{
+      background:rgba(157,107,255,.22);
+      color:#fff;
+    }
+    html[data-ui-theme="deep-purple-beta"] .generate-dock-search::placeholder{
+      color:rgba(187,174,217,.72);
+    }
+    html[data-ui-theme="deep-purple-beta"] .settings-box,
+    html[data-ui-theme="deep-purple-beta"] .drive-modal-box{
+      background:linear-gradient(180deg, rgba(34,20,58,.96), rgba(20,12,37,.96));
+      border-color:rgba(193,163,255,.14);
+    }
+    html[data-ui-theme="deep-purple-beta"] .settings-hd,
+    html[data-ui-theme="deep-purple-beta"] .drive-modal-hd,
+    html[data-ui-theme="deep-purple-beta"] .drive-modal-ft{
+      border-color:rgba(193,163,255,.1);
+    }
+    html[data-ui-theme="deep-purple-beta"] .settings-hd-title,
+    html[data-ui-theme="deep-purple-beta"] .drive-modal-title{
+      color:#fff;
+    }
+    html[data-ui-theme="deep-purple-beta"] .settings-section-label{
+      color:var(--txt2);
+    }
+    html[data-ui-theme="deep-purple-beta"] .settings-help-box{
+      background:rgba(15,9,27,.7);
+      border-color:rgba(193,163,255,.12);
+      color:var(--txt2);
+    }
+    html[data-ui-theme="deep-purple-beta"] .settings-help-box a,
+    html[data-ui-theme="deep-purple-beta"] .settings-help-toggle{
+      color:#b88aff;
+    }
+    html[data-ui-theme="deep-purple-beta"] #onboarding-tip{
+      background:#8a58f3;
+      box-shadow:0 10px 22px rgba(88,45,181,.28);
+    }
+    html[data-ui-theme="deep-purple-beta"] #onboarding-tip::before{
+      border-bottom-color:#8a58f3;
+    }
+    html[data-ui-theme="deep-purple-beta"] .storage-bar-wrap,
+    html[data-ui-theme="deep-purple-beta"] .sync-prog-outer{
+      background:rgba(157,107,255,.12);
+    }
+    html[data-ui-theme="deep-purple-beta"] .gdrive-tag-chip{
+      background:rgba(255,255,255,.04);
+      color:var(--txt2);
+    }
+    html[data-ui-theme="deep-purple-beta"] .gdrive-tag-chip.active{
       background:rgba(157,107,255,.24);
       border-color:rgba(157,107,255,.4);
       color:#fff;
@@ -2571,6 +2897,7 @@
           <option value="classic">經典深色</option>
           <option value="design-md-dark">Claude 深色</option>
           <option value="deep-purple">深紫色</option>
+          <option value="deep-purple-beta">深紫beta</option>
         </select>
       </div>
 
@@ -3615,7 +3942,7 @@ function applyDraftState(draft, isMob) {
 const UI_THEME_KEY = 'nai_ui_theme_v1';
 
 function applyUITheme(theme) {
-  const finalTheme = ['design-md-dark', 'classic', 'deep-purple'].includes(theme)
+  const finalTheme = ['design-md-dark', 'classic', 'deep-purple', 'deep-purple-beta'].includes(theme)
     ? theme
     : 'design-md-dark';
   document.documentElement.dataset.uiTheme = finalTheme;
@@ -3624,7 +3951,7 @@ function applyUITheme(theme) {
 }
 
 function setUITheme(theme) {
-  const finalTheme = ['design-md-dark', 'classic', 'deep-purple'].includes(theme)
+  const finalTheme = ['design-md-dark', 'classic', 'deep-purple', 'deep-purple-beta'].includes(theme)
     ? theme
     : 'design-md-dark';
   applyUITheme(finalTheme);
@@ -3632,6 +3959,7 @@ function setUITheme(theme) {
   let msg = 'Switched to Claude theme';
   if (finalTheme === 'classic') msg = 'Switched to classic theme';
   else if (finalTheme === 'deep-purple') msg = 'Switched to deep purple theme';
+  else if (finalTheme === 'deep-purple-beta') msg = 'Switched to deep purple beta theme';
   toast(msg, 'ok');
 }
 
