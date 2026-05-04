@@ -1629,6 +1629,12 @@
       display:flex;align-items:center;justify-content:center;}
     .modal-section-title{font-size:.72rem;font-weight:700;color:var(--txt2);text-transform:uppercase;
       letter-spacing:.06em;margin-bottom:6px;}
+    .modal-section-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;
+      gap:8px;padding:0;background:none;border:none;cursor:pointer;text-align:left;}
+    .modal-section-title-inline{margin-bottom:0;}
+    .modal-section-arrow{color:var(--txt2);font-size:.92rem;line-height:1;flex-shrink:0;}
+    .modal-section-body{display:flex;flex-direction:column;gap:6px;}
+    .modal-collapsible.collapsed .modal-section-body{display:none;}
     .modal-prompt-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;
       padding:10px;font-size:.8rem;line-height:1.6;color:var(--txt);word-break:break-word;}
     .meta-grid{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:.8rem;}
@@ -3868,6 +3874,7 @@ let dockOverlayReturnPage = 'generate';
 // Modal state
 let modalImageId = null;
 let modalMeta = {};
+let modalSectionState = { prompt: true, negPrompt: true };
 
 const FREE_RES = new Set(['832x1216','1216x832','1024x1024']);
 const DRAFT_KEY = 'nai_generate_draft_v1';
@@ -9881,16 +9888,8 @@ function openModal(id, url) {
   const time = new Date(img.timestamp).toLocaleString('zh-TW');
 
   document.getElementById('modal-info').innerHTML = `
-    <div>
-      <div class="modal-section-title">Prompt</div>
-      <div class="modal-prompt-box">${esc(meta.prompt||'—')}</div>
-      <button class="btn btn-s" style="margin-top:6px;width:100%;font-size:.8rem;" onclick="copyModalField('prompt')">📋 複製 Prompt</button>
-    </div>
-    <div>
-      <div class="modal-section-title">負向 Prompt</div>
-      <div class="modal-prompt-box">${esc(meta.negPrompt||'—')}</div>
-      <button class="btn btn-s" style="margin-top:6px;width:100%;font-size:.8rem;" onclick="copyModalField('negPrompt')">📋 複製</button>
-    </div>
+    ${renderModalPromptSection('prompt', 'Prompt', meta.prompt || '—', 'prompt', '📋 複製 Prompt')}
+    ${renderModalPromptSection('negPrompt', '負向 Prompt', meta.negPrompt || '—', 'negPrompt', '📋 複製')}
     <div>
       <div class="modal-section-title">參數</div>
       <div class="meta-grid">
@@ -9919,6 +9918,32 @@ function openModal(id, url) {
   `;
 
   document.getElementById('modal').classList.add('open');
+}
+
+function renderModalPromptSection(sectionKey, title, content, copyKey, copyLabel) {
+  const expanded = modalSectionState[sectionKey] !== false;
+  return `
+    <div class="modal-collapsible${expanded ? '' : ' collapsed'}" id="modal-section-${sectionKey}">
+      <button class="modal-section-toggle" type="button" onclick="toggleModalSection('${sectionKey}')">
+        <span class="modal-section-title modal-section-title-inline">${title}</span>
+        <span class="modal-section-arrow">${expanded ? '▾' : '▸'}</span>
+      </button>
+      <div class="modal-section-body">
+        <div class="modal-prompt-box">${esc(content || '—')}</div>
+        <button class="btn btn-s" style="width:100%;font-size:.8rem;" onclick="copyModalField('${copyKey}')">${copyLabel}</button>
+      </div>
+    </div>
+  `;
+}
+
+function toggleModalSection(sectionKey) {
+  const nextExpanded = modalSectionState[sectionKey] === false;
+  modalSectionState[sectionKey] = nextExpanded;
+  const section = document.getElementById(`modal-section-${sectionKey}`);
+  if (!section) return;
+  section.classList.toggle('collapsed', !nextExpanded);
+  const arrow = section.querySelector('.modal-section-arrow');
+  if (arrow) arrow.textContent = nextExpanded ? '▾' : '▸';
 }
 
 function copyModalField(key) {
