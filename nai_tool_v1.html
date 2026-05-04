@@ -3874,7 +3874,8 @@ let dockOverlayReturnPage = 'generate';
 // Modal state
 let modalImageId = null;
 let modalMeta = {};
-let modalSectionState = { prompt: true, negPrompt: true };
+const MODAL_SECTION_STATE_KEY = 'nai_modal_section_state_v1';
+let modalSectionState = loadModalSectionState();
 
 const FREE_RES = new Set(['832x1216','1216x832','1024x1024']);
 const DRAFT_KEY = 'nai_generate_draft_v1';
@@ -3888,6 +3889,27 @@ const GENERATE_LAYOUT_LIMITS = {
   centerMin: 560,
   resizerTotal: 24
 };
+
+function loadModalSectionState() {
+  const defaults = { prompt: true, negPrompt: true };
+  try {
+    const raw = localStorage.getItem(MODAL_SECTION_STATE_KEY);
+    if (!raw) return defaults;
+    const parsed = JSON.parse(raw);
+    return {
+      prompt: parsed?.prompt !== false,
+      negPrompt: parsed?.negPrompt !== false
+    };
+  } catch {
+    return defaults;
+  }
+}
+
+function saveModalSectionState() {
+  try {
+    localStorage.setItem(MODAL_SECTION_STATE_KEY, JSON.stringify(modalSectionState));
+  } catch {}
+}
 let generateLayoutState = { ...GENERATE_LAYOUT_DEFAULTS };
 let generateLayoutDrag = null;
 let draftSaveReady = false;
@@ -9939,6 +9961,7 @@ function renderModalPromptSection(sectionKey, title, content, copyKey, copyLabel
 function toggleModalSection(sectionKey) {
   const nextExpanded = modalSectionState[sectionKey] === false;
   modalSectionState[sectionKey] = nextExpanded;
+  saveModalSectionState();
   const section = document.getElementById(`modal-section-${sectionKey}`);
   if (!section) return;
   section.classList.toggle('collapsed', !nextExpanded);
