@@ -54,6 +54,39 @@
       --scroll-thumb: #6e6158;
       --scroll-thumb-hover: #a78672;
     }
+    html[data-ui-theme="deep-purple"] {
+      --bg:       #f7f7ff;
+      --bg2:      rgba(255,255,255,.78);
+      --bg3:      #ecefff;
+      --accent:   #7a6cff;
+      --accent-h: #6355f3;
+      --accent-l: rgba(122,108,255,.12);
+      --txt:      #090b16;
+      --txt2:     #5d647c;
+      --border:   rgba(1,1,32,.08);
+      --ok:       #1c9a6b;
+      --warn:     #ca7b17;
+      --err:      #c1537e;
+      --info:     #5468ff;
+      --font-body: "Segoe UI","Noto Sans TC",sans-serif;
+      --font-display: Georgia,"Times New Roman","Noto Serif TC",serif;
+      --shadow-soft: 0 18px 44px rgba(1,1,32,.12);
+      --scroll-track: rgba(255,255,255,.82);
+      --scroll-thumb: rgba(76,88,160,.42);
+      --scroll-thumb-hover: rgba(76,88,160,.62);
+      --glass-light: rgba(255,255,255,.74);
+      --glass-strong: rgba(255,255,255,.9);
+      --glass-dark: rgba(1,1,32,.74);
+      --hero-line: rgba(1,1,32,.08);
+      --panel-dark-border: rgba(255,255,255,.12);
+      --panel-dark-text: rgba(255,255,255,.92);
+      --panel-dark-muted: rgba(255,255,255,.62);
+      --surface-tint: rgba(189,187,255,.16);
+      --surface-tint-strong: rgba(189,187,255,.28);
+      --sunset-a: rgba(239,44,193,.18);
+      --sunset-b: rgba(252,76,2,.14);
+      --sunset-c: rgba(189,187,255,.36);
+    }
     *{margin:0;padding:0;box-sizing:border-box;}
     *{
       scrollbar-width:thin;
@@ -149,6 +182,430 @@
       font-family:var(--font-display);
       font-weight:400;
       letter-spacing:-.02em;
+    }
+    html[data-ui-theme="deep-purple"] body{
+      background:
+        radial-gradient(circle at top left, var(--sunset-a), transparent 26%),
+        radial-gradient(circle at top right, rgba(143,213,255,.24), transparent 30%),
+        radial-gradient(circle at 50% 12%, var(--sunset-c), transparent 34%),
+        linear-gradient(180deg, #ffffff 0%, #f5f6ff 42%, #eef3ff 100%);
+      color:var(--txt);
+    }
+    html[data-ui-theme="deep-purple"] .nav-brand,
+    html[data-ui-theme="deep-purple"] .login-title,
+    html[data-ui-theme="deep-purple"] .card-title,
+    html[data-ui-theme="deep-purple"] .char-modal-hd,
+    html[data-ui-theme="deep-purple"] .ab-section-head{
+      font-family:var(--font-display);
+      font-weight:500;
+      letter-spacing:-.03em;
+    }
+    html[data-ui-theme="deep-purple"] .navbar{
+      height:64px;
+      padding:0 20px;
+      background:rgba(255,255,255,.72);
+      border-bottom:1px solid rgba(1,1,32,.08);
+      backdrop-filter:blur(18px);
+      box-shadow:0 10px 30px rgba(1,1,32,.06);
+    }
+    html[data-ui-theme="deep-purple"] .nav-brand{
+      position:relative;
+      font-size:1.05rem;
+      color:#010120;
+    }
+    html[data-ui-theme="deep-purple"] .nav-brand::after{
+      content:"AI-NATIVE STUDIO";
+      display:block;
+      margin-top:3px;
+      font-family:"Consolas","Courier New",monospace;
+      font-size:.58rem;
+      letter-spacing:.18em;
+      color:var(--txt2);
+    }
+    html[data-ui-theme="deep-purple"] .nav-tab,
+    html[data-ui-theme="deep-purple"] .seed-toggle,
+    html[data-ui-theme="deep-purple"] .mode-tab{
+      border-radius:4px;
+      font-weight:500;
+      letter-spacing:-.01em;
+    }
+    html[data-ui-theme="deep-purple"] .nav-tab{
+      color:var(--txt2);
+      padding:8px 14px;
+    }
+    html[data-ui-theme="deep-purple"] .nav-tab.active{
+      background:rgba(1,1,32,.92);
+      color:#fff;
+      box-shadow:0 8px 18px rgba(1,1,32,.12);
+    }
+    html[data-ui-theme="deep-purple"] .nav-tab:hover:not(.active){
+      color:var(--txt);
+      background:rgba(189,187,255,.18);
+    }
+    html[data-ui-theme="deep-purple"] .anlas-bal,
+    html[data-ui-theme="deep-purple"] .anlas-cost{
+      color:var(--txt2);
+    }
+    html[data-ui-theme="deep-purple"] .anlas-bal b,
+    html[data-ui-theme="deep-purple"] .anlas-cost b{
+      color:#010120;
+    }
+    html[data-ui-theme="deep-purple"] .btn-settings{
+      color:var(--txt2);
+    }
+    html[data-ui-theme="deep-purple"] .btn-settings:hover{
+      color:#010120;
+      background:rgba(189,187,255,.2);
+    }
+    html[data-ui-theme="deep-purple"] .gen-sub-nav,
+    html[data-ui-theme="deep-purple"] .gallery-toolbar,
+    html[data-ui-theme="deep-purple"] .batch-progress-wrap,
+    html[data-ui-theme="deep-purple"] .gal-views-bar{
+      background:rgba(255,255,255,.58);
+      border-color:rgba(1,1,32,.08);
+      backdrop-filter:blur(14px);
+    }
+    html[data-ui-theme="deep-purple"] .left-panel{
+      position:relative;
+      background:linear-gradient(180deg, rgba(255,255,255,.76) 0%, rgba(248,249,255,.88) 100%);
+      border-right:1px solid rgba(1,1,32,.08);
+      backdrop-filter:blur(16px);
+    }
+    html[data-ui-theme="deep-purple"] .left-panel::before{
+      content:"";
+      position:absolute;
+      inset:12px 12px auto;
+      height:180px;
+      border-radius:12px;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(239,44,193,.16), transparent 36%),
+        radial-gradient(circle at 82% 14%, rgba(143,213,255,.22), transparent 34%),
+        linear-gradient(135deg, rgba(255,255,255,.94), rgba(243,245,255,.78));
+      border:1px solid rgba(1,1,32,.06);
+      pointer-events:none;
+      z-index:0;
+    }
+    html[data-ui-theme="deep-purple"] .left-panel > *{
+      position:relative;
+      z-index:1;
+    }
+    html[data-ui-theme="deep-purple"] .theme-hero{
+      display:block;
+      padding:18px 18px 16px;
+      border-radius:8px;
+      border:1px solid rgba(1,1,32,.08);
+      background:
+        radial-gradient(circle at top left, rgba(239,44,193,.12), transparent 34%),
+        linear-gradient(145deg, rgba(255,255,255,.94), rgba(245,247,255,.88));
+      box-shadow:0 14px 30px rgba(1,1,32,.08);
+      overflow:hidden;
+    }
+    html[data-ui-theme]:not([data-ui-theme="deep-purple"]) .theme-hero{
+      display:none;
+    }
+    .theme-hero-label{
+      font-family:"Consolas","Courier New",monospace;
+      font-size:.64rem;
+      letter-spacing:.16em;
+      color:var(--txt2);
+      margin-bottom:10px;
+    }
+    .theme-hero-title{
+      font-family:var(--font-display);
+      font-size:1.45rem;
+      line-height:1.08;
+      letter-spacing:-.05em;
+      color:#010120;
+      max-width:15ch;
+      margin-bottom:8px;
+    }
+    .theme-hero-copy{
+      font-size:.82rem;
+      line-height:1.58;
+      color:var(--txt2);
+    }
+    .theme-hero-stats{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:8px;
+      margin-top:14px;
+    }
+    .theme-hero-stat{
+      padding:10px 10px 9px;
+      border-radius:4px;
+      border:1px solid rgba(1,1,32,.08);
+      background:rgba(255,255,255,.72);
+      min-width:0;
+    }
+    .theme-hero-stat strong{
+      display:block;
+      font-family:var(--font-display);
+      font-size:1.2rem;
+      letter-spacing:-.05em;
+      color:#010120;
+    }
+    .theme-hero-stat span{
+      display:block;
+      margin-top:2px;
+      font-size:.67rem;
+      color:var(--txt2);
+      line-height:1.35;
+    }
+    html[data-ui-theme="deep-purple"] .card,
+    html[data-ui-theme="deep-purple"] .dock-gallery-card,
+    html[data-ui-theme="deep-purple"] .note-card,
+    html[data-ui-theme="deep-purple"] .gcard,
+    html[data-ui-theme="deep-purple"] .blend-card,
+    html[data-ui-theme="deep-purple"] .batch-task-card,
+    html[data-ui-theme="deep-purple"] .login-card,
+    html[data-ui-theme="deep-purple"] .modal-box,
+    html[data-ui-theme="deep-purple"] .char-modal-box,
+    html[data-ui-theme="deep-purple"] .gal-picker-box,
+    html[data-ui-theme="deep-purple"] .char-ref-picker-box,
+    html[data-ui-theme="deep-purple"] .batch-presets-box,
+    html[data-ui-theme="deep-purple"] .tag-picker-box,
+    html[data-ui-theme="deep-purple"] .tag-manager-box,
+    html[data-ui-theme="deep-purple"] .settings-box,
+    html[data-ui-theme="deep-purple"] .drive-modal-box{
+      background:linear-gradient(180deg, rgba(255,255,255,.92) 0%, rgba(249,250,255,.86) 100%);
+      border:1px solid rgba(1,1,32,.08);
+      box-shadow:0 18px 44px rgba(1,1,32,.10);
+      color:var(--txt);
+    }
+    html[data-ui-theme="deep-purple"] .card{
+      border-radius:8px;
+      overflow:hidden;
+    }
+    html[data-ui-theme="deep-purple"] .card-title{
+      color:#010120;
+      font-size:1.08rem;
+      letter-spacing:-.035em;
+      margin-bottom:14px;
+    }
+    html[data-ui-theme="deep-purple"] .coll-hd{
+      padding:4px 0;
+    }
+    html[data-ui-theme="deep-purple"] .coll-hd .card-title{
+      margin-bottom:0;
+      font-size:.76rem;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      font-family:"Consolas","Courier New",monospace;
+      color:var(--txt2);
+    }
+    html[data-ui-theme="deep-purple"] label{
+      font-size:.74rem;
+      color:var(--txt2);
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      font-family:"Consolas","Courier New",monospace;
+    }
+    html[data-ui-theme="deep-purple"] input[type=text],
+    html[data-ui-theme="deep-purple"] input[type=password],
+    html[data-ui-theme="deep-purple"] input[type=number],
+    html[data-ui-theme="deep-purple"] textarea,
+    html[data-ui-theme="deep-purple"] select,
+    html[data-ui-theme="deep-purple"] .gallery-search{
+      background:rgba(255,255,255,.86);
+      color:#010120;
+      border-color:rgba(1,1,32,.08);
+      border-radius:4px;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.66);
+    }
+    html[data-ui-theme="deep-purple"] input:focus,
+    html[data-ui-theme="deep-purple"] textarea:focus,
+    html[data-ui-theme="deep-purple"] select:focus{
+      border-color:rgba(122,108,255,.5);
+      box-shadow:0 0 0 3px rgba(189,187,255,.24);
+    }
+    html[data-ui-theme="deep-purple"] select option{
+      background:#fff;
+      color:#010120;
+    }
+    html[data-ui-theme="deep-purple"] .btn{
+      border-radius:4px;
+      font-weight:500;
+      letter-spacing:-.01em;
+    }
+    html[data-ui-theme="deep-purple"] .btn-p{
+      background:#010120;
+      color:#fff;
+      box-shadow:0 10px 20px rgba(1,1,32,.14);
+    }
+    html[data-ui-theme="deep-purple"] .btn-p:hover:not(:disabled){
+      background:#11173a;
+    }
+    html[data-ui-theme="deep-purple"] .btn-s{
+      background:rgba(255,255,255,.78);
+      color:#010120;
+      border:1px solid rgba(1,1,32,.08);
+    }
+    html[data-ui-theme="deep-purple"] .btn-s:hover{
+      border-color:rgba(122,108,255,.42);
+      background:rgba(189,187,255,.12);
+    }
+    html[data-ui-theme="deep-purple"] .btn-d{
+      background:rgba(193,83,126,.08);
+      border-color:rgba(193,83,126,.18);
+      color:#ad416d;
+    }
+    html[data-ui-theme="deep-purple"] .theme-picker-sel{
+      border-radius:4px;
+      background:rgba(255,255,255,.86);
+      color:#010120;
+    }
+    html[data-ui-theme="deep-purple"] .generate-main-panel{
+      position:relative;
+      padding:22px 24px 18px;
+    }
+    html[data-ui-theme="deep-purple"] .generate-main-panel::before{
+      content:"";
+      position:absolute;
+      inset:18px 20px 20px;
+      border-radius:12px;
+      background:
+        radial-gradient(circle at top left, rgba(239,44,193,.09), transparent 26%),
+        radial-gradient(circle at top right, rgba(143,213,255,.16), transparent 28%),
+        linear-gradient(180deg, rgba(255,255,255,.9) 0%, rgba(246,248,255,.72) 100%);
+      border:1px solid rgba(1,1,32,.06);
+      pointer-events:none;
+    }
+    html[data-ui-theme="deep-purple"] .generate-main-shell,
+    html[data-ui-theme="deep-purple"] .generate-bottom-bar{
+      position:relative;
+      z-index:1;
+    }
+    html[data-ui-theme="deep-purple"] .result-area,
+    html[data-ui-theme="deep-purple"] .ab-result-half-body{
+      background:rgba(255,255,255,.8);
+      border-color:rgba(1,1,32,.08);
+      box-shadow:0 18px 36px rgba(1,1,32,.08);
+    }
+    html[data-ui-theme="deep-purple"] .result-placeholder{
+      border-radius:12px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.86), rgba(246,247,255,.88)),
+        linear-gradient(135deg, rgba(189,187,255,.18), rgba(143,213,255,.12));
+      border:1px dashed rgba(1,1,32,.10);
+      color:var(--txt2);
+    }
+    html[data-ui-theme="deep-purple"] .generate-bottom-bar{
+      background:rgba(255,255,255,.62);
+      border:1px solid rgba(1,1,32,.08);
+      border-radius:8px;
+      backdrop-filter:blur(14px);
+      box-shadow:0 16px 32px rgba(1,1,32,.08);
+    }
+    html[data-ui-theme="deep-purple"] .generate-dock{
+      position:relative;
+      background:
+        radial-gradient(circle at top left, rgba(189,187,255,.08), transparent 24%),
+        linear-gradient(180deg, #06081c 0%, #010120 100%);
+      border-left:1px solid rgba(255,255,255,.08);
+      color:var(--panel-dark-text);
+    }
+    html[data-ui-theme="deep-purple"] .generate-dock::before{
+      content:"";
+      position:absolute;
+      inset:16px 14px auto;
+      height:120px;
+      border-radius:8px;
+      border:1px solid rgba(255,255,255,.08);
+      background:
+        radial-gradient(circle at 20% 20%, rgba(239,44,193,.18), transparent 34%),
+        radial-gradient(circle at 80% 10%, rgba(252,76,2,.16), transparent 34%),
+        linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      pointer-events:none;
+    }
+    html[data-ui-theme="deep-purple"] .generate-dock > *{
+      position:relative;
+      z-index:1;
+    }
+    html[data-ui-theme="deep-purple"] .generate-dock-toolbar{
+      background:transparent;
+      border-bottom-color:var(--panel-dark-border);
+    }
+    html[data-ui-theme="deep-purple"] .generate-dock-title,
+    html[data-ui-theme="deep-purple"] .generate-dock-tab,
+    html[data-ui-theme="deep-purple"] .dock-panel-btn,
+    html[data-ui-theme="deep-purple"] .dock-record-title,
+    html[data-ui-theme="deep-purple"] .dock-record,
+    html[data-ui-theme="deep-purple"] .dock-gallery-meta,
+    html[data-ui-theme="deep-purple"] .dock-gallery-title{
+      color:var(--panel-dark-text);
+    }
+    html[data-ui-theme="deep-purple"] .generate-dock-search,
+    html[data-ui-theme="deep-purple"] .dock-gallery-card,
+    html[data-ui-theme="deep-purple"] .dock-record{
+      background:rgba(255,255,255,.06);
+      border-color:rgba(255,255,255,.08);
+    }
+    html[data-ui-theme="deep-purple"] .generate-dock-tab.active,
+    html[data-ui-theme="deep-purple"] .dock-panel-btn.active{
+      background:rgba(255,255,255,.12);
+      color:#fff;
+    }
+    html[data-ui-theme="deep-purple"] .generate-dock-toolbar input,
+    html[data-ui-theme="deep-purple"] .generate-dock-toolbar select,
+    html[data-ui-theme="deep-purple"] .generate-dock-search{
+      color:#fff;
+    }
+    html[data-ui-theme="deep-purple"] .generate-dock-toolbar input::placeholder,
+    html[data-ui-theme="deep-purple"] .generate-dock-search::placeholder{
+      color:var(--panel-dark-muted);
+    }
+    html[data-ui-theme="deep-purple"] .settings-box,
+    html[data-ui-theme="deep-purple"] .drive-modal-box{
+      background:linear-gradient(180deg, rgba(255,255,255,.94), rgba(247,249,255,.9));
+    }
+    html[data-ui-theme="deep-purple"] .settings-hd,
+    html[data-ui-theme="deep-purple"] .drive-modal-hd,
+    html[data-ui-theme="deep-purple"] .drive-modal-ft{
+      border-color:rgba(1,1,32,.08);
+    }
+    html[data-ui-theme="deep-purple"] .settings-hd-title,
+    html[data-ui-theme="deep-purple"] .drive-modal-title{
+      color:#010120;
+    }
+    html[data-ui-theme="deep-purple"] .settings-section-label{
+      color:var(--txt2);
+      font-family:"Consolas","Courier New",monospace;
+      letter-spacing:.12em;
+    }
+    html[data-ui-theme="deep-purple"] .settings-help-box{
+      background:rgba(255,255,255,.76);
+      border-color:rgba(1,1,32,.08);
+      color:var(--txt2);
+    }
+    html[data-ui-theme="deep-purple"] .settings-help-box a,
+    html[data-ui-theme="deep-purple"] .settings-help-toggle{
+      color:#5468ff;
+    }
+    html[data-ui-theme="deep-purple"] #onboarding-tip{
+      background:#010120;
+      box-shadow:0 10px 22px rgba(1,1,32,.24);
+    }
+    html[data-ui-theme="deep-purple"] #onboarding-tip::before{
+      border-bottom-color:#010120;
+    }
+    html[data-ui-theme="deep-purple"] .storage-bar-wrap,
+    html[data-ui-theme="deep-purple"] .sync-prog-outer{
+      background:rgba(189,187,255,.2);
+    }
+    html[data-ui-theme="deep-purple"] .ab-result-card img,
+    html[data-ui-theme="deep-purple"] .result-image,
+    html[data-ui-theme="deep-purple"] .modal-main-image{
+      box-shadow:0 16px 34px rgba(1,1,32,.14);
+    }
+    html[data-ui-theme="deep-purple"] .gdrive-tag-chip{
+      border-radius:4px;
+      background:rgba(255,255,255,.78);
+      color:var(--txt2);
+    }
+    html[data-ui-theme="deep-purple"] .gdrive-tag-chip.active{
+      background:rgba(1,1,32,.94);
+      border-color:rgba(1,1,32,.94);
+      color:#fff;
     }
     html[data-ui-theme^="design-md"] .card-title{
       font-size:1.05rem;
@@ -1061,6 +1518,11 @@
       .anlas-info{display:none;}
       .gallery-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));}
       .gallery-search{width:100%;}
+      .theme-hero{padding:16px 14px 14px;}
+      .theme-hero-title{font-size:1.22rem;max-width:none;}
+      .theme-hero-stats{grid-template-columns:1fr;}
+      html[data-ui-theme="deep-purple"] .navbar{padding:0 14px;}
+      html[data-ui-theme="deep-purple"] .nav-brand::after{display:none;}
     }
   </style>
 </head>
@@ -1098,6 +1560,25 @@
   <!-- ── GENERATE PAGE ── -->
   <div id="page-generate" class="page active">
     <div class="left-panel">
+      <section class="theme-hero" aria-label="Deep Purple workspace overview">
+        <div class="theme-hero-label">AI-NATIVE WORKFLOW</div>
+        <div class="theme-hero-title">Generate, compare, and curate in one flow.</div>
+        <div class="theme-hero-copy">把 prompt、參考圖、A/B 比對和素材整理收進同一個工作區，讓生圖流程更清楚也更好切換。</div>
+        <div class="theme-hero-stats">
+          <div class="theme-hero-stat">
+            <strong>3</strong>
+            <span>core modes</span>
+          </div>
+          <div class="theme-hero-stat">
+            <strong>A/B</strong>
+            <span>instant compare</span>
+          </div>
+          <div class="theme-hero-stat">
+            <strong>Dock</strong>
+            <span>library access</span>
+          </div>
+        </div>
+      </section>
 
       <!-- ── A/B side-tab bar (shown only in A/B mode) ── -->
       <div class="ab-side-tabs-bar" id="ab-side-tabs-bar">
@@ -1991,6 +2472,7 @@
         <select id="ui-theme-sel" class="theme-picker-sel" onchange="setUITheme(this.value)" style="width:100%;border-radius:8px;padding:8px 12px;">
           <option value="classic">經典深色</option>
           <option value="design-md-dark">Claude 深色</option>
+          <option value="deep-purple">深紫色</option>
         </select>
       </div>
 
@@ -3035,7 +3517,7 @@ function applyDraftState(draft, isMob) {
 const UI_THEME_KEY = 'nai_ui_theme_v1';
 
 function applyUITheme(theme) {
-  const finalTheme = ['design-md-dark', 'classic'].includes(theme)
+  const finalTheme = ['design-md-dark', 'classic', 'deep-purple'].includes(theme)
     ? theme
     : 'design-md-dark';
   document.documentElement.dataset.uiTheme = finalTheme;
@@ -3044,14 +3526,14 @@ function applyUITheme(theme) {
 }
 
 function setUITheme(theme) {
-  const finalTheme = ['design-md-dark', 'classic'].includes(theme)
+  const finalTheme = ['design-md-dark', 'classic', 'deep-purple'].includes(theme)
     ? theme
     : 'design-md-dark';
   applyUITheme(finalTheme);
   try { localStorage.setItem(UI_THEME_KEY, finalTheme); } catch (_) {}
-  const msg = finalTheme === 'classic'
-    ? '已切回經典版'
-    : '已套用 Claude 深色';
+  let msg = 'Switched to Claude theme';
+  if (finalTheme === 'classic') msg = 'Switched to classic theme';
+  else if (finalTheme === 'deep-purple') msg = 'Switched to deep purple theme';
   toast(msg, 'ok');
 }
 
@@ -11539,3 +12021,4 @@ function showSyncPromptToast(msg) {
 </script>
 </body>
 </html>
+
