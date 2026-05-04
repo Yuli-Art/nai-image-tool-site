@@ -1290,7 +1290,22 @@
       flex-shrink:0;
     }
     .dock-overlay-open .page.overlay-active .dock-overlay-head{display:flex;}
+    .dock-overlay-head-main{display:flex;align-items:center;gap:12px;flex:1;min-width:0;}
     .dock-overlay-title{font-size:.92rem;font-weight:700;}
+    .dock-overlay-db-switcher{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;flex:1;min-width:0;}
+    .dock-overlay-db-switcher::-webkit-scrollbar{height:6px;}
+    .dock-overlay-db-switcher::-webkit-scrollbar-thumb{background:var(--scroll-thumb);border-radius:999px;}
+    .dock-overlay-db-btn{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:7px 12px;
+      color:var(--txt2);font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap;flex:0 0 auto;
+      transition:all .15s;font-family:inherit;}
+    .dock-overlay-db-btn.active{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
+    .overlay-lib-pager{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px 0;flex-wrap:wrap;}
+    .overlay-lib-pager-bottom{padding:0 12px 14px;}
+    .overlay-lib-pager-left,.overlay-lib-pager-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+    .overlay-lib-page-size{background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--txt);
+      padding:6px 10px;font-size:.78rem;font-family:inherit;}
+    .overlay-lib-page-size:focus{outline:none;border-color:var(--accent);}
+    .overlay-lib-pager-info{font-size:.78rem;color:var(--txt2);white-space:nowrap;}
     .dock-overlay-open .page.overlay-active .gal-views-bar{position:sticky;top:53px;z-index:69;}
     .dock-overlay-open .page.overlay-active .gallery-toolbar{top:94px;}
     .dock-overlay-open .page.overlay-active .gallery-actions{position:sticky;top:147px;z-index:68;}
@@ -2513,7 +2528,10 @@
   <div id="page-gallery" class="page">
     <div class="dock-overlay-head">
       <button class="btn btn-s btn-out" type="button" onclick="closeDockOverlayPage()">← 關閉</button>
-      <div class="dock-overlay-title">圖庫</div>
+      <div class="dock-overlay-head-main">
+        <div class="dock-overlay-title">圖庫</div>
+        <div class="dock-overlay-db-switcher" id="overlay-gallery-switcher"></div>
+      </div>
     </div>
     <!-- View tabs -->
     <div class="gal-views-bar" id="gal-views-bar"></div>
@@ -2540,15 +2558,21 @@
       <button class="btn btn-s" onclick="clearSelection()">取消選取</button>
     </div>
 
+    <div class="overlay-lib-pager" id="gallery-pager-top"></div>
+
     <!-- Grid -->
     <div class="gallery-grid" id="gal-grid"></div>
+    <div class="overlay-lib-pager overlay-lib-pager-bottom" id="gallery-pager-bottom"></div>
   </div>
 
   <!-- ── 角色庫 PAGE ── -->
   <div id="page-characters" class="page">
     <div class="dock-overlay-head">
       <button class="btn btn-s btn-out" type="button" onclick="closeDockOverlayPage()">← 關閉</button>
-      <div class="dock-overlay-title">角色庫</div>
+      <div class="dock-overlay-head-main">
+        <div class="dock-overlay-title">角色庫</div>
+        <div class="dock-overlay-db-switcher" id="overlay-characters-switcher"></div>
+      </div>
     </div>
     <div class="gal-views-bar" id="char-views-bar"></div>
     <div class="gallery-toolbar">
@@ -2565,14 +2589,19 @@
     </div>
     <!-- Series / tag filter row -->
     <div style="padding:4px 12px 0;display:flex;gap:6px;flex-wrap:wrap;" id="char-filter-row"></div>
+    <div class="overlay-lib-pager" id="characters-pager-top"></div>
     <div class="gallery-grid" id="char-page-grid"></div>
+    <div class="overlay-lib-pager overlay-lib-pager-bottom" id="characters-pager-bottom"></div>
   </div>
 
   <!-- ── 風格庫 PAGE ── -->
   <div id="page-artists" class="page">
     <div class="dock-overlay-head">
       <button class="btn btn-s btn-out" type="button" onclick="closeDockOverlayPage()">← 關閉</button>
-      <div class="dock-overlay-title">風格庫</div>
+      <div class="dock-overlay-head-main">
+        <div class="dock-overlay-title">風格庫</div>
+        <div class="dock-overlay-db-switcher" id="overlay-artists-switcher"></div>
+      </div>
     </div>
     <div class="gal-views-bar" id="artist-views-bar"></div>
     <div class="gallery-toolbar">
@@ -2598,15 +2627,20 @@
     </div>
     <!-- Style type filter -->
     <div style="padding:6px 12px 0;display:flex;gap:6px;flex-wrap:wrap;" id="artist-filter-row"></div>
+    <div class="overlay-lib-pager" id="artists-pager-top"></div>
     <!-- Artist grid -->
     <div class="gallery-grid" id="artist-page-grid"></div>
+    <div class="overlay-lib-pager overlay-lib-pager-bottom" id="artists-pager-bottom"></div>
   </div>
 
   <!-- ── PROMPT 筆記本 PAGE ── -->
   <div id="page-notes" class="page">
     <div class="dock-overlay-head">
       <button class="btn btn-s btn-out" type="button" onclick="closeDockOverlayPage()">← 關閉</button>
-      <div class="dock-overlay-title">Prompt 筆記本</div>
+      <div class="dock-overlay-head-main">
+        <div class="dock-overlay-title">Prompt 筆記本</div>
+        <div class="dock-overlay-db-switcher" id="overlay-notes-switcher"></div>
+      </div>
     </div>
     <!-- View tabs -->
     <div class="gal-views-bar" id="notes-views-bar"></div>
@@ -2624,8 +2658,10 @@
     </div>
     <!-- Category filter -->
     <div style="padding:6px 12px 0;display:flex;gap:6px;flex-wrap:wrap;" id="notes-filter-row"></div>
+    <div class="overlay-lib-pager" id="notes-pager-top"></div>
     <!-- Notes grid -->
     <div style="padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;" id="notes-grid"></div>
+    <div class="overlay-lib-pager overlay-lib-pager-bottom" id="notes-pager-bottom"></div>
   </div>
 
   <!-- ── BATCH PAGE ── -->
@@ -5869,9 +5905,104 @@ const GENERATE_DOCK_PAGE_MAP = {
   artists: 'artists',
   notes: 'notes'
 };
+const OVERLAY_LIBRARY_META = {
+  gallery: { label: '圖庫', count: () => galleryData.length, unit: '張' },
+  characters: { label: '角色庫', count: () => characterData.length, unit: '個' },
+  artists: { label: '風格庫', count: () => artistData.length + blendData.length, unit: '項' },
+  notes: { label: '筆記本', count: () => notesData.length, unit: '筆' }
+};
+const OVERLAY_LIBRARY_PAGE_OPTIONS = [12, 24, 30, 48, 60, 90];
+const overlayLibraryPageState = {
+  gallery: { page: 1, pageSize: 30 },
+  characters: { page: 1, pageSize: 30 },
+  artists: { page: 1, pageSize: 30 },
+  notes: { page: 1, pageSize: 30 }
+};
 
 function isGenerateDockAvailable() {
   return window.innerWidth > 768 && !!document.getElementById('generate-dock');
+}
+
+function getOverlayLibraryPageState(key) {
+  return overlayLibraryPageState[key] || (overlayLibraryPageState[key] = { page: 1, pageSize: 30 });
+}
+
+function paginateOverlayItems(key, items) {
+  const state = getOverlayLibraryPageState(key);
+  const total = items.length;
+  const pageSize = Math.max(1, parseInt(state.pageSize, 10) || 30);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  state.page = Math.min(Math.max(1, parseInt(state.page, 10) || 1), totalPages);
+  const startIndex = total ? (state.page - 1) * pageSize : 0;
+  const endIndex = Math.min(startIndex + pageSize, total);
+  return {
+    items: items.slice(startIndex, endIndex),
+    total,
+    page: state.page,
+    pageSize,
+    totalPages,
+    startIndex,
+    endIndex
+  };
+}
+
+function renderOverlayDatabaseSwitcher(activeKey) {
+  const html = Object.entries(OVERLAY_LIBRARY_META).map(([key, meta]) =>
+    `<button class="dock-overlay-db-btn ${activeKey === key ? 'active' : ''}" onclick="openDockOverlayPage('${key}')">${meta.label}${meta.count() ? ` (${meta.count()})` : ''}</button>`
+  ).join('');
+  Object.keys(OVERLAY_LIBRARY_META).forEach(key => {
+    const el = document.getElementById(`overlay-${key}-switcher`);
+    if (el) el.innerHTML = html;
+  });
+}
+
+function renderOverlayLibraryPager(key, total) {
+  const meta = OVERLAY_LIBRARY_META[key];
+  const state = getOverlayLibraryPageState(key);
+  const pageSize = Math.max(1, parseInt(state.pageSize, 10) || 30);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  state.page = Math.min(Math.max(1, parseInt(state.page, 10) || 1), totalPages);
+  const start = total ? ((state.page - 1) * pageSize) + 1 : 0;
+  const end = total ? Math.min(state.page * pageSize, total) : 0;
+  const html = `
+    <div class="overlay-lib-pager-left">
+      <span class="overlay-lib-pager-info">每頁顯示</span>
+      <select class="overlay-lib-page-size" onchange="setOverlayLibraryPageSize('${key}', this.value)">
+        ${OVERLAY_LIBRARY_PAGE_OPTIONS.map(size => `<option value="${size}" ${pageSize === size ? 'selected' : ''}>${size}</option>`).join('')}
+      </select>
+      <span class="overlay-lib-pager-info">${meta?.unit || '項'}</span>
+    </div>
+    <div class="overlay-lib-pager-right">
+      <button class="btn btn-s btn-out" type="button" onclick="changeOverlayLibraryPage('${key}', -1)" ${state.page <= 1 ? 'disabled' : ''}>← 上一頁</button>
+      <span class="overlay-lib-pager-info">${total ? `${start}-${end} / ${total} ${meta?.unit || '項'} · 第 ${state.page} / ${totalPages} 頁` : `0 / 0 ${meta?.unit || '項'}`}</span>
+      <button class="btn btn-s btn-out" type="button" onclick="changeOverlayLibraryPage('${key}', 1)" ${state.page >= totalPages ? 'disabled' : ''}>下一頁 →</button>
+    </div>`;
+  [`${key}-pager-top`, `${key}-pager-bottom`].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  });
+}
+
+function renderOverlayLibraryPage(key) {
+  if (key === 'gallery') renderGallery();
+  else if (key === 'characters') renderCharPage();
+  else if (key === 'artists') renderArtistPage();
+  else if (key === 'notes') renderNotesPage();
+}
+
+function setOverlayLibraryPageSize(key, value) {
+  const state = getOverlayLibraryPageState(key);
+  state.pageSize = Math.max(1, parseInt(value, 10) || 30);
+  state.page = 1;
+  renderOverlayLibraryPage(key);
+}
+
+function changeOverlayLibraryPage(key, delta) {
+  const state = getOverlayLibraryPageState(key);
+  state.page = Math.max(1, (parseInt(state.page, 10) || 1) + delta);
+  renderOverlayLibraryPage(key);
+  const pageEl = document.getElementById(`page-${key}`);
+  pageEl?.scrollTo?.({ top: 0, behavior: 'smooth' });
 }
 
 function openDockOverlayPage(page) {
@@ -5884,10 +6015,8 @@ function openDockOverlayPage(page) {
   const id = `page-${page}`;
   const target = document.getElementById(id);
   if (target) target.classList.add('overlay-active');
-  if (page === 'gallery') renderGallery();
-  else if (page === 'characters') renderCharPage();
-  else if (page === 'artists') renderArtistPage();
-  else if (page === 'notes') renderNotesPage();
+  renderOverlayDatabaseSwitcher(page);
+  renderOverlayLibraryPage(page);
 }
 
 function closeDockOverlayPage(restoreGenerate = true) {
@@ -7468,6 +7597,7 @@ async function loadArtistData() {
 function updateArtistLibCount(n) {
   document.getElementById('artist-lib-count').textContent = n ? `(${n})` : '';
   buildGenerateDockTabs();
+  if (dockOverlayPage) renderOverlayDatabaseSwitcher(dockOverlayPage);
   refreshGenerateDockIfVisible();
 }
 
@@ -7609,28 +7739,39 @@ function confirmAddArtistView() {
 
 async function renderArtistPage() {
   if (!artistData.length && !blendData.length) await loadArtistData();
+  renderOverlayDatabaseSwitcher(dockOverlayPage === 'artists' ? 'artists' : dockOverlayPage);
   updateArtistLibCount(artistData.length);
   renderArtistViewTabs();
   buildArtistFilterRow();
 
   const q = (document.getElementById('artist-search')?.value||'').toLowerCase();
   const activeView = artistViews.find(v => v.id === activeArtistViewId);
-  let filtered = artistData.filter(a => {
+  let filteredArtists = artistData.filter(a => {
     const matchQ = !q || a.name.toLowerCase().includes(q) || (a.artistTag||'').toLowerCase().includes(q);
     const matchStyle = !artistActiveStyle || a.styleType === artistActiveStyle;
     const matchTags  = artistActiveTags.size===0 || [...artistActiveTags].every(t=>(a.tags||[]).includes(t));
     const matchView = applyArtistViewFilter(a, activeView);
     return matchQ && matchStyle && matchTags && matchView;
   });
+  const visibleBlends = blendData.filter(b => applyArtistViewFilter(b, activeView));
+  const combinedItems = [
+    ...visibleBlends.map(item => ({ kind:'blend', item })),
+    ...filteredArtists.map(item => ({ kind:'artist', item }))
+  ];
+  const paged = paginateOverlayItems('artists', combinedItems);
+  const pageBlends = paged.items.filter(entry => entry.kind === 'blend').map(entry => entry.item);
+  const pageArtists = paged.items.filter(entry => entry.kind === 'artist').map(entry => entry.item);
+  renderOverlayLibraryPager('artists', paged.total);
 
   const grid = document.getElementById('artist-page-grid');
-  if (!filtered.length) {
+  if (!combinedItems.length) {
     grid.innerHTML = `<div class="gallery-empty" style="grid-column:1/-1;">
       <div style="font-size:1.5rem;margin-bottom:8px;">🎨</div>
       <span>${artistData.length?'沒有符合條件的繪師':'風格庫是空的，點「＋ 新增繪師」開始建立'}</span>
     </div>`;
+    renderBlendGrid([], visibleBlends.length);
   } else {
-    grid.innerHTML = filtered.map(a => {
+    grid.innerHTML = pageArtists.map(a => {
       const sel = artistSelected.has(a.id) ? 'selected' : '';
       const thumb = a._previewUrl
         ? `<img class="char-card-thumb" src="${a._previewUrl}" alt="">`
@@ -7653,7 +7794,7 @@ async function renderArtistPage() {
   }
 
   // Render blends
-  renderBlendGrid();
+  renderBlendGrid(pageBlends, visibleBlends.length);
   refreshGenerateDockIfVisible();
 }
 
@@ -7875,16 +8016,17 @@ async function createManualBlend() {
   document.getElementById('blend-detail-modal').classList.add('open');
 }
 
-function renderBlendGrid() {
+function renderBlendGrid(visibleBlendsOverride = null, totalVisibleCount = null) {
   const grid = document.getElementById('blend-grid');
   const countEl = document.getElementById('blend-count');
   const wrap = document.getElementById('blend-section-wrap');
   if (!blendData.length) { wrap.style.display='none'; return; }
   const activeView = artistViews.find(v => v.id === activeArtistViewId);
-  const visibleBlends = blendData.filter(b => applyArtistViewFilter(b, activeView));
+  const visibleBlends = Array.isArray(visibleBlendsOverride) ? visibleBlendsOverride : blendData.filter(b => applyArtistViewFilter(b, activeView));
+  const totalCount = typeof totalVisibleCount === 'number' ? totalVisibleCount : visibleBlends.length;
   if (!visibleBlends.length) { wrap.style.display='none'; return; }
   wrap.style.display='';
-  countEl.textContent = `(${visibleBlends.length})`;
+  countEl.textContent = `(${totalCount})`;
   grid.innerHTML = visibleBlends.map(b => {
     const previewUrl = getBlendPreviewUrl(b);
     const preview = previewUrl
@@ -8186,6 +8328,7 @@ async function loadCharacterData() {
 function updateCharLibCount(n) {
   document.getElementById('char-lib-count').textContent = n ? `(${n})` : '';
   buildGenerateDockTabs();
+  if (dockOverlayPage) renderOverlayDatabaseSwitcher(dockOverlayPage);
   refreshGenerateDockIfVisible();
 }
 
@@ -8323,6 +8466,7 @@ function confirmAddCharView() {
 
 async function renderCharPage() {
   if (!characterData.length) await loadCharacterData();
+  renderOverlayDatabaseSwitcher(dockOverlayPage === 'characters' ? 'characters' : dockOverlayPage);
   updateCharLibCount(characterData.length);
   renderCharViewTabs();
   buildCharFilterRow();
@@ -8339,6 +8483,8 @@ async function renderCharPage() {
     const matchView = applyCharViewFilter(c, activeView);
     return matchQ && matchSeries && matchTags && matchView;
   });
+  const paged = paginateOverlayItems('characters', filtered);
+  renderOverlayLibraryPager('characters', paged.total);
 
   if (!filtered.length) {
     grid.innerHTML = `<div class="gallery-empty" style="grid-column:1/-1;">
@@ -8349,7 +8495,7 @@ async function renderCharPage() {
     return;
   }
 
-  grid.innerHTML = filtered.map(c => {
+  grid.innerHTML = paged.items.map(c => {
     const sel = charSelected.has(c.id) ? 'selected' : '';
     const thumb = c._thumbUrl
       ? `<img class="char-card-thumb" src="${c._thumbUrl}" alt="">`
@@ -9449,6 +9595,7 @@ async function loadGallery() {
 function updateGalCount() {
   document.getElementById('gal-count').textContent = galleryData.length ? `(${galleryData.length})` : '';
   buildGenerateDockTabs();
+  if (dockOverlayPage) renderOverlayDatabaseSwitcher(dockOverlayPage);
   refreshGenerateDockIfVisible();
 }
 
@@ -9513,8 +9660,11 @@ function applyGalViewFilter(img, view) {
 }
 
 function renderGallery() {
+  renderOverlayDatabaseSwitcher(dockOverlayPage === 'gallery' ? 'gallery' : dockOverlayPage);
   filterGallery_noRender();
+  const paged = paginateOverlayItems('gallery', filteredData);
   const grid = document.getElementById('gal-grid');
+  renderOverlayLibraryPager('gallery', paged.total);
   if (!filteredData.length) {
     grid.innerHTML = `<div class="gallery-empty" style="grid-column:1/-1;">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
@@ -9527,7 +9677,7 @@ function renderGallery() {
     refreshGenerateDockIfVisible();
     return;
   }
-  grid.innerHTML = filteredData.map(img => {
+  grid.innerHTML = paged.items.map(img => {
     const url = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
     const tags = (img.tags||[]).map(t=>`<span class="gcard-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
     const time = new Date(img.timestamp).toLocaleDateString('zh-TW',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
@@ -10113,11 +10263,13 @@ async function loadNotesData() {
 function updateNotesCount(n) {
   document.getElementById('notes-count').textContent = n ? `(${n})` : '';
   buildGenerateDockTabs();
+  if (dockOverlayPage) renderOverlayDatabaseSwitcher(dockOverlayPage);
   refreshGenerateDockIfVisible();
 }
 
 // ── Render ──
 function renderNotesPage() {
+  renderOverlayDatabaseSwitcher(dockOverlayPage === 'notes' ? 'notes' : dockOverlayPage);
   renderNotesViewTabs();
   buildNotesCategoryFilter();
   const q = (document.getElementById('notes-search')?.value||'').toLowerCase();
@@ -10131,8 +10283,10 @@ function renderNotesPage() {
     const matchView = applyNotesViewFilter(n, activeView);
     return matchQ && matchCat && matchView;
   });
+  const paged = paginateOverlayItems('notes', filtered);
 
   const grid = document.getElementById('notes-grid');
+  renderOverlayLibraryPager('notes', paged.total);
   if (!filtered.length) {
     grid.innerHTML = `<div class="gallery-empty" style="grid-column:1/-1;">
       <div style="font-size:1.5rem;margin-bottom:8px;">📓</div>
@@ -10142,7 +10296,7 @@ function renderNotesPage() {
     return;
   }
 
-  grid.innerHTML = filtered.map(n => {
+  grid.innerHTML = paged.items.map(n => {
     const sel = notesSelected.has(n.id) ? ' selected' : '';
     const catClass = NOTE_CAT_CLASS[n.category] || 'nc-other';
     const catLabel = NOTE_CATEGORIES[n.category] || n.category;
