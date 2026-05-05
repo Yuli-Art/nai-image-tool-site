@@ -6,9 +6,9 @@
   <title>NAI 生圖工具</title>
   <script>
     try {
-      document.documentElement.dataset.uiTheme = localStorage.getItem('nai_ui_theme_v1') || 'design-md-dark';
+      document.documentElement.dataset.uiTheme = 'deep-purple-beta';
     } catch (_) {
-      document.documentElement.dataset.uiTheme = 'classic';
+      document.documentElement.dataset.uiTheme = 'deep-purple-beta';
     }
   </script>
   <style>
@@ -3053,16 +3053,13 @@
         </div>
       </div>
 
-      <!-- Theme -->
-      <div class="settings-section">
-        <div class="settings-section-label">外觀主題</div>
-        <select id="ui-theme-sel" class="theme-picker-sel" onchange="setUITheme(this.value)" style="width:100%;border-radius:8px;padding:8px 12px;">
-          <option value="classic">經典深色</option>
-          <option value="design-md-dark">Claude 深色</option>
-          <option value="deep-purple">深紫色</option>
-          <option value="deep-purple-beta">深紫beta</option>
-        </select>
-      </div>
+        <!-- Theme -->
+        <div class="settings-section">
+          <div class="settings-section-label">外觀主題</div>
+          <select id="ui-theme-sel" class="theme-picker-sel" onchange="setUITheme(this.value)" style="width:100%;border-radius:8px;padding:8px 12px;">
+            <option value="deep-purple-beta">深紫beta</option>
+          </select>
+        </div>
 
     </div>
   </div>
@@ -4129,9 +4126,7 @@ function applyDraftState(draft, isMob) {
 const UI_THEME_KEY = 'nai_ui_theme_v1';
 
 function applyUITheme(theme) {
-  const finalTheme = ['design-md-dark', 'classic', 'deep-purple', 'deep-purple-beta'].includes(theme)
-    ? theme
-    : 'design-md-dark';
+  const finalTheme = 'deep-purple-beta';
   document.documentElement.dataset.uiTheme = finalTheme;
   const sel = document.getElementById('ui-theme-sel');
   if (sel) sel.value = finalTheme;
@@ -4140,23 +4135,18 @@ function applyUITheme(theme) {
 }
 
 function setUITheme(theme) {
-  const finalTheme = ['design-md-dark', 'classic', 'deep-purple', 'deep-purple-beta'].includes(theme)
-    ? theme
-    : 'design-md-dark';
+  const finalTheme = 'deep-purple-beta';
   applyUITheme(finalTheme);
   try { localStorage.setItem(UI_THEME_KEY, finalTheme); } catch (_) {}
-  let msg = 'Switched to Claude theme';
-  if (finalTheme === 'classic') msg = 'Switched to classic theme';
-  else if (finalTheme === 'deep-purple') msg = 'Switched to deep purple theme';
-  else if (finalTheme === 'deep-purple-beta') msg = 'Switched to deep purple beta theme';
-  toast(msg, 'ok');
+  toast('Switched to deep purple beta theme', 'ok');
 }
 
 // ═══════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async () => {
-  applyUITheme(localStorage.getItem(UI_THEME_KEY) || document.documentElement.dataset.uiTheme || 'design-md-dark');
+  try { localStorage.setItem(UI_THEME_KEY, 'deep-purple-beta'); } catch (_) {}
+  applyUITheme('deep-purple-beta');
   generateLayoutState = loadGenerateLayoutState();
   applyGenerateLayoutState();
   bindGenerateLayoutResizers();
@@ -5557,7 +5547,7 @@ function openSettingsModal() {
   modal.classList.add('open');
   // Set theme selector to current
   const sel = document.getElementById('ui-theme-sel');
-  if (sel) sel.value = localStorage.getItem(UI_THEME_KEY) || 'design-md-dark';
+  if (sel) sel.value = 'deep-purple-beta';
   // Init backup/sync section
   initSyncSection();
 }
