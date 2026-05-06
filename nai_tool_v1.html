@@ -1770,6 +1770,13 @@
     .blend-weight-input{width:100%;}
     .artist-quick-btn{background:none;border:1px solid var(--border);border-radius:6px;color:var(--txt2);font-size:.7rem;padding:3px 7px;cursor:pointer;white-space:nowrap;transition:background .15s;}
     .artist-quick-btn:hover{background:var(--bg3);color:var(--txt);}
+    .artist-library-tabs{display:flex;gap:8px;padding:10px 12px 0;flex-wrap:wrap;}
+    .artist-library-tab{border:1px solid var(--border);background:var(--bg2);color:var(--txt2);border-radius:999px;padding:8px 14px;font-size:.82rem;font-weight:700;cursor:pointer;transition:border-color .15s,background .15s,color .15s;}
+    .artist-library-tab:hover{border-color:var(--accent);color:var(--txt);}
+    .artist-library-tab.active{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
+    .artist-library-panel{display:none;}
+    .artist-library-panel.active{display:block;}
+    .blend-library-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
 
     /* ── BATCH PAGE ── */
     .batch-task-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;
@@ -2106,7 +2113,7 @@
       <button class="nav-tab" id="tab-ab-top" onclick="showPage('ab')">A/B 比較</button>
       <button class="nav-tab library-tab" id="tab-gal" onclick="showPage('gallery')">圖庫 <span id="gal-count" style="font-size:.72rem;opacity:.7;"></span></button>
       <button class="nav-tab library-tab" id="tab-char-page" onclick="showPage('characters')">角色庫 <span id="char-lib-count" style="font-size:.72rem;opacity:.7;"></span></button>
-      <button class="nav-tab library-tab" id="tab-artist-page" onclick="showPage('artists')">風格庫 <span id="artist-lib-count" style="font-size:.72rem;opacity:.7;"></span></button>
+      <button class="nav-tab library-tab" id="tab-artist-page" onclick="showPage('artists')">繪師串 <span id="artist-lib-count" style="font-size:.72rem;opacity:.7;"></span></button>
       <button class="nav-tab library-tab" id="tab-notes-page" onclick="showPage('notes')">筆記本 <span id="notes-count" style="font-size:.72rem;opacity:.7;"></span></button>
     </div>
     <div class="nav-right">
@@ -2631,23 +2638,32 @@
     <div class="overlay-lib-pager overlay-lib-pager-bottom" id="characters-pager-bottom"></div>
   </div>
 
-  <!-- ── 風格庫 PAGE ── -->
+  <!-- ── 繪師串 PAGE ── -->
   <div id="page-artists" class="page">
     <div class="dock-overlay-head">
       <button class="btn btn-s btn-out" type="button" onclick="closeDockOverlayPage()">← 關閉</button>
       <div class="dock-overlay-head-main">
-        <div class="dock-overlay-title">風格庫</div>
+        <div class="dock-overlay-title">繪師串</div>
         <div class="dock-overlay-db-switcher" id="overlay-artists-switcher"></div>
       </div>
     </div>
     <div class="gal-views-bar" id="artist-views-bar"></div>
-    <div class="gallery-toolbar">
-      <span style="font-size:.9rem;font-weight:700;">風格庫</span>
+    <div class="artist-library-tabs">
+      <button class="artist-library-tab active" id="artist-library-tab-artists" type="button" onclick="setArtistLibraryTab('artists')">繪師 <span id="artist-library-count-artists"></span></button>
+      <button class="artist-library-tab" id="artist-library-tab-blends" type="button" onclick="setArtistLibraryTab('blends')">混搭 <span id="artist-library-count-blends"></span></button>
+    </div>
+    <div class="gallery-toolbar" id="artist-toolbar">
+      <span style="font-size:.9rem;font-weight:700;">繪師</span>
       <button class="btn btn-p" onclick="openArtistEditModal(null)">＋ 新增繪師</button>
-      <button class="btn btn-s" onclick="createManualBlend()">＋ 手動混搭</button>
       <input type="search" class="gallery-search" id="artist-search" placeholder="搜尋名稱 / tag..." oninput="renderArtistPage()" style="max-width:180px;">
       <div style="flex:1;"></div>
       <button class="btn btn-s" id="artist-sel-mode-btn" onclick="toggleArtistSelectMode()">多選</button>
+    </div>
+    <div class="gallery-toolbar" id="blend-toolbar" style="display:none;">
+      <span style="font-size:.9rem;font-weight:700;">混搭</span>
+      <button class="btn btn-p" onclick="createManualBlend()">＋ 手動混搭</button>
+      <input type="search" class="gallery-search" id="blend-search" placeholder="搜尋混搭名稱 / tag / prompt..." oninput="renderArtistPage()" style="max-width:240px;">
+      <div style="flex:1;"></div>
     </div>
     <div class="gallery-actions" id="artist-page-actions">
       <span class="gallery-sel-count" id="artist-sel-count">已選 0 個</span>
@@ -2655,18 +2671,17 @@
       <button class="btn btn-d" onclick="deleteSelectedArtists()">🗑 刪除選取</button>
       <button class="btn btn-s" onclick="clearArtistSelection()">取消選取</button>
     </div>
-    <!-- Blends section (混搭在繪師上方) -->
-    <div style="padding:10px 12px 4px;" id="blend-section-wrap">
-      <div style="font-size:.8rem;font-weight:700;color:var(--txt2);letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px;">
-        混搭記錄 <span id="blend-count" style="font-weight:400;font-size:.72rem;"></span>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;" id="blend-grid"></div>
-    </div>
     <!-- Style type filter -->
     <div style="padding:6px 12px 0;display:flex;gap:6px;flex-wrap:wrap;" id="artist-filter-row"></div>
     <div class="overlay-lib-pager" id="artists-pager-top"></div>
-    <!-- Artist grid -->
-    <div class="gallery-grid" id="artist-page-grid"></div>
+    <div class="artist-library-panel active" id="artist-library-panel-artists">
+      <div class="gallery-grid" id="artist-page-grid"></div>
+    </div>
+    <div class="artist-library-panel" id="artist-library-panel-blends">
+      <div style="padding:12px;" id="blend-section-wrap">
+        <div class="blend-library-grid" id="blend-grid"></div>
+      </div>
+    </div>
     <div class="overlay-lib-pager overlay-lib-pager-bottom" id="artists-pager-bottom"></div>
   </div>
 
@@ -3218,7 +3233,7 @@
         </div>
         <div>
         <div class="char-field-label">搜尋</div>
-        <input id="note-insert-search" class="inp" type="search" placeholder="搜尋角色 / 風格 / 混搭 / 片段 / tag..." style="width:100%;" oninput="renderNoteInsertModal()">
+        <input id="note-insert-search" class="inp" type="search" placeholder="搜尋角色 / 繪師 / 混搭 / 片段 / tag..." style="width:100%;" oninput="renderNoteInsertModal()">
         </div>
         <div>
         <div class="char-field-label">來源</div>
@@ -3520,7 +3535,7 @@
           </div>
         </div>
         <textarea id="bt-prompt" class="inp prompt-editor" rows="5"
-          placeholder="完整正向 prompt&#10;&#10;用上方按鈕從角色庫、風格庫、筆記本插入內容到游標位置。"
+          placeholder="完整正向 prompt&#10;&#10;用上方按鈕從角色庫、繪師串、筆記本插入內容到游標位置。"
           style="width:100%;resize:vertical;font-family:monospace;font-size:.83rem;" data-manual-resize="true"></textarea>
       </div>
       <div>
@@ -6293,7 +6308,7 @@ const GENERATE_DOCK_PAGE_MAP = {
 const OVERLAY_LIBRARY_META = {
   gallery: { label: '圖庫', count: () => galleryData.length, unit: '張' },
   characters: { label: '角色庫', count: () => characterData.length, unit: '個' },
-  artists: { label: '風格庫', count: () => artistData.length + blendData.length, unit: '項' },
+  artists: { label: '繪師串', count: () => artistData.length + blendData.length, unit: '項' },
   notes: { label: '筆記本', count: () => notesData.length, unit: '筆' }
 };
 const OVERLAY_LIBRARY_PAGE_OPTIONS = [12, 24, 30, 48, 60, 90];
@@ -6446,7 +6461,7 @@ function getGenerateDockSearchPlaceholder() {
   return {
     gallery: '搜尋圖庫 prompt / tag...',
     characters: '搜尋角色名稱 / 作品 / prompt / tag...',
-    artists: '搜尋繪師名稱 / artist tag...',
+    artists: '搜尋繪師 / 混搭名稱 / tag / prompt...',
     notes: '搜尋片段 / 描述 / tag...'
   }[generateDockTab] || '搜尋目前分頁...';
 }
@@ -6752,7 +6767,7 @@ function buildGenerateDockTabs() {
   const defs = [
     ['gallery', `圖庫 ${galleryData.length ? `(${galleryData.length})` : ''}`],
     ['characters', `角色庫 ${characterData.length ? `(${characterData.length})` : ''}`],
-    ['artists', `風格庫 ${(artistData.length + blendData.length) ? `(${artistData.length + blendData.length})` : ''}`],
+    ['artists', `繪師串 ${(artistData.length + blendData.length) ? `(${artistData.length + blendData.length})` : ''}`],
     ['notes', `筆記本 ${notesData.length ? `(${notesData.length})` : ''}`]
   ];
   wrap.innerHTML = defs.map(([key, label]) =>
@@ -7076,7 +7091,7 @@ function renderGenerateDockArtists(q) {
     </div>`;
   });
   if (!blendBlocks.length && !artistBlocks.length) {
-      return `<div class="dock-inline-tools"><div class="dock-chip-scroll">${renderDockViewTabs('artists')}</div><div class="dock-inline-bar"><button class="btn btn-s btn-out" type="button" onclick="openArtistEditModal(null)">＋ 新增繪師</button><button class="btn btn-s btn-out" type="button" onclick="createManualBlend()">＋ 手動混搭</button><button class="btn btn-s" type="button" onclick="toggleArtistSelectMode()">${artistSelectMode?'結束多選':'多選'}</button></div>${filterRows}</div><div class="generate-dock-empty">${artistData.length || blendData.length ? '沒有符合條件的風格或混搭' : '風格庫目前是空的。'}</div>`;
+      return `<div class="dock-inline-tools"><div class="dock-chip-scroll">${renderDockViewTabs('artists')}</div><div class="dock-inline-bar"><button class="btn btn-s btn-out" type="button" onclick="openArtistEditModal(null)">＋ 新增繪師</button><button class="btn btn-s btn-out" type="button" onclick="createManualBlend()">＋ 手動混搭</button><button class="btn btn-s" type="button" onclick="toggleArtistSelectMode()">${artistSelectMode?'結束多選':'多選'}</button></div>${filterRows}</div><div class="generate-dock-empty">${artistData.length || blendData.length ? '沒有符合條件的繪師或混搭' : '繪師串目前是空的。'}</div>`;
     }
     const selectionBar = artistSelectMode ? `<div class="dock-inline-bar"><span class="gallery-sel-count">已選 ${artistSelected.size} 個</span><button class="btn btn-p" type="button" onclick="createBlendFromSelected()">建立混搭</button><button class="btn btn-d" type="button" onclick="deleteSelectedArtists()">刪除</button><button class="btn btn-s btn-out" type="button" onclick="clearArtistSelection()">取消</button></div>` : '';
   return `<div class="dock-inline-tools"><div class="dock-chip-scroll">${renderDockViewTabs('artists')}</div><div class="dock-inline-bar"><button class="btn btn-s btn-out" type="button" onclick="openArtistEditModal(null)">＋ 新增繪師</button><button class="btn btn-s btn-out" type="button" onclick="createManualBlend()">＋ 手動混搭</button><button class="btn btn-s" type="button" onclick="toggleArtistSelectMode()">${artistSelectMode?'結束多選':'多選'}</button></div>${selectionBar}${filterRows}</div>${blendBlocks.length ? `<div class="generate-dock-grid" style="margin-bottom:12px;">${blendBlocks.join('')}</div>` : ''}${artistBlocks.length ? `<div class="generate-dock-list">${artistBlocks.join('')}</div>` : ''}`;
@@ -8037,6 +8052,7 @@ let artistEditId     = null;
 let artistEditThumbImageId = null;
 let currentBlendId   = null;   // for blend detail modal
 let currentBlendDraft = null;
+let activeArtistLibraryTab = 'artists';
 
 // ── Gallery picker routing (extend existing) ──
 // galPickerPurpose also handles: 'artistThumb' | 'blendPreview'
@@ -8054,11 +8070,16 @@ async function loadArtistData() {
     }
   }
   await hydrateBlendPreviewUrls(blendData);
-  updateArtistLibCount(artistData.length);
+  updateArtistLibCount();
 }
 
-function updateArtistLibCount(n) {
-  document.getElementById('artist-lib-count').textContent = n ? `(${n})` : '';
+function updateArtistLibCount() {
+  const total = artistData.length + blendData.length;
+  document.getElementById('artist-lib-count').textContent = total ? `(${total})` : '';
+  const artistCountEl = document.getElementById('artist-library-count-artists');
+  if (artistCountEl) artistCountEl.textContent = artistData.length ? `(${artistData.length})` : '';
+  const blendCountEl = document.getElementById('artist-library-count-blends');
+  if (blendCountEl) blendCountEl.textContent = blendData.length ? `(${blendData.length})` : '';
   buildGenerateDockTabs();
   if (dockOverlayPage) renderOverlayDatabaseSwitcher(dockOverlayPage);
   refreshGenerateDockIfVisible();
@@ -8073,6 +8094,32 @@ let activeArtistViewId = 'all';
 let artistViewIncludeTags = new Set();
 let artistViewExcludeTags = new Set();
 let artistViewTypeFilters = { include:'', exclude:'' };
+
+function renderArtistLibraryTabs() {
+  const isArtistsTab = activeArtistLibraryTab !== 'blends';
+  document.getElementById('artist-library-tab-artists')?.classList.toggle('active', isArtistsTab);
+  document.getElementById('artist-library-tab-blends')?.classList.toggle('active', !isArtistsTab);
+  document.getElementById('artist-library-panel-artists')?.classList.toggle('active', isArtistsTab);
+  document.getElementById('artist-library-panel-blends')?.classList.toggle('active', !isArtistsTab);
+  const artistToolbar = document.getElementById('artist-toolbar');
+  if (artistToolbar) artistToolbar.style.display = isArtistsTab ? '' : 'none';
+  const blendToolbar = document.getElementById('blend-toolbar');
+  if (blendToolbar) blendToolbar.style.display = isArtistsTab ? 'none' : '';
+}
+
+function setArtistLibraryTab(tab) {
+  const nextTab = tab === 'blends' ? 'blends' : 'artists';
+  if (activeArtistLibraryTab === nextTab && document.getElementById('page-artists')?.classList.contains('active')) return;
+  activeArtistLibraryTab = nextTab;
+  if (nextTab !== 'artists' && artistSelectMode) {
+    clearArtistSelection({ suppressRender: true });
+  }
+  if (nextTab !== 'artists') {
+    artistActiveStyle = '';
+  }
+  getOverlayLibraryPageState('artists').page = 1;
+  renderArtistPage();
+}
 
 function loadArtistViews() {
   try {
@@ -8165,7 +8212,7 @@ function renderArtistViewTagPicker(kind) {
   const list = document.getElementById(isExclude ? 'artist-view-exclude-list' : 'artist-view-include-list');
   const typeTabs = renderTagTypeFilterChips(allTags, currentType, typeId => `setArtistViewTypeFilter('${kind}', ${JSON.stringify(typeId)})`, '全部類型');
   if (!filtered.length) {
-    list.innerHTML = `${typeTabs ? `<div class="tag-type-filter-row">${typeTabs}</div>` : ''}${selected.size ? renderClearTagChip(`clearArtistViewTags('${kind}')`) : ''}<span style="font-size:.75rem;color:var(--txt2);">${allTags.length ? '沒有符合的 tag' : '風格庫目前沒有 tag'}</span>`;
+    list.innerHTML = `${typeTabs ? `<div class="tag-type-filter-row">${typeTabs}</div>` : ''}${selected.size ? renderClearTagChip(`clearArtistViewTags('${kind}')`) : ''}<span style="font-size:.75rem;color:var(--txt2);">${allTags.length ? '沒有符合的 tag' : '繪師串目前沒有 tag'}</span>`;
     return;
   }
   list.innerHTML = `${typeTabs ? `<div class="tag-type-filter-row">${typeTabs}</div>` : ''}${selected.size ? renderClearTagChip(`clearArtistViewTags('${kind}')`) : ''}` + filtered.map(t => {
@@ -8203,11 +8250,13 @@ function confirmAddArtistView() {
 async function renderArtistPage() {
   if (!artistData.length && !blendData.length) await loadArtistData();
   renderOverlayDatabaseSwitcher(dockOverlayPage === 'artists' ? 'artists' : dockOverlayPage);
-  updateArtistLibCount(artistData.length);
+  updateArtistLibCount();
+  renderArtistLibraryTabs();
   renderArtistViewTabs();
   buildArtistFilterRow();
 
-  const q = (document.getElementById('artist-search')?.value||'').toLowerCase();
+  const isArtistsTab = activeArtistLibraryTab !== 'blends';
+  const q = ((isArtistsTab ? document.getElementById('artist-search') : document.getElementById('blend-search'))?.value || '').toLowerCase();
   const activeView = artistViews.find(v => v.id === activeArtistViewId);
   let filteredArtists = artistData.filter(a => {
     const matchQ = !q || a.name.toLowerCase().includes(q) || (a.artistTag||'').toLowerCase().includes(q) || (a.tags||[]).some(t => t.toLowerCase().includes(q));
@@ -8223,67 +8272,79 @@ async function renderArtistPage() {
     const matchView = applyArtistViewFilter(b, activeView);
     return matchQ && matchTags && matchView;
   });
-  const combinedItems = [
-    ...visibleBlends.map(item => ({ kind:'blend', item })),
-    ...filteredArtists.map(item => ({ kind:'artist', item }))
-  ];
-  const paged = paginateOverlayItems('artists', combinedItems);
-  const pageBlends = paged.items.filter(entry => entry.kind === 'blend').map(entry => entry.item);
-  const pageArtists = paged.items.filter(entry => entry.kind === 'artist').map(entry => entry.item);
-  renderOverlayLibraryPager('artists', paged.total);
-
   const grid = document.getElementById('artist-page-grid');
-  if (!combinedItems.length) {
-    grid.innerHTML = `<div class="gallery-empty" style="grid-column:1/-1;">
-      <div style="font-size:1.5rem;margin-bottom:8px;">🎨</div>
-      <span>${artistData.length?'沒有符合條件的繪師':'風格庫是空的，點「＋ 新增繪師」開始建立'}</span>
-    </div>`;
-    renderBlendGrid([], visibleBlends.length);
-  } else {
-    grid.innerHTML = pageArtists.map(a => {
-      const sel = artistSelected.has(a.id) ? 'selected' : '';
-      const thumb = a._previewUrl
-        ? `<img class="char-card-thumb" src="${a._previewUrl}" alt="">`
-        : `<div class="char-card-thumb-ph">🎨</div>`;
-      const styleBadge = a.styleType ? `<span class="style-badge ${STYLE_CLASS[a.styleType]||'sb-other'}">${STYLE_LABELS[a.styleType]||a.styleType}</span>` : '';
-    const tags = (a.tags||[]).slice(0,2).map(t=>`<span class="char-card-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
-      return `<div class="gcard char-card ${sel}" onclick="onArtistCardClick(event,${a.id})">
-        ${sel?'<div class="gcard-check">✓</div>':''}
-        ${thumb}
-        <div class="char-card-footer">
-          <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:3px;">
-            <div class="char-card-name" style="flex:1;">${esc(a.name)}</div>
-            ${styleBadge}
-          </div>
-          <div class="char-card-series" style="font-family:monospace;">${esc(a.artistTag||'')}</div>
-          <div class="char-card-tags">${tags}</div>
-        </div>
-      </div>`;
-    }).join('');
-  }
+  const actions = document.getElementById('artist-page-actions');
+  if (actions) actions.classList.toggle('visible', isArtistsTab && artistSelectMode);
 
-  // Render blends
-  renderBlendGrid(pageBlends, visibleBlends.length);
+  if (isArtistsTab) {
+    const paged = paginateOverlayItems('artists', filteredArtists);
+    renderOverlayLibraryPager('artists', paged.total);
+    const pageArtists = paged.items;
+    if (!filteredArtists.length) {
+      grid.innerHTML = `<div class="gallery-empty" style="grid-column:1/-1;">
+        <div style="font-size:1.5rem;margin-bottom:8px;">🎨</div>
+        <span>${artistData.length ? '沒有符合條件的繪師' : '繪師串目前是空的，點「＋ 新增繪師」開始建立'}</span>
+      </div>`;
+    } else {
+      grid.innerHTML = pageArtists.map(a => {
+        const sel = artistSelected.has(a.id) ? 'selected' : '';
+        const thumb = a._previewUrl
+          ? `<img class="char-card-thumb" src="${a._previewUrl}" alt="">`
+          : `<div class="char-card-thumb-ph">🎨</div>`;
+        const styleBadge = a.styleType ? `<span class="style-badge ${STYLE_CLASS[a.styleType]||'sb-other'}">${STYLE_LABELS[a.styleType]||a.styleType}</span>` : '';
+      const tags = (a.tags||[]).slice(0,2).map(t=>`<span class="char-card-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
+        return `<div class="gcard char-card ${sel}" onclick="onArtistCardClick(event,${a.id})">
+          ${sel?'<div class="gcard-check">✓</div>':''}
+          ${thumb}
+          <div class="char-card-footer">
+            <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:3px;">
+              <div class="char-card-name" style="flex:1;">${esc(a.name)}</div>
+              ${styleBadge}
+            </div>
+            <div class="char-card-series" style="font-family:monospace;">${esc(a.artistTag||'')}</div>
+            <div class="char-card-tags">${tags}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+    renderBlendGrid([], 0, { forceHide: true });
+  } else {
+    grid.innerHTML = '';
+    const paged = paginateOverlayItems('artists', visibleBlends);
+    renderOverlayLibraryPager('artists', paged.total);
+    renderBlendGrid(paged.items, visibleBlends.length, {
+      emptyHtml: `<div class="gallery-empty" style="grid-column:1/-1;">
+        <div style="font-size:1.5rem;margin-bottom:8px;">🧪</div>
+        <span>${blendData.length ? '沒有符合條件的混搭' : '目前還沒有混搭，先到繪師頁多選建立，或直接手動混搭。'}</span>
+      </div>`
+    });
+  }
   refreshGenerateDockIfVisible();
 }
 
 function buildArtistFilterRow() {
   const row = document.getElementById('artist-filter-row');
+  const isArtistsTab = activeArtistLibraryTab !== 'blends';
   const tagCount = {};
-  artistData.forEach(a => (a.tags||[]).forEach(t => tagCount[t]=(tagCount[t]||0)+1));
-  blendData.forEach(b => (b.tags||[]).forEach(t => tagCount[t]=(tagCount[t]||0)+1));
+  if (isArtistsTab) {
+    artistData.forEach(a => (a.tags||[]).forEach(t => tagCount[t]=(tagCount[t]||0)+1));
+  } else {
+    blendData.forEach(b => (b.tags||[]).forEach(t => tagCount[t]=(tagCount[t]||0)+1));
+  }
   const tagNames = Object.entries(tagCount).sort((a,b)=>b[1]-a[1]).map(([t]) => t);
   let html = '';
   if (artistActiveStyle || artistActiveTags.size) {
     html += `<span class="tag-filter-chip active" onclick="clearArtistFilters()">✕ 清除篩選</span>`;
   }
-  Object.keys(STYLE_LABELS).forEach(s => {
-    if (!s) return;
-    if (!artistData.some(a=>a.styleType===s)) return;
-    const cls = STYLE_CLASS[s]||'sb-other';
-    html += `<span class="tag-filter-chip ${artistActiveStyle===s?'active':''}" onclick="toggleArtistStyle('${s}')" style="display:inline-flex;align-items:center;gap:4px;">
-      <span class="style-badge ${cls}" style="margin:0;">${STYLE_LABELS[s]}</span></span>`;
-  });
+  if (isArtistsTab) {
+    Object.keys(STYLE_LABELS).forEach(s => {
+      if (!s) return;
+      if (!artistData.some(a=>a.styleType===s)) return;
+      const cls = STYLE_CLASS[s]||'sb-other';
+      html += `<span class="tag-filter-chip ${artistActiveStyle===s?'active':''}" onclick="toggleArtistStyle('${s}')" style="display:inline-flex;align-items:center;gap:4px;">
+        <span class="style-badge ${cls}" style="margin:0;">${STYLE_LABELS[s]}</span></span>`;
+    });
+  }
   const typeTabs = renderTagTypeFilterChips(tagNames, artistActiveTagType, typeId => `setArtistTagType(${JSON.stringify(typeId)})`, '全部類型');
   if (typeTabs) html += `<div class="tag-type-filter-row">${typeTabs}</div>`;
   Object.entries(tagCount)
@@ -8323,11 +8384,11 @@ function toggleArtistSelect(id) {
   renderArtistPage();
 }
 
-function clearArtistSelection() {
+function clearArtistSelection(options = {}) {
   artistSelected.clear(); artistSelectMode = false;
   document.getElementById('artist-sel-mode-btn').textContent = '多選';
   document.getElementById('artist-page-actions').classList.remove('visible');
-  renderArtistPage();
+  if (!options.suppressRender) renderArtistPage();
 }
 
 async function deleteSelectedArtists() {
@@ -8338,7 +8399,7 @@ async function deleteSelectedArtists() {
   document.getElementById('artist-sel-mode-btn').textContent = '多選';
   document.getElementById('artist-page-actions').classList.remove('visible');
   artistData = await dbGetArtists();
-  updateArtistLibCount(artistData.length);
+  updateArtistLibCount();
   toast('已刪除','ok');
   renderArtistPage();
 }
@@ -8438,7 +8499,7 @@ async function saveArtistEdit() {
       try { const img=await dbGetImageById(a.previewImageId); if(img) a._previewUrl=URL.createObjectURL(new Blob([img.data],{type:'image/png'})); } catch(_){}
     }
   }
-  updateArtistLibCount(artistData.length);
+  updateArtistLibCount();
   renderArtistPage();
 }
 
@@ -8463,8 +8524,11 @@ async function createBlendFromSelected() {
   });
   blendData = await dbGetBlends();
   await hydrateBlendPreviewUrls(blendData);
+  updateArtistLibCount();
   toast(`已建立混搭記錄「${name}」`,'ok');
-  clearArtistSelection();
+  activeArtistLibraryTab = 'blends';
+  clearArtistSelection({ suppressRender: true });
+  renderArtistPage();
   openBlendDetailModal(id);
 }
 
@@ -8492,17 +8556,42 @@ async function createManualBlend() {
   document.getElementById('blend-detail-modal').classList.add('open');
 }
 
-function renderBlendGrid(visibleBlendsOverride = null, totalVisibleCount = null) {
+function renderBlendGrid(visibleBlendsOverride = null, totalVisibleCount = null, options = {}) {
   const grid = document.getElementById('blend-grid');
   const countEl = document.getElementById('blend-count');
   const wrap = document.getElementById('blend-section-wrap');
-  if (!blendData.length) { wrap.style.display='none'; return; }
+  if (!grid || !wrap) return;
+  if (options.forceHide) {
+    wrap.style.display = 'none';
+    grid.innerHTML = '';
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+  if (!blendData.length) {
+    if (options.emptyHtml) {
+      wrap.style.display = '';
+      grid.innerHTML = options.emptyHtml;
+    } else {
+      wrap.style.display='none';
+    }
+    if (countEl) countEl.textContent = '';
+    return;
+  }
   const activeView = artistViews.find(v => v.id === activeArtistViewId);
   const visibleBlends = Array.isArray(visibleBlendsOverride) ? visibleBlendsOverride : blendData.filter(b => applyArtistViewFilter(b, activeView));
   const totalCount = typeof totalVisibleCount === 'number' ? totalVisibleCount : visibleBlends.length;
-  if (!visibleBlends.length) { wrap.style.display='none'; return; }
+  if (!visibleBlends.length) {
+    if (options.emptyHtml) {
+      wrap.style.display = '';
+      grid.innerHTML = options.emptyHtml;
+    } else {
+      wrap.style.display='none';
+    }
+    if (countEl) countEl.textContent = totalCount ? `(${totalCount})` : '';
+    return;
+  }
   wrap.style.display='';
-  countEl.textContent = `(${totalCount})`;
+  if (countEl) countEl.textContent = `(${totalCount})`;
   grid.innerHTML = visibleBlends.map(b => {
     const previewUrl = getBlendPreviewUrl(b);
     const preview = previewUrl
@@ -8662,7 +8751,7 @@ function clearBlendTags() {
 function openBlendTagsPicker() {
   openTagPicker({
     title: '選擇混搭標籤',
-    help: '混搭標籤會幫你整理風格庫，也會用來替混搭自動尋找範例圖。建議至少放一個專屬 tag。',
+    help: '混搭標籤會幫你整理繪師串，也會用來替混搭自動尋找範例圖。建議至少放一個專屬 tag。',
     initialTags: currentBlendDraft?.tags || [],
     multi: true,
     allowCreate: true,
@@ -11967,7 +12056,7 @@ function openBtInsertPicker(type, btnEl, targetId) {
   }
 
   if (!items.length) {
-    const msgs = { char: '角色庫是空的', style: '風格庫是空的', note: '筆記本是空的' };
+    const msgs = { char: '角色庫是空的', style: '繪師串是空的', note: '筆記本是空的' };
     toast(msgs[type] || '沒有內容', 'warn'); return;
   }
 
