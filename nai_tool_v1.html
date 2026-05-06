@@ -6896,16 +6896,22 @@ function renderDockCharFilters() {
 }
 
 function renderDockArtistFilters() {
+  const isArtistsTab = activeArtistLibraryTab !== 'blends';
   const tagCount = {};
-  artistData.forEach(a => (a.tags || []).forEach(t => tagCount[t] = (tagCount[t] || 0) + 1));
-  blendData.forEach(b => (b.tags || []).forEach(t => tagCount[t] = (tagCount[t] || 0) + 1));
+  if (isArtistsTab) {
+    artistData.forEach(a => (a.tags || []).forEach(t => tagCount[t] = (tagCount[t] || 0) + 1));
+  } else {
+    blendData.forEach(b => (b.tags || []).forEach(t => tagCount[t] = (tagCount[t] || 0) + 1));
+  }
   const tagNames = Object.keys(tagCount);
   const typeTabs = renderTagTypeFilterChips(tagNames, artistActiveTagType, typeId => `setArtistTagType(${JSON.stringify(typeId)})`, '全部類型');
   const clearHtml = (artistActiveStyle || artistActiveTags.size) ? renderClearTagChip('clearArtistFilters()') : '';
-  const styleHtml = Object.keys(STYLE_LABELS).filter(s => s && artistData.some(a => a.styleType === s)).map(s => {
-    const cls = STYLE_CLASS[s] || 'sb-other';
-    return `<span class="tag-filter-chip ${artistActiveStyle===s?'active':''}" onclick="toggleArtistStyle('${s}')" style="display:inline-flex;align-items:center;gap:4px;"><span class="style-badge ${cls}" style="margin:0;">${STYLE_LABELS[s]}</span></span>`;
-  }).join('');
+  const styleHtml = isArtistsTab
+    ? Object.keys(STYLE_LABELS).filter(s => s && artistData.some(a => a.styleType === s)).map(s => {
+        const cls = STYLE_CLASS[s] || 'sb-other';
+        return `<span class="tag-filter-chip ${artistActiveStyle===s?'active':''}" onclick="toggleArtistStyle('${s}')" style="display:inline-flex;align-items:center;gap:4px;"><span class="style-badge ${cls}" style="margin:0;">${STYLE_LABELS[s]}</span></span>`;
+      }).join('')
+    : '';
   const tagHtml = Object.entries(tagCount)
     .sort((a,b) => {
       const aSel = artistActiveTags.has(a[0]) ? 1 : 0;
@@ -6917,6 +6923,13 @@ function renderDockArtistFilters() {
     .map(([t, c]) => `<span class="tag-filter-chip ${artistActiveTags.has(t)?'active':''}" ${artistActiveTags.has(t) ? '' : `style="${getTagChipStyle(t, 0.10)}"`} onclick="toggleArtistTag('${esc(t)}')">#${esc(t)} <small>${c}</small></span>`)
     .join('');
   return `${styleHtml || clearHtml ? `<div class="dock-chip-scroll">${clearHtml}${styleHtml}</div>` : ''}${typeTabs ? `<div class="dock-chip-scroll">${typeTabs}</div>` : ''}${tagHtml ? `<div class="dock-chip-scroll">${tagHtml}</div>` : ''}`;
+}
+
+function renderDockArtistLibraryTabs() {
+  return `<div class="dock-chip-scroll">
+    <button class="artist-library-tab ${activeArtistLibraryTab !== 'blends' ? 'active' : ''}" type="button" onclick="setArtistLibraryTab('artists')">繪師${artistData.length ? ` (${artistData.length})` : ''}</button>
+    <button class="artist-library-tab ${activeArtistLibraryTab === 'blends' ? 'active' : ''}" type="button" onclick="setArtistLibraryTab('blends')">混搭${blendData.length ? ` (${blendData.length})` : ''}</button>
+  </div>`;
 }
 
 function renderDockNotesFilters() {
@@ -7037,6 +7050,8 @@ function renderGenerateDockCharacters(q) {
 function renderGenerateDockArtists(q) {
   const activeView = artistViews.find(v => v.id === activeArtistViewId);
   const filterRows = renderDockArtistFilters();
+  const libraryTabs = renderDockArtistLibraryTabs();
+  const isArtistsTab = activeArtistLibraryTab !== 'blends';
   const artistItems = artistData
       .filter(a => {
         const matchQ = !q || a.name.toLowerCase().includes(q) || (a.artistTag||'').toLowerCase().includes(q) || (a.tags||[]).some(t => t.toLowerCase().includes(q));
@@ -7057,10 +7072,9 @@ function renderGenerateDockArtists(q) {
       })
       .sort((a,b) => (b.timestamp||0) - (a.timestamp||0))
       .slice(0, 10);
-  const items = [
-    ...blendItems.map(b => ({ kind:'blend', item:b, timestamp: b.timestamp || 0 })),
-    ...artistItems.map(a => ({ kind:'artist', item:a, timestamp: a.timestamp || 0 }))
-  ].sort((a, b) => b.timestamp - a.timestamp);
+  const items = isArtistsTab
+    ? artistItems.map(a => ({ kind:'artist', item:a, timestamp: a.timestamp || 0 }))
+    : blendItems.map(b => ({ kind:'blend', item:b, timestamp: b.timestamp || 0 }));
   const dockCards = items.map(entry => {
     if (entry.kind === 'blend') {
       const b = entry.item;
@@ -7097,10 +7111,10 @@ function renderGenerateDockArtists(q) {
     </div>`;
   });
   if (!dockCards.length) {
-      return `<div class="dock-inline-tools"><div class="dock-chip-scroll">${renderDockViewTabs('artists')}</div><div class="dock-inline-bar"><button class="btn btn-s btn-out" type="button" onclick="openArtistEditModal(null)">＋ 新增繪師</button><button class="btn btn-s btn-out" type="button" onclick="createManualBlend()">＋ 手動混搭</button><button class="btn btn-s" type="button" onclick="toggleArtistSelectMode()">${artistSelectMode?'結束多選':'多選'}</button></div>${filterRows}</div><div class="generate-dock-empty">${artistData.length || blendData.length ? '沒有符合條件的繪師或混搭' : '繪師串目前是空的。'}</div>`;
+      return `<div class="dock-inline-tools"><div class="dock-chip-scroll">${renderDockViewTabs('artists')}</div>${libraryTabs}<div class="dock-inline-bar">${isArtistsTab ? `<button class="btn btn-s btn-out" type="button" onclick="openArtistEditModal(null)">＋ 新增繪師</button><button class="btn btn-s" type="button" onclick="toggleArtistSelectMode()">${artistSelectMode?'結束多選':'多選'}</button>` : `<button class="btn btn-s btn-out" type="button" onclick="createManualBlend()">＋ 手動混搭</button>`}</div>${filterRows}</div><div class="generate-dock-empty">${artistData.length || blendData.length ? `沒有符合條件的${isArtistsTab ? '繪師' : '混搭'}` : '繪師串目前是空的。'}</div>`;
     }
     const selectionBar = artistSelectMode ? `<div class="dock-inline-bar"><span class="gallery-sel-count">已選 ${artistSelected.size} 個</span><button class="btn btn-p" type="button" onclick="createBlendFromSelected()">建立混搭</button><button class="btn btn-d" type="button" onclick="deleteSelectedArtists()">刪除</button><button class="btn btn-s btn-out" type="button" onclick="clearArtistSelection()">取消</button></div>` : '';
-  return `<div class="dock-inline-tools"><div class="dock-chip-scroll">${renderDockViewTabs('artists')}</div><div class="dock-inline-bar"><button class="btn btn-s btn-out" type="button" onclick="openArtistEditModal(null)">＋ 新增繪師</button><button class="btn btn-s btn-out" type="button" onclick="createManualBlend()">＋ 手動混搭</button><button class="btn btn-s" type="button" onclick="toggleArtistSelectMode()">${artistSelectMode?'結束多選':'多選'}</button></div>${selectionBar}${filterRows}</div><div class="generate-dock-grid">${dockCards.join('')}</div>`;
+  return `<div class="dock-inline-tools"><div class="dock-chip-scroll">${renderDockViewTabs('artists')}</div>${libraryTabs}<div class="dock-inline-bar">${isArtistsTab ? `<button class="btn btn-s btn-out" type="button" onclick="openArtistEditModal(null)">＋ 新增繪師</button><button class="btn btn-s" type="button" onclick="toggleArtistSelectMode()">${artistSelectMode?'結束多選':'多選'}</button>` : `<button class="btn btn-s btn-out" type="button" onclick="createManualBlend()">＋ 手動混搭</button>`}</div>${isArtistsTab ? selectionBar : ''}${filterRows}</div><div class="generate-dock-grid">${dockCards.join('')}</div>`;
 }
 
 function renderGenerateDockNotes(q) {
