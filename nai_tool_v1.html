@@ -2649,8 +2649,8 @@
     </div>
     <div class="gal-views-bar" id="artist-views-bar"></div>
     <div class="artist-library-tabs">
-      <button class="artist-library-tab active" id="artist-library-tab-artists" type="button" onclick="setArtistLibraryTab('artists')">繪師 <span id="artist-library-count-artists"></span></button>
-      <button class="artist-library-tab" id="artist-library-tab-blends" type="button" onclick="setArtistLibraryTab('blends')">混搭 <span id="artist-library-count-blends"></span></button>
+      <button class="artist-library-tab active" id="artist-library-tab-blends" type="button" onclick="setArtistLibraryTab('blends')">混搭 <span id="artist-library-count-blends"></span></button>
+      <button class="artist-library-tab" id="artist-library-tab-artists" type="button" onclick="setArtistLibraryTab('artists')">繪師 <span id="artist-library-count-artists"></span></button>
     </div>
     <div class="gallery-toolbar" id="artist-toolbar">
       <span style="font-size:.9rem;font-weight:700;">繪師</span>
@@ -2674,13 +2674,13 @@
     <!-- Style type filter -->
     <div style="padding:6px 12px 0;display:flex;gap:6px;flex-wrap:wrap;" id="artist-filter-row"></div>
     <div class="overlay-lib-pager" id="artists-pager-top"></div>
-    <div class="artist-library-panel active" id="artist-library-panel-artists">
-      <div class="gallery-grid" id="artist-page-grid"></div>
-    </div>
-    <div class="artist-library-panel" id="artist-library-panel-blends">
+    <div class="artist-library-panel active" id="artist-library-panel-blends">
       <div style="padding:12px;" id="blend-section-wrap">
         <div class="blend-library-grid" id="blend-grid"></div>
       </div>
+    </div>
+    <div class="artist-library-panel" id="artist-library-panel-artists">
+      <div class="gallery-grid" id="artist-page-grid"></div>
     </div>
     <div class="overlay-lib-pager overlay-lib-pager-bottom" id="artists-pager-bottom"></div>
   </div>
@@ -6927,8 +6927,8 @@ function renderDockArtistFilters() {
 
 function renderDockArtistLibraryTabs() {
   return `<div class="dock-chip-scroll">
-    <button class="artist-library-tab ${activeArtistLibraryTab !== 'blends' ? 'active' : ''}" type="button" onclick="setArtistLibraryTab('artists')">繪師${artistData.length ? ` (${artistData.length})` : ''}</button>
     <button class="artist-library-tab ${activeArtistLibraryTab === 'blends' ? 'active' : ''}" type="button" onclick="setArtistLibraryTab('blends')">混搭${blendData.length ? ` (${blendData.length})` : ''}</button>
+    <button class="artist-library-tab ${activeArtistLibraryTab !== 'blends' ? 'active' : ''}" type="button" onclick="setArtistLibraryTab('artists')">繪師${artistData.length ? ` (${artistData.length})` : ''}</button>
   </div>`;
 }
 
@@ -8072,7 +8072,7 @@ let artistEditId     = null;
 let artistEditThumbImageId = null;
 let currentBlendId   = null;   // for blend detail modal
 let currentBlendDraft = null;
-let activeArtistLibraryTab = 'artists';
+let activeArtistLibraryTab = 'blends';
 
 // ── Gallery picker routing (extend existing) ──
 // galPickerPurpose also handles: 'artistThumb' | 'blendPreview'
