@@ -5542,6 +5542,22 @@ async function inflateChunkText(bytes) {
   return '';
 }
 
+async function inflateGzipText(bytes) {
+  if (!bytes?.length || typeof DecompressionStream !== 'function') return '';
+  try {
+    const ds = new DecompressionStream('gzip');
+    const stream = new Blob([bytes]).stream().pipeThrough(ds);
+    const ab = await new Response(stream).arrayBuffer();
+    try {
+      return new TextDecoder('utf-8').decode(ab);
+    } catch {
+      return new TextDecoder('latin1').decode(ab);
+    }
+  } catch {
+    return '';
+  }
+}
+
 async function extractPNGMetaRich(arrayBuffer) {
   const bytes = new Uint8Array(arrayBuffer);
   if (bytes[0] !== 0x89 || bytes[1] !== 0x50) return {};
@@ -5653,6 +5669,94 @@ function extractLooseNovelAiMeta(arrayBuffer) {
   return buildNovelAiMetaFromRaw(raw);
 }
 
+async function readImageBitmapRgba(file) {
+  const bmp = await createImageBitmap(file);
+  const width = bmp.width;
+  const height = bmp.height;
+  const canvas = typeof OffscreenCanvas !== 'undefined'
+    ? new OffscreenCanvas(width, height)
+    : Object.assign(document.createElement('canvas'), { width, height });
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) {
+    if (typeof bmp.close === 'function') bmp.close();
+    throw new Error('無法讀取圖片像素');
+  }
+  ctx.drawImage(bmp, 0, 0);
+  if (typeof bmp.close === 'function') bmp.close();
+  return {
+    width,
+    height,
+    data: ctx.getImageData(0, 0, width, height).data
+  };
+}
+
+function packStealthBitsToBytes(imageData, width, height) {
+  const totalBits = width * height;
+  const totalBytes = Math.floor(totalBits / 8);
+  const out = new Uint8Array(totalBytes);
+  let outIdx = 0;
+  let bitCount = 0;
+  let current = 0;
+  for (let x = 0; x < width; x++) {
+    for (let y = 0; y < height; y++) {
+      const alpha = imageData[(y * width + x) * 4 + 3];
+      current = (current << 1) | (alpha & 1);
+      bitCount++;
+      if (bitCount === 8) {
+        out[outIdx++] = current;
+        bitCount = 0;
+        current = 0;
+        if (outIdx >= totalBytes) return out;
+      }
+    }
+  }
+  return out;
+}
+
+function readStealthUint32(bytes, offset) {
+  if (offset + 4 > bytes.length) return null;
+  return ((bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3]) >>> 0;
+}
+
+async function extractNovelAiStealthMeta(file) {
+  if (typeof createImageBitmap !== 'function') return {};
+  try {
+    const rgba = await readImageBitmapRgba(file);
+    const stream = packStealthBitsToBytes(rgba.data, rgba.width, rgba.height);
+    const magicComp = 'stealth_pngcomp';
+    const magicInfo = 'stealth_pnginfo';
+    const head = new TextDecoder('utf-8').decode(stream.slice(0, magicComp.length));
+    const isComp = head === magicComp;
+    const isInfo = !isComp && new TextDecoder('utf-8').decode(stream.slice(0, magicInfo.length)) === magicInfo;
+    if (!isComp && !isInfo) return {};
+
+    const magicLen = isComp ? magicComp.length : magicInfo.length;
+    const bitLen = readStealthUint32(stream, magicLen);
+    if (!bitLen || bitLen === 0xffffffff) return {};
+    const byteLen = Math.floor(bitLen / 8);
+    const payload = stream.slice(magicLen + 4, magicLen + 4 + byteLen);
+    if (!payload.length) return {};
+
+    let rawText = '';
+    if (isComp) rawText = await inflateGzipText(payload);
+    else rawText = new TextDecoder('utf-8').decode(payload);
+    if (!rawText) return {};
+
+    let jsonData = null;
+    try { jsonData = JSON.parse(rawText); } catch {}
+    if (!jsonData) return {};
+
+    const raw = {};
+    Object.entries(jsonData).forEach(([key, value]) => assignEmbeddedMetaValue(raw, key, value));
+    if (!raw.width) raw.width = rgba.width;
+    if (!raw.height) raw.height = rgba.height;
+    return buildNovelAiMetaFromRaw(raw);
+  } catch (err) {
+    console.warn('NovelAI stealth metadata 解析失敗', err);
+    return {};
+  }
+}
+
 async function readImageSizeFromFile(file) {
   try {
     const bmp = await createImageBitmap(file);
@@ -5681,6 +5785,10 @@ async function extractUploadImageMeta(file, arrayBuffer, kind) {
   let meta = {};
   if (kind === 'png') meta = await extractPNGMetaRich(arrayBuffer);
   else meta = extractLooseNovelAiMeta(arrayBuffer);
+  if (!meta.prompt && !meta.negPrompt && !meta.seed && !meta.model) {
+    const stealthMeta = await extractNovelAiStealthMeta(file);
+    if (stealthMeta && Object.keys(stealthMeta).length) meta = { ...stealthMeta, ...meta };
+  }
   const size = await readImageSizeFromFile(file);
   if (!meta.width && size.width) meta.width = size.width;
   if (!meta.height && size.height) meta.height = size.height;
