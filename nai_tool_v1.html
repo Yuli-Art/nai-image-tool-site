@@ -5787,7 +5787,16 @@ async function extractUploadImageMeta(file, arrayBuffer, kind) {
   else meta = extractLooseNovelAiMeta(arrayBuffer);
   if (!meta.prompt && !meta.negPrompt && !meta.seed && !meta.model) {
     const stealthMeta = await extractNovelAiStealthMeta(file);
-    if (stealthMeta && Object.keys(stealthMeta).length) meta = { ...stealthMeta, ...meta };
+    if (stealthMeta && Object.keys(stealthMeta).length) {
+      meta = Object.fromEntries(
+        [...new Set([...Object.keys(stealthMeta), ...Object.keys(meta)])].map(key => {
+          const current = meta[key];
+          const stealth = stealthMeta[key];
+          const hasCurrent = !(current === '' || current == null);
+          return [key, hasCurrent ? current : stealth];
+        })
+      );
+    }
   }
   const size = await readImageSizeFromFile(file);
   if (!meta.width && size.width) meta.width = size.width;
