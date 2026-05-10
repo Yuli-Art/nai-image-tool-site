@@ -3510,6 +3510,25 @@
   </div>
 </div>
 
+<!-- ── DOWNLOAD OPTIONS MODAL ── -->
+<div class="char-modal-overlay" id="download-options-modal" onclick="closeDownloadOptionsModal(event)">
+  <div class="char-modal-box" onclick="event.stopPropagation()" style="max-width:460px;">
+    <div class="char-modal-hd">
+      <span id="download-options-title">下載圖片</span>
+      <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeDownloadOptionsModal()">✕</button>
+    </div>
+    <div class="char-modal-body">
+      <div style="font-size:.84rem;color:var(--txt2);line-height:1.6;" id="download-options-desc">
+        選擇要保留原始 NovelAI metadata，或輸出成不含 metadata 的新圖片。
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <button class="btn btn-p" type="button" onclick="chooseDownloadMetadataMode('keep')">保留 metadata</button>
+        <button class="btn btn-s btn-out" type="button" onclick="chooseDownloadMetadataMode('strip')">移除 metadata</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ── ADD GALLERY VIEW POPUP ── -->
 <div class="gal-view-popup-overlay" id="gal-view-popup" onclick="closeGalViewPopup(event)">
   <div class="gal-view-popup" onclick="event.stopPropagation()">
@@ -10565,6 +10584,101 @@ function clearTagFilters() {
   filterGallery();
 }
 
+let downloadOptionsHandler = null;
+
+function getImageMimeType(img) {
+  return img?.metadata?._mimeType || 'image/png';
+}
+
+function getImageExtension(mimeType = 'image/png') {
+  if (/png/i.test(mimeType)) return 'png';
+  if (/webp/i.test(mimeType)) return 'webp';
+  if (/jpe?g/i.test(mimeType)) return 'jpg';
+  return 'png';
+}
+
+function buildImageDownloadName(img, mimeType = getImageMimeType(img)) {
+  const ts = new Date(img.timestamp).toISOString().slice(0,19).replace(/[T:]/g,'-');
+  return `nai_${ts}_seed${img.metadata?.seed || 0}.${getImageExtension(mimeType)}`;
+}
+
+function triggerBlobDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function blobToImageBitmap(blob) {
+  if ('createImageBitmap' in window) {
+    try { return await createImageBitmap(blob); } catch (_) {}
+  }
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(blob);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = err => {
+      URL.revokeObjectURL(url);
+      reject(err);
+    };
+    img.src = url;
+  });
+}
+
+async function exportImageWithoutMetadata(arrayBuffer, mimeType = 'image/png') {
+  const sourceBlob = new Blob([arrayBuffer], { type: mimeType || 'image/png' });
+  const drawable = await blobToImageBitmap(sourceBlob);
+  const width = drawable.width || drawable.naturalWidth || 0;
+  const height = drawable.height || drawable.naturalHeight || 0;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('無法建立下載畫布');
+  ctx.drawImage(drawable, 0, 0, width, height);
+  if (typeof drawable.close === 'function') drawable.close();
+  const outMime = /^image\/(png|jpeg|webp)$/i.test(mimeType || '') ? mimeType : 'image/png';
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('無法輸出圖片')), outMime, 0.98);
+  });
+}
+
+async function prepareImageDownloadBlob(img, stripMetadata = false) {
+  const mimeType = getImageMimeType(img);
+  if (!stripMetadata) return new Blob([img.data], { type: mimeType });
+  return exportImageWithoutMetadata(img.data, mimeType);
+}
+
+function openDownloadOptionsModal({ title, description, onChoose }) {
+  downloadOptionsHandler = onChoose;
+  document.getElementById('download-options-title').textContent = title || '下載圖片';
+  document.getElementById('download-options-desc').textContent = description || '選擇下載方式。';
+  document.getElementById('download-options-modal').classList.add('open');
+}
+
+function closeDownloadOptionsModal(e) {
+  if (e && e.target !== document.getElementById('download-options-modal')) return;
+  document.getElementById('download-options-modal').classList.remove('open');
+  downloadOptionsHandler = null;
+}
+
+async function chooseDownloadMetadataMode(mode) {
+  const handler = downloadOptionsHandler;
+  document.getElementById('download-options-modal').classList.remove('open');
+  downloadOptionsHandler = null;
+  if (!handler) return;
+  try {
+    await handler(mode);
+  } catch (err) {
+    toast(`下載失敗：${err.message || err}`, 'err');
+  }
+}
+
 function setActiveTagTypeFilter(typeId) {
   activeTagTypeFilter = typeId || '';
   buildTagFilterList();
@@ -10758,21 +10872,31 @@ function bulkRemoveTagsFromSelected() {
   });
 }
 
-async function downloadSelected() {
+function downloadSelected() {
   if (!selectedIds.size) { toast('請先選擇圖片','warn'); return; }
+  openDownloadOptionsModal({
+    title: `打包下載 ${selectedIds.size} 張圖片`,
+    description: '要保留這批圖片原本的 metadata，還是輸出成不含 metadata 的版本再打包？',
+    onChoose: mode => downloadSelectedWithMode(mode)
+  });
+}
+
+async function downloadSelectedWithMode(mode = 'keep') {
   const zip = new JSZip();
   const items = galleryData.filter(img => selectedIds.has(img.id));
-  items.forEach((img, i) => {
+  for (let i = 0; i < items.length; i++) {
+    const img = items[i];
     const ts = new Date(img.timestamp).toISOString().slice(0,19).replace(/[T:]/g,'-');
     const seed = img.metadata?.seed || i;
-    zip.file(`nai_${ts}_seed${seed}.png`, img.data);
-  });
+    const blob = await prepareImageDownloadBlob(img, mode === 'strip');
+    zip.file(`nai_${ts}_seed${seed}.${getImageExtension(blob.type || getImageMimeType(img))}`, await blob.arrayBuffer());
+  }
   const blob = await zip.generateAsync({type:'blob'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = `nai_gallery_${items.length}張.zip`; a.click();
   URL.revokeObjectURL(url);
-  toast(`已打包 ${items.length} 張圖片`,'ok');
+  toast(`已打包 ${items.length} 張圖片${mode === 'strip' ? '（無 metadata）' : ''}`,'ok');
 }
 
 async function deleteSelected() {
@@ -10954,13 +11078,19 @@ function fillFromModal() {
 }
 
 function downloadModal() {
+  openDownloadOptionsModal({
+    title: '下載圖片',
+    description: '要保留這張圖片原本的 NovelAI metadata，還是下載成不含 metadata 的新圖片？',
+    onChoose: mode => downloadModalWithMode(mode)
+  });
+}
+
+async function downloadModalWithMode(mode = 'keep') {
   const img = galleryData.find(i=>i.id===modalImageId);
   if (!img) return;
-  const url = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
-  const a = document.createElement('a');
-  const ts = new Date(img.timestamp).toISOString().slice(0,19).replace(/[T:]/g,'-');
-  a.href = url; a.download = `nai_${ts}_seed${img.metadata?.seed||0}.png`; a.click();
-  URL.revokeObjectURL(url);
+  const blob = await prepareImageDownloadBlob(img, mode === 'strip');
+  triggerBlobDownload(blob, buildImageDownloadName(img, blob.type || getImageMimeType(img)));
+  toast(mode === 'strip' ? '已下載無 metadata 版本' : '已下載原始圖片', 'ok');
 }
 
 async function deleteModal() {
@@ -10986,13 +11116,23 @@ async function deleteModal() {
 // CURRENT IMAGE ACTIONS
 // ═══════════════════════════════════════════
 function downloadCurrent() {
+  openDownloadOptionsModal({
+    title: '下載目前結果',
+    description: '要保留目前結果的 metadata，還是下載成不含 metadata 的新圖片？',
+    onChoose: mode => downloadCurrentWithMode(mode)
+  });
+}
+
+async function downloadCurrentWithMode(mode = 'keep') {
   if (!lastBlob) return;
-  const url = URL.createObjectURL(lastBlob);
-  const a = document.createElement('a');
+  const mimeType = lastBlob.type || 'image/png';
+  const blob = mode === 'strip'
+    ? await exportImageWithoutMetadata(await lastBlob.arrayBuffer(), mimeType)
+    : lastBlob;
   const ts = new Date().toISOString().slice(0,19).replace(/[T:]/g,'-');
   const seed = document.getElementById('seed').value;
-  a.href = url; a.download = `nai_${ts}_seed${seed}.png`; a.click();
-  URL.revokeObjectURL(url);
+  triggerBlobDownload(blob, `nai_${ts}_seed${seed}.${getImageExtension(blob.type || mimeType)}`);
+  toast(mode === 'strip' ? '已下載無 metadata 版本' : '已下載原始圖片', 'ok');
 }
 
 function copyCurrentPrompt() {
