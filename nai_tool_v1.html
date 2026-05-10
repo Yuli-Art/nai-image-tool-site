@@ -1742,6 +1742,17 @@
     .char-ref-item{position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;flex-shrink:0;}
     .char-ref-item img{width:100%;height:100%;object-fit:cover;display:block;}
     .char-ref-remove{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.65rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
+    .char-prompt-variant-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+    .char-prompt-variant-btn{border:1px solid var(--border);background:var(--bg);color:var(--txt2);border-radius:999px;padding:6px 12px;font-size:.76rem;font-weight:700;cursor:pointer;transition:border-color .15s,background .15s,color .15s;}
+    .char-prompt-variant-btn:hover{border-color:var(--accent);color:var(--txt);}
+    .char-prompt-variant-btn.active{background:var(--accent-l);border-color:var(--accent);color:var(--accent);}
+    .char-prompt-variant-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
+    .char-prompt-variant-default{font-size:.74rem;color:var(--txt2);}
+    .char-prompt-picker-row{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:8px;}
+    .char-prompt-picker-row:last-child{border-bottom:none;}
+    .char-prompt-picker-name{font-size:.84rem;font-weight:700;color:var(--txt);}
+    .char-prompt-picker-preview{font-size:.73rem;color:var(--txt2);font-family:monospace;line-height:1.45;white-space:pre-wrap;word-break:break-word;}
+    .char-prompt-picker-actions{display:flex;gap:6px;flex-wrap:wrap;}
     .gal-picker-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1320;display:flex;align-items:center;justify-content:center;}
     .gal-picker-overlay:not(.open){display:none;}
     .gal-picker-box{background:var(--bg2);border-radius:14px;width:min(96vw,700px);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;}
@@ -3410,8 +3421,24 @@
         </div>
       </div>
       <div>
-        <div class="char-field-label">角色 Prompt</div>
-        <textarea id="char-edit-prompt" class="inp prompt-editor-sm" data-manual-resize="true" rows="3" placeholder="例：raiden shogun, 1girl, ..." style="width:100%;resize:vertical;"></textarea>
+        <div class="char-field-label" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <span>角色 Prompt 組</span>
+          <button class="btn btn-s btn-out" type="button" onclick="addCharPromptVariant()">＋ 新增 Prompt</button>
+        </div>
+        <div class="char-prompt-variant-tabs" id="char-prompt-variant-tabs"></div>
+        <div class="char-prompt-variant-meta">
+          <div class="char-prompt-variant-default" id="char-prompt-variant-default">目前沒有 Prompt 組</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn btn-s btn-out" type="button" id="char-prompt-variant-set-default" onclick="setCharPromptVariantDefault()">設成預設</button>
+            <button class="btn btn-d btn-out" type="button" id="char-prompt-variant-remove" onclick="removeCharPromptVariant()">刪除這組</button>
+          </div>
+        </div>
+        <div class="char-field-label">Prompt 名稱</div>
+        <input id="char-prompt-variant-name" class="inp" type="text" placeholder="例：基礎造型 / 冬裝 / 無鬍子修正版" style="width:100%;" oninput="updateCurrentCharPromptVariant('name', this.value)">
+        <div class="char-field-label" style="margin-top:10px;">正向 Prompt</div>
+        <textarea id="char-edit-prompt" class="inp prompt-editor-sm" data-manual-resize="true" rows="3" placeholder="例：raiden shogun, 1girl, ..." style="width:100%;resize:vertical;" oninput="updateCurrentCharPromptVariant('positivePrompt', this.value)"></textarea>
+        <div class="char-field-label" style="margin-top:10px;">負向 Prompt</div>
+        <textarea id="char-edit-neg-prompt" class="inp prompt-editor-sm" data-manual-resize="true" rows="3" placeholder="例：beard, mustache, old man..." style="width:100%;resize:vertical;" oninput="updateCurrentCharPromptVariant('negativePrompt', this.value)"></textarea>
       </div>
       <div>
         <div class="char-field-label">備註</div>
@@ -3469,6 +3496,17 @@
       <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeCharRefPicker()">✕</button>
     </div>
     <div id="char-ref-picker-grid" style="overflow-y:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px;"></div>
+  </div>
+</div>
+
+<!-- ── CHARACTER PROMPT PICKER MODAL ── -->
+<div class="char-ref-picker-overlay" id="char-prompt-picker-modal" onclick="closeCharPromptPicker(event)">
+  <div class="char-ref-picker-box" onclick="event.stopPropagation()" style="width:min(96vw,640px);">
+    <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+      <span style="font-weight:700;font-size:.9rem;" id="char-prompt-picker-title">選擇角色 Prompt</span>
+      <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeCharPromptPicker()">✕</button>
+    </div>
+    <div id="char-prompt-picker-list" style="overflow-y:auto;max-height:70vh;"></div>
   </div>
 </div>
 
@@ -4494,18 +4532,86 @@ async function dbGetImageById(id) {
   return dbOp(db,'images','readonly', s => s.get(id));
 }
 
+function buildCharPromptVariantId() {
+  return `cpv_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
+}
+
+function normalizeCharPromptVariant(variant, index = 0) {
+  const name = String(variant?.name || '').trim();
+  return {
+    id: String(variant?.id || buildCharPromptVariantId()),
+    name: name || (index === 0 ? '預設造型' : `Prompt ${index + 1}`),
+    positivePrompt: String(variant?.positivePrompt ?? variant?.prompt ?? '').trim(),
+    negativePrompt: String(variant?.negativePrompt ?? variant?.negPrompt ?? '').trim(),
+    isDefault: !!variant?.isDefault
+  };
+}
+
+function normalizeCharacterRecord(char = {}) {
+  let promptVariants = Array.isArray(char.promptVariants) && char.promptVariants.length
+    ? char.promptVariants.map((variant, index) => normalizeCharPromptVariant(variant, index))
+    : [];
+  if (!promptVariants.length) {
+    promptVariants = [
+      normalizeCharPromptVariant({
+        id: char.defaultPromptVariantId || buildCharPromptVariantId(),
+        name: '預設造型',
+        positivePrompt: char.prompt || '',
+        negativePrompt: char.negPrompt || '',
+        isDefault: true
+      }, 0)
+    ];
+  }
+  let defaultPromptVariantId = (
+    char.defaultPromptVariantId &&
+    promptVariants.some(variant => variant.id === char.defaultPromptVariantId)
+  )
+    ? char.defaultPromptVariantId
+    : (promptVariants.find(variant => variant.isDefault)?.id || promptVariants[0].id);
+  promptVariants = promptVariants.map(variant => ({ ...variant, isDefault: variant.id === defaultPromptVariantId }));
+  const defaultVariant = promptVariants.find(variant => variant.id === defaultPromptVariantId) || promptVariants[0] || null;
+  return {
+    ...char,
+    promptVariants,
+    defaultPromptVariantId,
+    prompt: defaultVariant?.positivePrompt || '',
+    negPrompt: defaultVariant?.negativePrompt || ''
+  };
+}
+
+function getCharacterPromptVariants(char) {
+  return normalizeCharacterRecord(char).promptVariants;
+}
+
+function getDefaultCharacterPromptVariant(char) {
+  const normalized = normalizeCharacterRecord(char);
+  return normalized.promptVariants.find(variant => variant.id === normalized.defaultPromptVariantId) || normalized.promptVariants[0] || null;
+}
+
+function getCharacterPromptSearchText(char) {
+  return getCharacterPromptVariants(char)
+    .map(variant => `${variant.name} ${variant.positivePrompt} ${variant.negativePrompt}`)
+    .join(' ')
+    .toLowerCase();
+}
+
 // ── Characters DB ──
 async function dbSaveCharacter(char) {
+  const normalized = normalizeCharacterRecord(char);
+  const defaultVariant = getDefaultCharacterPromptVariant(normalized);
   const db = await getDB();
   return dbOp(db,'characters','readwrite', s => s.add({
-    name: char.name || '',
-    seriesName: char.seriesName || '',
-    tags: char.tags || [],
-    primaryTagName: char.primaryTagName || '',
-    prompt: char.prompt || '',
-    notes: char.notes || '',
-    thumbImageId: char.thumbImageId ?? null,
-    preciseRefImageIds: char.preciseRefImageIds || [],
+    name: normalized.name || '',
+    seriesName: normalized.seriesName || '',
+    tags: normalized.tags || [],
+    primaryTagName: normalized.primaryTagName || '',
+    promptVariants: normalized.promptVariants || [],
+    defaultPromptVariantId: normalized.defaultPromptVariantId || '',
+    prompt: defaultVariant?.positivePrompt || '',
+    negPrompt: defaultVariant?.negativePrompt || '',
+    notes: normalized.notes || '',
+    thumbImageId: normalized.thumbImageId ?? null,
+    preciseRefImageIds: normalized.preciseRefImageIds || [],
     timestamp: Date.now()
   }));
 }
@@ -4527,7 +4633,7 @@ async function dbUpdateCharacter(id, fields) {
 async function dbGetCharacters() {
   const db = await getDB();
   const all = await dbOp(db,'characters','readonly', s => s.getAll());
-  return all.sort((a,b) => b.timestamp - a.timestamp);
+  return all.map(normalizeCharacterRecord).sort((a,b) => b.timestamp - a.timestamp);
 }
 async function dbDeleteCharacter(id) {
   const db = await getDB();
@@ -7015,7 +7121,7 @@ function renderGenerateDockCharacters(q) {
   const filterRows = renderDockCharFilters();
   const items = characterData
       .filter(c => {
-        const matchQ = !q || c.name.toLowerCase().includes(q) || (c.prompt||'').toLowerCase().includes(q) || (c.seriesName||'').toLowerCase().includes(q) || (c.tags||[]).some(t => t.toLowerCase().includes(q));
+        const matchQ = !q || c.name.toLowerCase().includes(q) || getCharacterPromptSearchText(c).includes(q) || (c.seriesName||'').toLowerCase().includes(q) || (c.tags||[]).some(t => t.toLowerCase().includes(q));
         const matchSeries = !charActiveSeries || c.seriesName === charActiveSeries;
         const matchTags = charActiveTags.size===0 || [...charActiveTags].every(t => (c.tags||[]).includes(t));
         const matchView = applyCharViewFilter(c, activeView);
@@ -7032,15 +7138,21 @@ function renderGenerateDockCharacters(q) {
       ? `<img src="${c._thumbUrl}" alt="">`
       : `<div class="dock-record-media" style="width:100%;height:auto;aspect-ratio:5/7;border-radius:0;">👤</div>`;
     const tags = (c.tags||[]).slice(0,3).map(t => `<span class="gcard-tag" style="${getTagChipStyle(t, 0.14)}">${esc(t)}</span>`).join('');
+    const promptVariants = getCharacterPromptVariants(c);
+    const promptCountBadge = promptVariants.length ? `<span class="gcard-tag">Prompt ×${promptVariants.length}</span>` : '';
+    const defaultVariant = getDefaultCharacterPromptVariant(c);
+    const subtitle = promptVariants.length > 1
+      ? [c.seriesName, defaultVariant?.name].filter(Boolean).join(' · ') || '角色庫'
+      : (c.seriesName || defaultVariant?.name || '角色庫');
     const sel = charSelected.has(c.id) ? ' selected' : '';
     return `<div class="dock-gallery-card${sel}" onclick="onDockCharCardClick(${c.id})">
       ${media}
       <div class="gcard-footer">
-        <div class="gcard-tags">${tags}</div>
+        <div class="gcard-tags">${tags}${promptCountBadge}</div>
         <div class="dock-record-title" style="font-size:.92rem;line-height:1.35;">${esc(c.name)}</div>
-        <div class="dock-record-sub">${esc(c.seriesName || '角色庫')}</div>
+        <div class="dock-record-sub">${esc(subtitle)}</div>
         <div class="dock-record-actions" style="margin-top:8px;">
-          <button class="btn btn-s" type="button" data-text="${esc(c.prompt || '')}" onclick="event.stopPropagation();copyDockText(this.dataset.text,'角色 Prompt')">複製 Prompt</button>
+          <button class="btn btn-s" type="button" onclick="event.stopPropagation();openCharacterPromptAction(${c.id})">${promptVariants.length > 1 ? '選擇 Prompt' : '加入角色'}</button>
         </div>
       </div>
     </div>`;
@@ -8877,13 +8989,18 @@ function blendGenPreview() {
 // ═══════════════════════════════════════════
 // CHARACTER LIBRARY
 // ═══════════════════════════════════════════
-let characterData = [];       // {id, name, seriesName, tags, prompt, notes, thumbImageId, preciseRefImageIds, timestamp, _thumbUrl}
+let characterData = [];       // {id, name, seriesName, tags, promptVariants, defaultPromptVariantId, prompt, negPrompt, notes, thumbImageId, preciseRefImageIds, timestamp, _thumbUrl}
 let charSelectMode = false;
 let charSelected = new Set();
 let charEditId = null;        // null = new, number = editing
 let charEditThumbImageId = null;
 let charEditRefImageIds = [];
 let charEditRefUrls = {};     // imageId → blob URL cache
+let charEditPromptVariants = [];
+let charEditActivePromptVariantId = '';
+let charPromptPickerCharacterId = null;
+let charPromptPickerPositiveTargetId = 'prompt';
+let charPromptPickerNegativeTargetId = 'neg-prompt';
 
 // ── Gallery Image Picker ──
 let galPickerPurpose = null;  // 'charThumb' | 'charRef' | 'preciseRef'
@@ -8895,6 +9012,220 @@ const GAL_PICKER_PAGE = 10;
 
 // ── Char Ref Sub-picker ──
 // used when selecting a character for preciseRef and it has multiple refs
+
+function createEmptyCharPromptVariant(index = 0) {
+  return normalizeCharPromptVariant({
+    id: buildCharPromptVariantId(),
+    name: index === 0 ? '預設造型' : '',
+    positivePrompt: '',
+    negativePrompt: '',
+    isDefault: index === 0
+  }, index);
+}
+
+function ensureCharEditPromptVariants() {
+  if (!charEditPromptVariants.length) {
+    const firstVariant = createEmptyCharPromptVariant(0);
+    charEditPromptVariants = [firstVariant];
+    charEditActivePromptVariantId = firstVariant.id;
+  }
+  if (!charEditPromptVariants.some(variant => variant.id === charEditActivePromptVariantId)) {
+    charEditActivePromptVariantId = (charEditPromptVariants.find(variant => variant.isDefault)?.id) || charEditPromptVariants[0].id;
+  }
+  if (!charEditPromptVariants.some(variant => variant.isDefault)) {
+    charEditPromptVariants = charEditPromptVariants.map((variant, index) => ({ ...variant, isDefault: index === 0 }));
+  }
+}
+
+function getActiveCharEditPromptVariant() {
+  ensureCharEditPromptVariants();
+  return charEditPromptVariants.find(variant => variant.id === charEditActivePromptVariantId) || charEditPromptVariants[0] || null;
+}
+
+function renderCharPromptVariantTabs() {
+  ensureCharEditPromptVariants();
+  const tabsEl = document.getElementById('char-prompt-variant-tabs');
+  if (!tabsEl) return;
+  tabsEl.innerHTML = charEditPromptVariants.map((variant, index) => `
+    <button
+      type="button"
+      class="char-prompt-variant-btn ${variant.id === charEditActivePromptVariantId ? 'active' : ''}"
+      onclick="switchCharPromptVariant('${variant.id}')">
+      ${esc(variant.name || `Prompt ${index + 1}`)}
+    </button>
+  `).join('');
+}
+
+function renderCharPromptVariantFields() {
+  ensureCharEditPromptVariants();
+  const activeVariant = getActiveCharEditPromptVariant();
+  if (!activeVariant) return;
+  const nameInput = document.getElementById('char-prompt-variant-name');
+  const promptInput = document.getElementById('char-edit-prompt');
+  const negInput = document.getElementById('char-edit-neg-prompt');
+  const defaultLabel = document.getElementById('char-prompt-variant-default');
+  const setDefaultBtn = document.getElementById('char-prompt-variant-set-default');
+  const removeBtn = document.getElementById('char-prompt-variant-remove');
+  if (nameInput) nameInput.value = activeVariant.name || '';
+  if (promptInput) promptInput.value = activeVariant.positivePrompt || '';
+  if (negInput) negInput.value = activeVariant.negativePrompt || '';
+  if (defaultLabel) defaultLabel.textContent = activeVariant.isDefault ? '這組會作為角色預設 Prompt 使用。' : '目前不是預設，可切換成角色預設 Prompt。';
+  if (setDefaultBtn) setDefaultBtn.disabled = !!activeVariant.isDefault;
+  if (removeBtn) removeBtn.disabled = charEditPromptVariants.length <= 1;
+}
+
+function renderCharPromptVariants() {
+  renderCharPromptVariantTabs();
+  renderCharPromptVariantFields();
+}
+
+function switchCharPromptVariant(id) {
+  charEditActivePromptVariantId = id;
+  renderCharPromptVariants();
+}
+
+function addCharPromptVariant() {
+  ensureCharEditPromptVariants();
+  const nextVariant = createEmptyCharPromptVariant(charEditPromptVariants.length);
+  charEditPromptVariants.push(nextVariant);
+  charEditActivePromptVariantId = nextVariant.id;
+  renderCharPromptVariants();
+}
+
+function updateCurrentCharPromptVariant(field, value) {
+  ensureCharEditPromptVariants();
+  charEditPromptVariants = charEditPromptVariants.map(variant =>
+    variant.id === charEditActivePromptVariantId ? { ...variant, [field]: value } : variant
+  );
+  if (field === 'name') renderCharPromptVariantTabs();
+}
+
+function setCharPromptVariantDefault(id = charEditActivePromptVariantId) {
+  ensureCharEditPromptVariants();
+  charEditPromptVariants = charEditPromptVariants.map(variant => ({ ...variant, isDefault: variant.id === id }));
+  charEditActivePromptVariantId = id;
+  renderCharPromptVariants();
+}
+
+function removeCharPromptVariant(id = charEditActivePromptVariantId) {
+  ensureCharEditPromptVariants();
+  if (charEditPromptVariants.length <= 1) {
+    toast('至少要保留一組 Prompt', 'warn');
+    return;
+  }
+  charEditPromptVariants = charEditPromptVariants.filter(variant => variant.id !== id);
+  if (!charEditPromptVariants.some(variant => variant.isDefault) && charEditPromptVariants.length) {
+    charEditPromptVariants[0].isDefault = true;
+  }
+  charEditActivePromptVariantId = (charEditPromptVariants.find(variant => variant.isDefault)?.id) || charEditPromptVariants[0]?.id || '';
+  renderCharPromptVariants();
+}
+
+function appendPromptTextToField(targetId, text) {
+  const el = document.getElementById(targetId);
+  const nextText = String(text || '').trim();
+  if (!el || !nextText) return false;
+  const currentRaw = String(el.value || '');
+  const currentTrimmed = currentRaw.replace(/\s+$/, '');
+  if (!currentTrimmed) {
+    el.value = nextText;
+  } else {
+    const separator = (currentTrimmed.includes('\n') || nextText.includes('\n')) ? '\n' : ', ';
+    el.value = `${currentTrimmed}${separator}${nextText}`;
+  }
+  el.dispatchEvent(new Event('input'));
+  el.focus();
+  return true;
+}
+
+function openCharacterPromptAction(charId, options = {}) {
+  const character = characterData.find(item => item.id === charId);
+  if (!character) return;
+  const variants = getCharacterPromptVariants(character);
+  if (!variants.length) {
+    toast('這個角色還沒有 Prompt', 'warn');
+    return;
+  }
+  const positiveTargetId = options.positiveTargetId || 'prompt';
+  const negativeTargetId = options.negativeTargetId || 'neg-prompt';
+  if (variants.length === 1) {
+    appendCharacterPromptVariant(charId, variants[0].id, { positiveTargetId, negativeTargetId });
+    return;
+  }
+  openCharPromptPicker(charId, { positiveTargetId, negativeTargetId });
+}
+
+function openCharPromptPicker(charId, options = {}) {
+  charPromptPickerCharacterId = charId;
+  charPromptPickerPositiveTargetId = options.positiveTargetId || 'prompt';
+  charPromptPickerNegativeTargetId = options.negativeTargetId || 'neg-prompt';
+  renderCharPromptPicker();
+  document.getElementById('char-prompt-picker-modal').classList.add('open');
+}
+
+function renderCharPromptPicker() {
+  const character = characterData.find(item => item.id === charPromptPickerCharacterId);
+  const list = document.getElementById('char-prompt-picker-list');
+  const title = document.getElementById('char-prompt-picker-title');
+  if (!character || !list || !title) return;
+  const variants = getCharacterPromptVariants(character);
+  title.textContent = `${character.name} — 選擇角色 Prompt`;
+  list.innerHTML = variants.map(variant => `
+    <div class="char-prompt-picker-row">
+      <div>
+        <div class="char-prompt-picker-name">${esc(variant.name || '未命名 Prompt')}</div>
+        ${variant.isDefault ? `<div class="char-prompt-variant-default" style="margin-top:2px;">預設 Prompt</div>` : ''}
+      </div>
+      <div class="char-prompt-picker-preview">${variant.positivePrompt ? `正向：${esc(variant.positivePrompt.slice(0, 140))}` : '正向：—'}${variant.negativePrompt ? `<br>負向：${esc(variant.negativePrompt.slice(0, 140))}` : ''}</div>
+      <div class="char-prompt-picker-actions">
+        <button class="btn btn-p" type="button" onclick="appendCharacterPromptVariant(${character.id}, '${variant.id}')">加入正負</button>
+        <button class="btn btn-s btn-out" type="button" onclick="appendCharacterPromptVariant(${character.id}, '${variant.id}', { negativeOnly: true })">只加負向</button>
+        <button class="btn btn-s btn-out" type="button" onclick="appendCharacterPromptVariant(${character.id}, '${variant.id}', { positiveOnly: true })">只加正向</button>
+        <button class="btn btn-s" type="button" onclick="copyCharacterPromptVariant(${character.id}, '${variant.id}', 'positive')">複製正向</button>
+        <button class="btn btn-s" type="button" onclick="copyCharacterPromptVariant(${character.id}, '${variant.id}', 'negative')">複製負向</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function closeCharPromptPicker(e) {
+  if (e && e.target !== document.getElementById('char-prompt-picker-modal')) return;
+  document.getElementById('char-prompt-picker-modal').classList.remove('open');
+  charPromptPickerCharacterId = null;
+}
+
+function appendCharacterPromptVariant(charId, variantId, options = {}) {
+  const character = characterData.find(item => item.id === charId);
+  if (!character) return;
+  const variant = getCharacterPromptVariants(character).find(item => item.id === variantId);
+  if (!variant) return;
+  const positiveTargetId = options.positiveTargetId || charPromptPickerPositiveTargetId || 'prompt';
+  const negativeTargetId = options.negativeTargetId || charPromptPickerNegativeTargetId || 'neg-prompt';
+  const shouldAddPositive = !options.negativeOnly;
+  const shouldAddNegative = !options.positiveOnly;
+  const addedPositive = shouldAddPositive ? appendPromptTextToField(positiveTargetId, variant.positivePrompt) : false;
+  const addedNegative = shouldAddNegative ? appendPromptTextToField(negativeTargetId, variant.negativePrompt) : false;
+  if (!addedPositive && !addedNegative) {
+    toast('這組 Prompt 目前沒有可加入的內容', 'warn');
+    return;
+  }
+  closeCharPromptPicker();
+  const actionLabel = addedPositive && addedNegative ? '正負 Prompt' : addedPositive ? '正向 Prompt' : '負向 Prompt';
+  toast(`已加入「${character.name}／${variant.name}」的${actionLabel}`, 'ok');
+}
+
+function copyCharacterPromptVariant(charId, variantId, kind = 'positive') {
+  const character = characterData.find(item => item.id === charId);
+  if (!character) return;
+  const variant = getCharacterPromptVariants(character).find(item => item.id === variantId);
+  if (!variant) return;
+  const text = kind === 'negative' ? variant.negativePrompt : variant.positivePrompt;
+  if (!String(text || '').trim()) {
+    toast(`這組 Prompt 沒有${kind === 'negative' ? '負向' : '正向'}內容`, 'warn');
+    return;
+  }
+  copyDockText(text, `${character.name}／${variant.name} ${kind === 'negative' ? '負向 Prompt' : '角色 Prompt'}`);
+}
 
 async function loadCharacterData() {
   characterData = await dbGetCharacters();
@@ -9062,7 +9393,7 @@ async function renderCharPage() {
   const activeView = charViews.find(v => v.id === activeCharViewId);
 
   let filtered = characterData.filter(c => {
-    const matchQ = !q || c.name.toLowerCase().includes(q) || (c.prompt||'').toLowerCase().includes(q) || (c.seriesName||'').toLowerCase().includes(q) || (c.tags||[]).some(t => t.toLowerCase().includes(q));
+    const matchQ = !q || c.name.toLowerCase().includes(q) || getCharacterPromptSearchText(c).includes(q) || (c.seriesName||'').toLowerCase().includes(q) || (c.tags||[]).some(t => t.toLowerCase().includes(q));
     const matchSeries = !activeSeries || c.seriesName === activeSeries;
     const matchTags = activeTags.size === 0 || [...activeTags].every(t => (c.tags||[]).includes(t));
     const matchView = applyCharViewFilter(c, activeView);
@@ -9088,13 +9419,14 @@ async function renderCharPage() {
     const tags = (c.tags||[]).slice(0,3).map(t => `<span class="char-card-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
     const refCount = (c.preciseRefImageIds||[]).length;
     const refBadge = refCount ? `<span class="feat-tag" style="font-size:.65rem;margin-top:3px;">Ref ×${refCount}</span>` : '';
+    const promptBadge = getCharacterPromptVariants(c).length ? `<span class="feat-tag" style="font-size:.65rem;margin-top:3px;">Prompt ×${getCharacterPromptVariants(c).length}</span>` : '';
     return `<div class="gcard char-card ${sel}" onclick="onCharCardClick(event,${c.id})">
       ${sel ? '<div class="gcard-check">✓</div>' : ''}
       ${thumb}
       <div class="char-card-footer">
         <div class="char-card-name">${esc(c.name)}</div>
         ${c.seriesName ? `<div class="char-card-series">${esc(c.seriesName)}</div>` : ''}
-        <div class="char-card-tags">${tags}${refBadge}</div>
+        <div class="char-card-tags">${tags}${promptBadge}${refBadge}</div>
       </div>
     </div>`;
   }).join('');
@@ -9194,8 +9526,9 @@ async function openCharEditModal(id) {
     document.getElementById('char-edit-auto-tag').checked = !!c.primaryTagName;
     charEditTagsState = dedupeTags(c.tags || []);
     renderCharEditTags();
-    document.getElementById('char-edit-prompt').value = c.prompt || '';
     document.getElementById('char-edit-notes').value = c.notes || '';
+    charEditPromptVariants = getCharacterPromptVariants(c).map((variant, index) => normalizeCharPromptVariant(variant, index));
+    charEditActivePromptVariantId = c.defaultPromptVariantId || charEditPromptVariants[0]?.id || '';
     charEditThumbImageId = c.thumbImageId ?? null;
     charEditRefImageIds = [...(c.preciseRefImageIds || [])];
     // restore thumb url
@@ -9224,11 +9557,13 @@ async function openCharEditModal(id) {
     document.getElementById('char-edit-auto-tag').checked = false;
     charEditTagsState = [];
     renderCharEditTags();
-    document.getElementById('char-edit-prompt').value = '';
     document.getElementById('char-edit-notes').value = '';
+    charEditPromptVariants = [createEmptyCharPromptVariant(0)];
+    charEditActivePromptVariantId = charEditPromptVariants[0].id;
     renderCharEditThumb(null);
   }
   renderCharEditRefList();
+  renderCharPromptVariants();
   bindInlineTagInput({
     inputId: 'char-edit-tag-in',
     ddId: 'char-tag-dd',
@@ -9300,6 +9635,7 @@ async function saveCharEdit() {
   const name = document.getElementById('char-edit-name').value.trim();
   const autoPrimaryTag = document.getElementById('char-edit-auto-tag').checked;
   if (!name) { toast('請填寫角色名稱','err'); return; }
+  ensureCharEditPromptVariants();
   let tags = dedupeTags(charEditTagsState);
   let primaryTagName = '';
   if (autoPrimaryTag) {
@@ -9307,12 +9643,22 @@ async function saveCharEdit() {
     tags = dedupeTags([...tags, primaryTagName]);
   }
   tags = await ensureKnownTagList(tags);
+  let promptVariants = charEditPromptVariants
+    .map((variant, index) => normalizeCharPromptVariant(variant, index))
+    .filter((variant, index) => index === 0 || variant.name.trim() || variant.positivePrompt.trim() || variant.negativePrompt.trim());
+  if (!promptVariants.length) promptVariants = [createEmptyCharPromptVariant(0)];
+  let defaultPromptVariantId = promptVariants.find(variant => variant.isDefault)?.id || promptVariants[0].id;
+  promptVariants = promptVariants.map(variant => ({ ...variant, isDefault: variant.id === defaultPromptVariantId }));
+  const defaultVariant = promptVariants.find(variant => variant.id === defaultPromptVariantId) || promptVariants[0];
   const data = {
     name,
     seriesName: document.getElementById('char-edit-series').value.trim(),
     primaryTagName,
     tags,
-    prompt: document.getElementById('char-edit-prompt').value.trim(),
+    promptVariants,
+    defaultPromptVariantId,
+    prompt: defaultVariant?.positivePrompt || '',
+    negPrompt: defaultVariant?.negativePrompt || '',
     notes: document.getElementById('char-edit-notes').value.trim(),
     thumbImageId: charEditThumbImageId,
     preciseRefImageIds: [...charEditRefImageIds],
@@ -11138,16 +11484,18 @@ function saveNoteInsertModal() {
 function getPromptInsertItems() {
   const items = [];
   characterData.forEach(c => {
-    const text = String(c.prompt || '').trim();
-    if (!text) return;
-    items.push({
-      source: 'char',
-      sourceLabel: '角色 Prompt',
-      badgeClass: 'nc-composition',
-      title: c.name || '未命名角色',
-      subtitle: c.seriesName ? `作品：${c.seriesName}` : '角色庫',
-      text,
-      tags: c.tags || []
+    getCharacterPromptVariants(c).forEach(variant => {
+      const text = String(variant.positivePrompt || '').trim();
+      if (!text) return;
+      items.push({
+        source: 'char',
+        sourceLabel: '角色 Prompt',
+        badgeClass: 'nc-composition',
+        title: getCharacterPromptVariants(c).length > 1 ? `${c.name || '未命名角色'} · ${variant.name}` : (c.name || '未命名角色'),
+        subtitle: c.seriesName ? `作品：${c.seriesName}` : '角色庫',
+        text,
+        tags: c.tags || []
+      });
     });
   });
   artistData.forEach(a => {
@@ -12047,11 +12395,16 @@ function openBtInsertPicker(type, btnEl, targetId) {
   // Build items list
   let items = [];
   if (type === 'char') {
-    items = characterData.map(c => ({
-      label: c.name,
-      sub:   (c.prompt || '').slice(0, 80),
-      text:  c.prompt || c.name
-    }));
+    items = characterData.flatMap(c => {
+      const variants = getCharacterPromptVariants(c);
+      return variants
+        .map(variant => ({
+          label: variants.length > 1 ? `${c.name} · ${variant.name}` : c.name,
+          sub:   (variant.positivePrompt || variant.negativePrompt || c.seriesName || '').slice(0, 80),
+          text:  variant.positivePrompt || ''
+        }))
+        .filter(item => item.text.trim());
+    });
   } else if (type === 'style') {
     artistData.forEach(a => items.push({
       label: a.name,
@@ -12076,7 +12429,7 @@ function openBtInsertPicker(type, btnEl, targetId) {
   }
 
   if (!items.length) {
-    const msgs = { char: '角色庫是空的', style: '繪師串是空的', note: '筆記本是空的' };
+    const msgs = { char: characterData.length ? '角色庫目前沒有可插入的正向 Prompt' : '角色庫是空的', style: '繪師串是空的', note: '筆記本是空的' };
     toast(msgs[type] || '沒有內容', 'warn'); return;
   }
 
