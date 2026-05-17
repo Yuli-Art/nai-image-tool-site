@@ -4414,6 +4414,36 @@ async function dbDelete(id) {
   return dbOp(db,'images','readwrite', s => s.delete(id));
 }
 
+function revokeRecordObjectUrl(record, prop = '_url') {
+  if (!record || !record[prop]) return;
+  try { URL.revokeObjectURL(record[prop]); } catch (_) {}
+  record[prop] = '';
+}
+
+function getRecordObjectUrl(record, prop = '_url', mime = 'image/png') {
+  if (!record) return '';
+  if (record[prop]) return record[prop];
+  if (!record.data) return '';
+  try {
+    record[prop] = URL.createObjectURL(new Blob([record.data], { type: mime }));
+    return record[prop];
+  } catch (_) {
+    return '';
+  }
+}
+
+function revokeGalleryObjectUrls(items = galleryData) {
+  (items || []).forEach(img => revokeRecordObjectUrl(img, '_url'));
+}
+
+window.addEventListener('beforeunload', () => {
+  revokeGalleryObjectUrls(galleryData);
+  if (window.__naiResultUrl) {
+    try { URL.revokeObjectURL(window.__naiResultUrl); } catch (_) {}
+    window.__naiResultUrl = '';
+  }
+});
+
 async function dbUpdateTags(id, tags) {
   const db = await getDB();
   return new Promise((res, rej) => {
@@ -4842,13 +4872,8 @@ function getBlendFallbackPreviewRecord(blend) {
 function getBlendPreviewUrl(blend) {
   if (blend?._previewUrl) return blend._previewUrl;
   const fallbackImage = getBlendFallbackPreviewRecord(blend);
-  if (fallbackImage?._url) return fallbackImage._url;
-  if (fallbackImage?.data) {
-    try {
-      fallbackImage._url = URL.createObjectURL(new Blob([fallbackImage.data], { type: 'image/png' }));
-      return fallbackImage._url;
-    } catch (_) {}
-  }
+  const fallbackUrl = getRecordObjectUrl(fallbackImage);
+  if (fallbackUrl) return fallbackUrl;
   const linkedArtist = getBlendEntriesSorted(blend)
     .map(entry => artistData.find(a => a.id === entry.artistId))
     .find(a => a?._previewUrl);
@@ -6215,6 +6240,12 @@ function closeDriveUploadModal(e) {
 // ANLAS
 // ═══════════════════════════════════════════
 async function fetchAnlas() {
+  const isElectronRuntime = !!(window.process && window.process.versions && window.process.versions.electron);
+  if (!isElectronRuntime) {
+    anlasBalance = null;
+    document.getElementById('anlas-val').textContent = 'N/A';
+    return null;
+  }
   const r = await fetch('https://api.novelai.net/user/subscription',{
     headers:{'Authorization':`Bearer ${apiToken}`},signal:AbortSignal.timeout(10000)});
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -6903,7 +6934,7 @@ function buildGenerateDockTabs() {
 function openModalFromDock(id) {
   const img = galleryData.find(x => x.id === id);
   if (!img) return;
-  const url = URL.createObjectURL(new Blob([img.data], { type:'image/png' }));
+  const url = getRecordObjectUrl(img);
   openModal(id, url);
 }
 
@@ -7121,7 +7152,7 @@ function renderGenerateDockGallery(q) {
   }
   const selectionBar = selectMode ? `<div class="dock-inline-bar"><span class="gallery-sel-count">已選 ${selectedIds.size} 張</span><button class="btn btn-s" type="button" onclick="selectAll()">全選</button><button class="btn btn-s" type="button" onclick="downloadSelected()">下載</button><button class="btn btn-d" type="button" onclick="deleteSelected()">刪除</button><button class="btn btn-s btn-out" type="button" onclick="clearSelection()">取消</button></div>` : '';
   return `<div class="dock-inline-tools"><div class="dock-chip-scroll">${renderDockViewTabs('gallery')}</div><div class="dock-inline-bar"><button class="btn btn-s btn-out" type="button" onclick="uploadImagesToGallery()">📤 上傳</button><button class="btn btn-s" type="button" onclick="toggleSelectMode()">${selectMode?'結束多選':'多選'}</button></div>${selectionBar}${typeTabs ? `<div class="dock-chip-scroll">${typeTabs}</div>` : ''}<div class="dock-chip-scroll">${renderDockGalleryTagChips()}</div></div><div class="generate-dock-grid">${items.map(img => {
-    const url = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
+    const url = getRecordObjectUrl(img);
     const tags = (img.tags||[]).slice(0,3).map(t => `<span class="gcard-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
     const time = new Date(img.timestamp).toLocaleDateString('zh-TW',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
       const selected = selectedIds.has(img.id) ? ' selected' : '';
@@ -9817,7 +9848,7 @@ async function onGalPickerSelect(imgId) {
   closeGalleryPicker();
   const img = galleryData.find(i => i.id === imgId);
   if (!img) return;
-  const url = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
+  const url = getRecordObjectUrl(img);
 
   if (galPickerPurpose === 'charThumb') {
     charEditThumbImageId = imgId;
@@ -9960,7 +9991,7 @@ function closeCharRefPicker() {
 async function loadPreciseRefFromImageId(imgId, label) {
   const img = galleryData.find(i => i.id === imgId) || await dbGetImageById(imgId);
   if (!img) { toast('找不到圖片','err'); return; }
-  const url = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
+  const url = getRecordObjectUrl(img);
   const b64 = arrayBufferToBase64(img.data);
   preciseRef = { base64: b64, url, name: label || `圖庫 #${imgId}`,
     galleryId: imgId, mode: 'character&style', strength: 1.0, fidelity: 1.0 };
@@ -10504,7 +10535,12 @@ async function generate() {
     // Display
     lastAB = ab;
     lastBlob = new Blob([ab],{type:'image/png'});
+    if (window.__naiResultUrl) {
+      try { URL.revokeObjectURL(window.__naiResultUrl); } catch(_) {}
+      window.__naiResultUrl = '';
+    }
     const url = URL.createObjectURL(lastBlob);
+    window.__naiResultUrl = url;
     document.getElementById('result-ph').style.display = 'none';
     document.getElementById('result-img').src = url;
     document.getElementById('result-img').style.display = 'block';
@@ -10522,7 +10558,7 @@ async function generate() {
     if (!meta.negPrompt) meta.negPrompt = negPrompt;
 
     const id = await dbSaveImage(ab, meta, [...currentTags]);
-    galleryData.unshift({ id, timestamp:Date.now(), data:ab, metadata:meta, tags:[...currentTags] });
+    galleryData.unshift({ id, timestamp:Date.now(), data:ab, metadata:meta, tags:[...currentTags], _url: window.__naiResultUrl || '' });
     updateGalCount();
     revealLatestInGenerateDock(id, { forceGallery: true });
 
@@ -10544,6 +10580,7 @@ async function generate() {
 // GALLERY
 // ═══════════════════════════════════════════
 async function loadGallery() {
+  revokeGalleryObjectUrls(galleryData);
   galleryData = await dbGetAll();
   updateGalCount();
   buildTagFilterList();
@@ -10730,7 +10767,7 @@ function renderGallery() {
     return;
   }
   grid.innerHTML = paged.items.map(img => {
-    const url = URL.createObjectURL(new Blob([img.data],{type:'image/png'}));
+    const url = getRecordObjectUrl(img);
     const tags = (img.tags||[]).map(t=>`<span class="gcard-tag" style="${getTagChipStyle(t, 0.12)}">${esc(t)}</span>`).join('');
     const time = new Date(img.timestamp).toLocaleDateString('zh-TW',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
     const sel = selectedIds.has(img.id) ? 'selected' : '';
@@ -10910,10 +10947,12 @@ async function deleteSelected() {
     ? `這 ${selectedIds.size} 張圖裡有被其他地方連結的圖片：\n\n${linkedMessages.slice(0, 8).join('\n\n')}\n\n刪除後會自動解除這些連結。\n仍要刪除嗎？`
     : `確定要刪除 ${selectedIds.size} 張圖片？`;
   if (!confirm(confirmText)) return;
+  const deletingItems = galleryData.filter(img => selectedIds.has(img.id));
   for (const id of selectedIds) {
     await unlinkImageReferences(id);
   }
   for (const id of selectedIds) await dbDelete(id);
+  revokeGalleryObjectUrls(deletingItems);
   galleryData = galleryData.filter(img => !selectedIds.has(img.id));
   selectedIds.clear();
   selectMode = false;
@@ -10936,7 +10975,7 @@ function openModal(id, url) {
   if (!img) return;
   modalImageId = id;
   modalMeta = img.metadata || {};
-  if (!url) url = URL.createObjectURL(new Blob([img.data], { type:'image/png' }));
+  if (!url) url = getRecordObjectUrl(img);
   document.getElementById('modal-img').src = url;
   const meta = modalMeta;
   const tags = (img.tags||[]);
@@ -11099,8 +11138,10 @@ async function deleteModal() {
     ? `這張圖目前有被其他地方連結：\n\n${usageLines.join('\n')}\n\n刪除後會自動解除這些連結。\n仍要刪除嗎？`
     : '確定要刪除這張圖片？';
   if (!confirm(confirmText)) return;
+  const deletingImage = galleryData.find(i=>i.id===modalImageId);
   await unlinkImageReferences(modalImageId);
   await dbDelete(modalImageId);
+  revokeRecordObjectUrl(deletingImage, '_url');
   galleryData = galleryData.filter(i=>i.id!==modalImageId);
   document.getElementById('modal').classList.remove('open');
   updateGalCount();
@@ -11367,7 +11408,7 @@ function getNotePreviewImageInfo(note) {
   if (!firstImg) return null;
   return {
     id: firstId,
-    url: URL.createObjectURL(new Blob([firstImg.data], { type:'image/png' }))
+    url: getRecordObjectUrl(firstImg)
   };
 }
 
@@ -11861,7 +11902,7 @@ function renderNoteEditPreviews() {
   wrap.innerHTML = noteEditPreviewImageIds.map(imgId => {
     const img = galleryData.find(i => i.id === imgId);
     if (!img) return '';
-    const url = URL.createObjectURL(new Blob([img.data], { type: 'image/png' }));
+    const url = getRecordObjectUrl(img);
     return `<div style="position:relative;width:72px;height:72px;flex-shrink:0;">
       <img src="${url}" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">
       <button class="char-ref-remove" onclick="removeNotePreviewImage(${imgId})" title="移除">×</button>
@@ -13595,7 +13636,7 @@ function gdriveRenderGrid() {
     const div = document.createElement('div');
     div.className = 'gdrive-img-item' + (gdriveSelectedImgs.has(item.id) ? ' sel' : '');
     div.onclick = () => gdriveToggleImg(item.id);
-    const url = URL.createObjectURL(new Blob([item.data], { type: 'image/png' }));
+    const url = getRecordObjectUrl(item);
     div.innerHTML = `<img src="${url}" loading="lazy"><div class="gdrive-img-cb">${gdriveSelectedImgs.has(item.id) ? '✓' : ''}</div>`;
     grid.appendChild(div);
   });
