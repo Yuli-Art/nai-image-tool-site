@@ -4511,9 +4511,9 @@ async function dbIterateStoreInChunks(store, onChunk, options = {}) {
   }
 }
 
-async function dbSaveImage(arrayBuffer, metadata, tags, imageCategory) {
+async function dbSaveImage(arrayBuffer, metadata, tags, imageCategory, timestampOverride) {
   return dbStoreOp('images','readwrite', s => s.add({
-    timestamp: Date.now(),
+    timestamp: Number.isFinite(timestampOverride) ? timestampOverride : Date.now(),
     data: arrayBuffer,
     metadata,
     tags: tags || [],
@@ -13901,31 +13901,10 @@ async function gdriveUpload() {
 }
 
 async function gdriveUploadFile(arrayBuffer, filename, folderId) {
-  const boundary = 'nai_gdrive_' + Date.now().toString(36);
-  const meta = JSON.stringify({ name: filename, ...(folderId ? { parents: [folderId] } : {}) });
-  const enc = new TextEncoder();
-  const hdr  = enc.encode(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${meta}\r\n--${boundary}\r\nContent-Type: image/png\r\n\r\n`);
-  const tail = enc.encode(`\r\n--${boundary}--`);
-  const img  = new Uint8Array(arrayBuffer);
-  const body = new Uint8Array(hdr.length + img.length + tail.length);
-  body.set(hdr, 0); body.set(img, hdr.length); body.set(tail, hdr.length + img.length);
-
-  const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-    method: 'POST',
-    headers: {
-      Authorization: 'Bearer ' + gdriveToken,
-      'Content-Type': `multipart/related; boundary=${boundary}`
-    },
-    body: body.buffer,
-    signal: AbortSignal.timeout(60000)
+  return gdriveUploadBlob(new Blob([arrayBuffer], { type: 'image/png' }), filename, 'image/png', {
+    parentId: folderId || '',
+    timeoutMs: 180000
   });
-  if (r.status === 401) {
-    // Token expired — re-request then retry once
-    await new Promise(res => { gdriveTokenClient.requestAccessToken({ prompt: '' }); setTimeout(res, 3000); });
-    return gdriveUploadFile(arrayBuffer, filename, folderId);
-  }
-  if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + (await r.text()).slice(0, 80));
-  return await r.json();
 }
 
 // ═══════════════════════════════════════════
@@ -13934,12 +13913,154 @@ async function gdriveUploadFile(arrayBuffer, filename, folderId) {
 const SYNC_LAST_AT_KEY   = 'nai_last_sync_at_v1';
 const SYNC_CONFLICT_KEY  = 'nai_sync_conflict_v1';
 const DRIVE_BACKUP_NAME  = 'nai_backup.zip';
-const BACKUP_VERSION     = 1;
+const DRIVE_BACKUP_ROOT_NAME = 'nai_native_studio_backups';
+const DRIVE_BACKUP_LATEST_NAME = 'latest.json';
+const DRIVE_BACKUP_SNAPSHOT_NAME = 'snapshot.json';
+const DRIVE_BACKUP_LIBRARY_NAME = 'library.json';
+const DRIVE_BACKUP_WORKSPACE_NAME = 'workspace.json';
+const DRIVE_BACKUP_CHUNK_PREFIX = 'images-part-';
+const DRIVE_BACKUP_CHUNK_TARGET_BYTES = 24 * 1024 * 1024;
+const DRIVE_BACKUP_CHUNK_MAX_IMAGES = 24;
+const BACKUP_VERSION     = 2;
+const BACKUP_WORKSPACE_KEYS = [
+  MODAL_SECTION_STATE_KEY,
+  DRAFT_KEY,
+  GENERATE_LAYOUT_KEY,
+  UI_THEME_KEY,
+  GAL_VIEWS_KEY,
+  CHAR_VIEWS_KEY,
+  ARTIST_VIEWS_KEY,
+  NOTES_VIEWS_KEY,
+  BATCH_TASKS_KEY,
+  BATCH_PRESETS_KEY,
+  GDRIVE_CID_KEY,
+  ONBOARDED_KEY,
+  SYNC_CONFLICT_KEY
+];
 
 // ── Helpers ───────────────────────────────
 async function sha256hex(arrayBuffer) {
   const hash = await crypto.subtle.digest('SHA-256', arrayBuffer instanceof ArrayBuffer ? arrayBuffer : arrayBuffer.buffer ?? arrayBuffer);
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function buildBackupTimestampSlug(date = new Date()) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+}
+
+function escapeDriveQueryValue(value) {
+  return String(value || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+
+function collectWorkspaceSnapshot() {
+  const localValues = {};
+  BACKUP_WORKSPACE_KEYS.forEach(key => {
+    const value = localStorage.getItem(key);
+    if (value !== null) localValues[key] = value;
+  });
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    localStorage: localValues
+  };
+}
+
+function applyWorkspaceSnapshot(snapshot) {
+  const saved = snapshot?.localStorage || {};
+  BACKUP_WORKSPACE_KEYS.forEach(key => {
+    if (Object.prototype.hasOwnProperty.call(saved, key)) localStorage.setItem(key, saved[key]);
+    else localStorage.removeItem(key);
+  });
+
+  modalSectionState = loadModalSectionState();
+  generateLayoutState = loadGenerateLayoutState();
+  applyGenerateLayoutState();
+  applyUITheme(localStorage.getItem(UI_THEME_KEY) || 'deep-purple-beta');
+
+  loadGalViews();
+  loadCharViews();
+  loadArtistViews();
+  loadNotesViews();
+  loadBatchTasks();
+  loadBatchPresets();
+
+  renderGalViewTabs();
+  renderCharViewTabs();
+  renderArtistViewTabs();
+  renderNotesViewTabs();
+  renderBatchPage();
+
+  const isMob = window.innerWidth <= 768;
+  applyDraftState(loadDraftState(), isMob);
+  syncBetaTopConfigFromMain();
+  gdriveRefreshSettingsStatus?.();
+  initSyncSection();
+}
+
+async function collectLibrarySnapshot() {
+  return {
+    tags:         await dbReadAllStore('tags'),
+    tagTypes:     await dbReadAllStore('tag_types'),
+    vibes:        await dbReadAllStore('vibe_library'),
+    characters:   await dbReadAllStore('characters'),
+    artists:      await dbReadAllStore('artists'),
+    blends:       await dbReadAllStore('artist_blends'),
+    notes:        await dbReadAllStore('prompt_notes'),
+    exportedAt:   new Date().toISOString()
+  };
+}
+
+async function buildLocalImageHashMap() {
+  const map = new Map();
+  await dbIterateStoreInChunks('images', async chunk => {
+    for (const img of chunk) {
+      const buf = img.data instanceof ArrayBuffer ? img.data : img.data.buffer ?? img.data;
+      const hash = await sha256hex(buf);
+      map.set(hash, { id: img.id, tags: img.tags || [], timestamp: img.timestamp });
+    }
+  }, { chunkSize: 12 });
+  return map;
+}
+
+async function mergeLibrarySnapshot(library) {
+  async function mergeStore(storeName, items, keyField) {
+    if (!items?.length) return;
+    const existing = await dbReadAllStore(storeName);
+    const existingIds = new Set(existing.map(e => e[keyField]));
+    for (const item of items) {
+      if (!existingIds.has(item[keyField])) {
+        await dbStoreOp(storeName, 'readwrite', s => s.put(item));
+      }
+    }
+  }
+
+  await mergeStore('tags',          library.tags,       'name');
+  await mergeStore('tag_types',     library.tagTypes,   'id');
+  await mergeStore('vibe_library',  library.vibes,      'id');
+  await mergeStore('characters',    library.characters, 'id');
+  await mergeStore('artists',       library.artists,    'id');
+  await mergeStore('artist_blends', library.blends,     'id');
+  await mergeStore('prompt_notes',  library.notes,      'id');
+}
+
+async function refreshAppDataAfterImport() {
+  await loadGallery();
+  await refreshVibeLibrary();
+  await loadCharacterData();
+  await loadArtistData();
+  await loadNotesData();
+  renderGalViewTabs();
+  renderCharViewTabs();
+  renderArtistViewTabs();
+  renderNotesViewTabs();
+  filterGallery();
+  updateGalCount();
+  await renderArtistPage();
+  await renderCharPage();
+  renderNotesPage();
+  renderGenerateDock();
+  initSyncSection();
 }
 
 function setSyncConflict(mode) {
@@ -14064,73 +14185,342 @@ async function buildBackupZip(progressCb) {
     }
   }, { chunkSize: 12 });
 
-  // Library data (all non-image stores)
-  const library = {
-    tags:         await dbReadAllStore('tags'),
-    tagTypes:     await dbReadAllStore('tag_types'),
-    vibes:        await dbReadAllStore('vibe_library'),
-    characters:   await dbReadAllStore('characters'),
-    artists:      await dbReadAllStore('artists'),
-    blends:       await dbReadAllStore('artist_blends'),
-    notes:        await dbReadAllStore('prompt_notes'),
-    exportedAt:   new Date().toISOString()
-  };
+  const library = await collectLibrarySnapshot();
+  const workspace = collectWorkspaceSnapshot();
 
   zip.file('manifest.json', JSON.stringify(manifest));
   zip.file('library.json',  JSON.stringify(library));
+  zip.file('workspace.json', JSON.stringify(workspace));
   return zip;
 }
 
-// ── Drive: find/upload backup file ────────
-async function getDriveBackupFileMeta() {
+// ── Drive: backup snapshots ───────────────
+async function gdriveAuthorizedFetch(url, init = {}, retryOn401 = true) {
+  const headers = Object.assign({}, init.headers || {}, { Authorization: 'Bearer ' + gdriveToken });
+  const resp = await fetch(url, { ...init, headers });
+  if (resp.status === 401 && retryOn401 && gdriveTokenClient) {
+    try {
+      await new Promise((res, rej) => {
+        const prevCb = gdriveTokenClient.callback;
+        gdriveTokenClient.callback = async tokenResp => {
+          gdriveTokenClient.callback = prevCb;
+          if (tokenResp?.error) { rej(new Error(tokenResp.error)); return; }
+          gdriveToken = tokenResp.access_token;
+          try {
+            const emailReq = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+              headers: { Authorization: 'Bearer ' + gdriveToken }
+            });
+            const emailData = await emailReq.json();
+            const emailEl = document.getElementById('settings-gdrive-email');
+            if (emailEl) emailEl.textContent = emailData.email || '';
+          } catch (_) {}
+          res();
+        };
+        try { gdriveTokenClient.requestAccessToken({ prompt: '' }); }
+        catch (err) {
+          gdriveTokenClient.callback = prevCb;
+          rej(err);
+        }
+      });
+    } catch (err) {
+      throw new Error('Google Drive 驗證已失效，請重新連線');
+    }
+    return gdriveAuthorizedFetch(url, init, false);
+  }
+  return resp;
+}
+
+async function gdriveFindFileByName(name, opts = {}) {
   if (!gdriveToken) return null;
-  const q = encodeURIComponent(`name='${DRIVE_BACKUP_NAME}' and trashed=false`);
-  const r = await fetch(
-    `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,modifiedTime,size)&pageSize=1`,
-    { headers: { Authorization: 'Bearer ' + gdriveToken } }
+  const clauses = [`name='${escapeDriveQueryValue(name)}'`, 'trashed=false'];
+  if (opts.mimeType) clauses.push(`mimeType='${escapeDriveQueryValue(opts.mimeType)}'`);
+  if (opts.parentId) clauses.push(`'${escapeDriveQueryValue(opts.parentId)}' in parents`);
+  const q = encodeURIComponent(clauses.join(' and '));
+  const r = await gdriveAuthorizedFetch(
+    `https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=modifiedTime desc&fields=files(id,name,mimeType,modifiedTime,size,parents)&pageSize=10`,
+    { signal: AbortSignal.timeout(60000) }
   );
   if (!r.ok) return null;
   const d = await r.json();
   return d.files?.[0] || null;
 }
 
-async function checkDriveBackupVersion() {
-  return getDriveBackupFileMeta();
+async function gdriveListChildren(parentId) {
+  const files = [];
+  let pageToken = '';
+  do {
+    const q = encodeURIComponent(`'${escapeDriveQueryValue(parentId)}' in parents and trashed=false`);
+    const url = `https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=name&fields=nextPageToken,files(id,name,mimeType,modifiedTime,size,parents)&pageSize=1000${pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : ''}`;
+    const r = await gdriveAuthorizedFetch(url, { signal: AbortSignal.timeout(60000) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    files.push(...(d.files || []));
+    pageToken = d.nextPageToken || '';
+  } while (pageToken);
+  return files;
 }
 
-async function uploadZipToDrive(zipBlob, progressCb) {
-  const meta = await getDriveBackupFileMeta();
-  const boundary = 'nai_bk_' + Date.now().toString(36);
-  const fileMeta = JSON.stringify({ name: DRIVE_BACKUP_NAME });
-  const enc  = new TextEncoder();
-  const hdr  = enc.encode(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${fileMeta}\r\n--${boundary}\r\nContent-Type: application/zip\r\n\r\n`);
-  const tail = enc.encode(`\r\n--${boundary}--`);
-  const imgArr = new Uint8Array(await zipBlob.arrayBuffer());
-  const body   = new Uint8Array(hdr.length + imgArr.length + tail.length);
-  body.set(hdr, 0); body.set(imgArr, hdr.length); body.set(tail, hdr.length + imgArr.length);
-
-  const url    = meta
-    ? `https://www.googleapis.com/upload/drive/v3/files/${meta.id}?uploadType=multipart`
-    : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`;
-  const method = meta ? 'PATCH' : 'POST';
-
-  const r = await fetch(url, {
-    method,
-    headers: { Authorization: 'Bearer ' + gdriveToken, 'Content-Type': `multipart/related; boundary=${boundary}` },
-    body: body.buffer,
-    signal: AbortSignal.timeout(120000)
+async function gdriveCreateFolderInternal(name, parentId = '') {
+  const body = {
+    name,
+    mimeType: 'application/vnd.google-apps.folder',
+    ...(parentId ? { parents: [parentId] } : {})
+  };
+  const r = await gdriveAuthorizedFetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(60000)
   });
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return await r.json();
 }
 
-async function downloadZipFromDrive(fileId) {
-  const r = await fetch(
+async function gdriveUploadBlob(blob, filename, mimeType, opts = {}) {
+  const boundary = 'nai_drive_' + Date.now().toString(36);
+  const meta = {
+    name: filename,
+    ...(opts.parentId && !opts.fileId ? { parents: [opts.parentId] } : {})
+  };
+  const multipart = new Blob([
+    `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`,
+    blob,
+    `\r\n--${boundary}--`
+  ], { type: `multipart/related; boundary=${boundary}` });
+  const fileId = opts.fileId || '';
+  const url = fileId
+    ? `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=multipart`
+    : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+  const r = await gdriveAuthorizedFetch(url, {
+    method: fileId ? 'PATCH' : 'POST',
+    headers: { 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body: multipart,
+    signal: AbortSignal.timeout(opts.timeoutMs || 180000)
+  });
+  if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + (await r.text()).slice(0, 120));
+  return await r.json();
+}
+
+async function gdriveDownloadBlob(fileId, timeoutMs = 180000) {
+  const r = await gdriveAuthorizedFetch(
     `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-    { headers: { Authorization: 'Bearer ' + gdriveToken }, signal: AbortSignal.timeout(120000) }
+    { signal: AbortSignal.timeout(timeoutMs) }
   );
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return await r.blob();
+}
+
+async function gdriveDownloadJson(fileId, timeoutMs = 120000) {
+  const blob = await gdriveDownloadBlob(fileId, timeoutMs);
+  return JSON.parse(await blob.text());
+}
+
+async function gdriveEnsureBackupRootFolder() {
+  const existing = await gdriveFindFileByName(DRIVE_BACKUP_ROOT_NAME, { mimeType: 'application/vnd.google-apps.folder' });
+  if (existing) return existing;
+  return gdriveCreateFolderInternal(DRIVE_BACKUP_ROOT_NAME);
+}
+
+async function getDriveBackupFileMetaLegacy() {
+  return gdriveFindFileByName(DRIVE_BACKUP_NAME);
+}
+
+async function getDriveBackupDescriptor() {
+  if (!gdriveToken) return null;
+  const root = await gdriveEnsureBackupRootFolder();
+  const latestFile = await gdriveFindFileByName(DRIVE_BACKUP_LATEST_NAME, { parentId: root.id });
+  if (latestFile) {
+    try {
+      const latest = await gdriveDownloadJson(latestFile.id);
+      if (latest?.snapshotFolderId) {
+        return {
+          kind: 'snapshot-v2',
+          rootFolderId: root.id,
+          latestFileId: latestFile.id,
+          snapshotFolderId: latest.snapshotFolderId,
+          snapshotName: latest.snapshotName || '',
+          imageCount: latest.imageCount || 0,
+          chunkCount: latest.chunkCount || 0,
+          modifiedTime: latest.createdAt || latest.modifiedTime || latestFile.modifiedTime || '',
+          version: latest.version || BACKUP_VERSION
+        };
+      }
+    } catch (_) {}
+  }
+  const legacy = await getDriveBackupFileMetaLegacy();
+  if (!legacy) return null;
+  return { kind: 'zip-v1', id: legacy.id, modifiedTime: legacy.modifiedTime, size: legacy.size, version: 1 };
+}
+
+async function checkDriveBackupVersion() {
+  return getDriveBackupDescriptor();
+}
+
+async function uploadDriveSnapshotV2(progressCb) {
+  const root = await gdriveEnsureBackupRootFolder();
+  const createdAt = new Date();
+  const slug = buildBackupTimestampSlug(createdAt);
+  const snapshotFolder = await gdriveCreateFolderInternal(`snapshot_${slug}`, root.id);
+  const library = await collectLibrarySnapshot();
+  const workspace = collectWorkspaceSnapshot();
+  const totalImages = await dbCountStore('images');
+  const snapshot = {
+    version: BACKUP_VERSION,
+    format: 'drive-folder-chunks',
+    createdAt: createdAt.toISOString(),
+    imageCount: totalImages,
+    chunkTargetBytes: DRIVE_BACKUP_CHUNK_TARGET_BYTES,
+    files: {
+      library: DRIVE_BACKUP_LIBRARY_NAME,
+      workspace: DRIVE_BACKUP_WORKSPACE_NAME
+    },
+    chunks: []
+  };
+
+  if (progressCb) progressCb(0, totalImages || 1, '上傳資料設定…');
+  await gdriveUploadBlob(new Blob([JSON.stringify(library)], { type: 'application/json' }), DRIVE_BACKUP_LIBRARY_NAME, 'application/json', { parentId: snapshotFolder.id });
+  await gdriveUploadBlob(new Blob([JSON.stringify(workspace)], { type: 'application/json' }), DRIVE_BACKUP_WORKSPACE_NAME, 'application/json', { parentId: snapshotFolder.id });
+
+  let processedImages = 0;
+  let chunkIndex = 0;
+  let chunkBytes = 0;
+  let chunkItems = [];
+
+  async function flushChunk() {
+    if (!chunkItems.length) return;
+    chunkIndex++;
+    const chunkName = `${DRIVE_BACKUP_CHUNK_PREFIX}${String(chunkIndex).padStart(4, '0')}.zip`;
+    const zip = new JSZip();
+    const chunkManifest = [];
+    for (const item of chunkItems) {
+      const ext = getImageExtension(item.mimeType || 'image/png');
+      const filename = `${item.hash}.${ext}`;
+      zip.file(filename, item.buffer);
+      chunkManifest.push({
+        hash: item.hash,
+        filename,
+        mimeType: item.mimeType || 'image/png',
+        timestamp: item.timestamp,
+        metadata: item.metadata,
+        tags: item.tags,
+        imageCategory: item.imageCategory || 'general'
+      });
+    }
+    zip.file('chunk-manifest.json', JSON.stringify({ version: BACKUP_VERSION, index: chunkIndex, imageCount: chunkManifest.length, images: chunkManifest }));
+    if (progressCb) progressCb(processedImages, totalImages || 1, `打包並上傳第 ${chunkIndex} 段（${chunkManifest.length} 張）…`);
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+    await gdriveUploadBlob(blob, chunkName, 'application/zip', { parentId: snapshotFolder.id, timeoutMs: 300000 });
+    snapshot.chunks.push({ index: chunkIndex, name: chunkName, imageCount: chunkManifest.length, totalBytes: chunkBytes });
+    chunkItems = [];
+    chunkBytes = 0;
+  }
+
+  let afterKey = null;
+  while (true) {
+    const { items, lastKey, done } = await dbReadStoreChunk('images', { afterKey, chunkSize: 8 });
+    if (!items.length) break;
+    for (const img of items) {
+      const buffer = img.data instanceof ArrayBuffer ? img.data : img.data.buffer ?? img.data;
+      const mimeType = img.metadata?._mimeType || 'image/png';
+      const hash = await sha256hex(buffer);
+      chunkItems.push({
+        hash,
+        buffer,
+        mimeType,
+        timestamp: img.timestamp,
+        metadata: img.metadata,
+        tags: img.tags || [],
+        imageCategory: img.imageCategory || 'general'
+      });
+      chunkBytes += buffer.byteLength || 0;
+      processedImages++;
+      if (chunkBytes >= DRIVE_BACKUP_CHUNK_TARGET_BYTES || chunkItems.length >= DRIVE_BACKUP_CHUNK_MAX_IMAGES) {
+        await flushChunk();
+      } else if (progressCb) {
+        progressCb(processedImages, totalImages || 1, `整理圖片 ${processedImages}/${totalImages}…`);
+      }
+    }
+    if (done) break;
+    afterKey = lastKey;
+  }
+  await flushChunk();
+
+  snapshot.chunkCount = snapshot.chunks.length;
+  snapshot.completedAt = new Date().toISOString();
+  await gdriveUploadBlob(new Blob([JSON.stringify(snapshot)], { type: 'application/json' }), DRIVE_BACKUP_SNAPSHOT_NAME, 'application/json', { parentId: snapshotFolder.id });
+
+  const latestPayload = {
+    version: BACKUP_VERSION,
+    kind: 'snapshot-v2',
+    snapshotFolderId: snapshotFolder.id,
+    snapshotName: snapshotFolder.name,
+    imageCount: snapshot.imageCount,
+    chunkCount: snapshot.chunkCount,
+    createdAt: snapshot.createdAt,
+    completedAt: snapshot.completedAt
+  };
+  const latestExisting = await gdriveFindFileByName(DRIVE_BACKUP_LATEST_NAME, { parentId: root.id });
+  await gdriveUploadBlob(new Blob([JSON.stringify(latestPayload)], { type: 'application/json' }), DRIVE_BACKUP_LATEST_NAME, 'application/json', {
+    parentId: root.id,
+    fileId: latestExisting?.id || ''
+  });
+
+  return { snapshotFolderId: snapshotFolder.id, imageCount: snapshot.imageCount, chunkCount: snapshot.chunkCount, modifiedTime: snapshot.completedAt };
+}
+
+async function importDriveSnapshotV2(descriptor, conflictMode, progressCb) {
+  const files = await gdriveListChildren(descriptor.snapshotFolderId);
+  const byName = new Map(files.map(file => [file.name, file]));
+  const snapshotFile = byName.get(DRIVE_BACKUP_SNAPSHOT_NAME);
+  const libraryFile = byName.get(DRIVE_BACKUP_LIBRARY_NAME);
+  if (!snapshotFile || !libraryFile) throw new Error('備份快照不完整');
+
+  const snapshot = await gdriveDownloadJson(snapshotFile.id, 120000);
+  const library = await gdriveDownloadJson(libraryFile.id, 120000);
+  const workspaceFile = byName.get(DRIVE_BACKUP_WORKSPACE_NAME);
+  const workspace = workspaceFile ? await gdriveDownloadJson(workspaceFile.id, 120000) : null;
+
+  let added = 0, skipped = 0, merged = 0;
+  const totalImages = snapshot.imageCount || snapshot.chunks?.reduce((sum, chunk) => sum + (chunk.imageCount || 0), 0) || 0;
+  if (progressCb) progressCb(0, totalImages || 1, '建立本地雜湊索引…');
+  const localHashMap = await buildLocalImageHashMap();
+
+  let processed = 0;
+  for (const chunk of snapshot.chunks || []) {
+    const chunkFile = byName.get(chunk.name);
+    if (!chunkFile) continue;
+    if (progressCb) progressCb(processed, totalImages || 1, `下載第 ${chunk.index} 段…`);
+    const chunkBlob = await gdriveDownloadBlob(chunkFile.id, 300000);
+    const zip = await JSZip.loadAsync(await chunkBlob.arrayBuffer());
+    const chunkManifest = JSON.parse(await zip.file('chunk-manifest.json').async('string'));
+    for (const entry of chunkManifest.images || []) {
+      processed++;
+      if (progressCb) progressCb(processed, totalImages || 1, `還原圖片 ${processed}/${totalImages}…`);
+      const local = localHashMap.get(entry.hash);
+      if (!local) {
+        const imageFile = zip.file(entry.filename);
+        if (!imageFile) { skipped++; continue; }
+        const buffer = await imageFile.async('arraybuffer');
+        await dbSaveImage(buffer, entry.metadata, entry.tags, entry.imageCategory, entry.timestamp);
+        added++;
+        continue;
+      }
+      let newTags;
+      if (conflictMode === 'merge') newTags = [...new Set([...(local.tags || []), ...(entry.tags || [])])];
+      else newTags = (entry.timestamp > local.timestamp) ? (entry.tags || []) : (local.tags || []);
+      const tagsChanged = JSON.stringify([...newTags].sort()) !== JSON.stringify([...(local.tags || [])].sort());
+      if (tagsChanged) {
+        await dbUpdateTags(local.id, newTags);
+        merged++;
+      } else {
+        skipped++;
+      }
+    }
+  }
+
+  if (progressCb) progressCb(totalImages || 1, totalImages || 1, '合併資料庫…');
+  await mergeLibrarySnapshot(library);
+  return { added, skipped, merged, workspace };
 }
 
 // ── Merge backup into local DB ─────────────
@@ -14138,20 +14528,15 @@ async function mergeBackupIntoLocal(zipBlob, conflictMode, progressCb) {
   const zip      = await JSZip.loadAsync(await zipBlob.arrayBuffer());
   const manifest = JSON.parse(await zip.file('manifest.json').async('string'));
   const library  = JSON.parse(await zip.file('library.json').async('string'));
+  const workspaceFile = zip.file('workspace.json');
+  const workspace = workspaceFile ? JSON.parse(await workspaceFile.async('string')) : null;
 
   let added = 0, skipped = 0, merged = 0;
 
   // ── Images ──
   // Build local hash map
   if (progressCb) progressCb(0, manifest.images.length, '建立本地雜湊索引…');
-  const localHashMap = new Map(); // hash → {id, tags, timestamp}
-  await dbIterateStoreInChunks('images', async chunk => {
-    for (const img of chunk) {
-      const buf  = img.data instanceof ArrayBuffer ? img.data : img.data.buffer ?? img.data;
-      const h    = await sha256hex(buf);
-      localHashMap.set(h, { id: img.id, tags: img.tags || [], timestamp: img.timestamp });
-    }
-  }, { chunkSize: 12 });
+  const localHashMap = await buildLocalImageHashMap(); // hash → {id, tags, timestamp}
 
   for (let i = 0; i < manifest.images.length; i++) {
     const entry = manifest.images[i];
@@ -14163,7 +14548,7 @@ async function mergeBackupIntoLocal(zipBlob, conflictMode, progressCb) {
       const pngFile = zip.file('images/' + entry.hash + '.png');
       if (!pngFile) { skipped++; continue; }
       const buf = (await pngFile.async('arraybuffer'));
-      await dbSaveImage(buf, entry.metadata, entry.tags, entry.imageCategory);
+      await dbSaveImage(buf, entry.metadata, entry.tags, entry.imageCategory, entry.timestamp);
       added++;
     } else {
       // Exists — handle tag conflict
@@ -14184,48 +14569,27 @@ async function mergeBackupIntoLocal(zipBlob, conflictMode, progressCb) {
     }
   }
 
-  // ── Library: helper to merge by id ──
-  async function mergeStore(storeName, items, keyField) {
-    if (!items?.length) return;
-    const existing = await dbReadAllStore(storeName);
-    const existingIds = new Set(existing.map(e => e[keyField]));
-    for (const item of items) {
-      if (!existingIds.has(item[keyField])) {
-        await dbStoreOp(storeName, 'readwrite', s => s.put(item));
-      }
-    }
-  }
-
   if (progressCb) progressCb(manifest.images.length, manifest.images.length, '合併資料庫…');
-  await mergeStore('tag_types',     library.tagTypes,   'id');
-  await mergeStore('vibe_library',  library.vibes,      'id');
-  await mergeStore('characters',    library.characters, 'id');
-  await mergeStore('artists',       library.artists,    'id');
-  await mergeStore('artist_blends', library.blends,     'id');
-  await mergeStore('prompt_notes',  library.notes,      'id');
+  await mergeLibrarySnapshot(library);
 
-  return { added, skipped, merged };
+  return { added, skipped, merged, workspace };
 }
 
 // ── Orchestration ─────────────────────────
 async function doBackupToDrive() {
   if (!gdriveToken) { toast('請先連線 Google Drive', 'warn'); return; }
   setSyncBtnsDisabled(true);
-  setSyncProgress(0, 1, '打包備份中…');
+  setSyncProgress(0, 1, '建立雲端快照中…');
   try {
-    const zip  = await buildBackupZip((done, total, msg) => setSyncProgress(done, total, msg));
-    setSyncProgress(1, 1, '上傳至 Drive…');
-    const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
-    await uploadZipToDrive(blob);
+    const result = await uploadDriveSnapshotV2((done, total, msg) => setSyncProgress(done, total, msg));
     localStorage.setItem(SYNC_LAST_AT_KEY, Date.now().toString());
-    setSyncProgress(1, 1, '');
     setSyncProgress(0, null, '');
-    setSyncStatus('✓ 備份完成', 'ok');
+    setSyncStatus(`✓ 備份完成（${result.imageCount} 張 / ${result.chunkCount} 段）`, 'ok');
     const row = document.getElementById('sync-last-row');
     const lbl = document.getElementById('sync-last-at');
     if (row) row.style.display = 'block';
     if (lbl) lbl.textContent = new Date().toLocaleString('zh-TW');
-    toast('☁ 備份完成！', 'ok');
+    toast(`☁ 備份完成！已建立 ${result.chunkCount} 個分段`, 'ok');
   } catch (e) {
     setSyncProgress(0, null, '');
     setSyncStatus('備份失敗：' + e.message, 'warn');
@@ -14237,27 +14601,24 @@ async function doBackupToDrive() {
 
 async function doImportFromDrive() {
   if (!gdriveToken) { toast('請先連線 Google Drive', 'warn'); return; }
-  const meta = await getDriveBackupFileMeta();
-  if (!meta) { toast('Drive 上找不到備份檔', 'warn'); return; }
+  const descriptor = await getDriveBackupDescriptor();
+  if (!descriptor) { toast('Drive 上找不到備份檔', 'warn'); return; }
   setSyncBtnsDisabled(true);
   setSyncProgress(0, 1, '下載備份…');
   try {
-    const blob    = await downloadZipFromDrive(meta.id);
     const conflict = getSyncConflict();
-    const result  = await mergeBackupIntoLocal(blob, conflict,
-      (done, total, msg) => setSyncProgress(done, total, msg));
+    const result = descriptor.kind === 'snapshot-v2'
+      ? await importDriveSnapshotV2(descriptor, conflict, (done, total, msg) => setSyncProgress(done, total, msg))
+      : await mergeBackupIntoLocal(await gdriveDownloadBlob(descriptor.id), conflict, (done, total, msg) => setSyncProgress(done, total, msg));
     localStorage.setItem(SYNC_LAST_AT_KEY, Date.now().toString());
     setSyncProgress(0, null, '');
     setSyncStatus('✓ 匯入完成', 'ok');
     const row = document.getElementById('sync-last-row');
     if (row) row.style.display = 'block';
     document.getElementById('sync-last-at').textContent = new Date().toLocaleString('zh-TW');
+    await refreshAppDataAfterImport();
+    if (result.workspace) applyWorkspaceSnapshot(result.workspace);
     toast(`匯入完成：新增 ${result.added} 張，合併標籤 ${result.merged} 張，略過 ${result.skipped} 張`, 'ok');
-    // Reload gallery
-    await loadGallery();
-    renderGalViewTabs();
-    filterGallery();
-    updateGalCount();
   } catch (e) {
     setSyncProgress(0, null, '');
     setSyncStatus('匯入失敗：' + e.message, 'warn');
@@ -14303,11 +14664,9 @@ async function handleLocalZipImport(input) {
     const result   = await mergeBackupIntoLocal(file, conflict,
       (done, total, msg) => setSyncProgress(done, total, msg));
     setSyncProgress(0, null, '');
+    await refreshAppDataAfterImport();
+    if (result.workspace) applyWorkspaceSnapshot(result.workspace);
     toast(`匯入完成：新增 ${result.added} 張，合併標籤 ${result.merged} 張，略過 ${result.skipped} 張`, 'ok');
-    await loadGallery();
-    renderGalViewTabs();
-    filterGallery();
-    updateGalCount();
   } catch (e) {
     setSyncProgress(0, null, '');
     toast('匯入失敗：' + e.message, 'err');
