@@ -4322,10 +4322,65 @@ window.addEventListener('DOMContentLoaded', async () => {
 // DATABASE (IndexedDB)
 // ═══════════════════════════════════════════
 let _db = null;
-async function getDB() {
+let _dbOpenPromise = null;
+const DB_NAME = 'nai_tool';
+const DB_VERSION = 7;
+
+function invalidateDbConnection(db = _db) {
+  if (_db === db) _db = null;
+  _dbOpenPromise = null;
+}
+
+function attachDbLifecycle(db) {
+  db.onversionchange = () => {
+    invalidateDbConnection(db);
+    try { db.close(); } catch (_) {}
+  };
+  if ('onclose' in db) {
+    db.onclose = () => invalidateDbConnection(db);
+  }
+}
+
+function isRetriableDbError(err) {
+  const name = String(err?.name || '');
+  const msg = String(err?.message || '').toLowerCase();
+  return name === 'InvalidStateError' ||
+    name === 'AbortError' ||
+    name === 'UnknownError' ||
+    msg.includes('connection is closing') ||
+    msg.includes('database connection is closing') ||
+    msg.includes('indexed database server') ||
+    msg.includes('internal error');
+}
+
+async function withDbRetry(action, options = {}) {
+  const retries = Math.max(0, parseInt(options.retries, 10) || 1);
+  let lastErr = null;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const db = await getDB({ forceReopen: attempt > 0 });
+    try {
+      return await action(db);
+    } catch (err) {
+      lastErr = err;
+      if (!isRetriableDbError(err) || attempt === retries) throw err;
+      invalidateDbConnection(db);
+      try { db.close(); } catch (_) {}
+    }
+  }
+  throw lastErr || new Error('IndexedDB 操作失敗');
+}
+
+async function getDB(options = {}) {
+  const forceReopen = options.forceReopen === true;
+  if (forceReopen && _db) {
+    const staleDb = _db;
+    invalidateDbConnection(staleDb);
+    try { staleDb.close(); } catch (_) {}
+  }
   if (_db) return _db;
-  _db = await new Promise((res, rej) => {
-    const r = indexedDB.open('nai_tool', 7);
+  if (_dbOpenPromise) return _dbOpenPromise;
+  _dbOpenPromise = new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME, DB_VERSION);
     r.onupgradeneeded = e => {
       const db = e.target.result;
       if (!db.objectStoreNames.contains('images')) {
@@ -4361,24 +4416,103 @@ async function getDB() {
         ns.createIndex('by_time','timestamp');
       }
     };
-    r.onsuccess = () => res(r.result);
-    r.onerror   = () => rej(r.error);
+    r.onsuccess = () => {
+      const db = r.result;
+      attachDbLifecycle(db);
+      _db = db;
+      _dbOpenPromise = null;
+      res(db);
+    };
+    r.onerror = () => {
+      _dbOpenPromise = null;
+      rej(r.error);
+    };
+    r.onblocked = () => {
+      console.warn('IndexedDB open blocked; another tab may still hold the old schema.');
+    };
   });
-  return _db;
+  return _dbOpenPromise;
 }
 
 function dbOp(db, store, mode, fn) {
   return new Promise((res, rej) => {
+    let settled = false;
     const tx = db.transaction(store, mode);
     const req = fn(tx.objectStore(store));
-    req.onsuccess = () => res(req.result);
-    req.onerror   = () => rej(req.error);
+    req.onsuccess = () => {
+      settled = true;
+      res(req.result);
+    };
+    req.onerror = () => {
+      settled = true;
+      rej(req.error);
+    };
+    tx.onabort = () => {
+      if (!settled) rej(tx.error || req.error || new Error(`IndexedDB transaction aborted (${store})`));
+    };
+    tx.onerror = () => {
+      if (!settled) rej(tx.error || req.error || new Error(`IndexedDB transaction failed (${store})`));
+    };
   });
 }
 
+async function dbStoreOp(store, mode, fn, options) {
+  return withDbRetry(db => dbOp(db, store, mode, fn), options);
+}
+
+async function dbReadAllStore(store) {
+  return dbStoreOp(store, 'readonly', s => s.getAll());
+}
+
+async function dbCountStore(store) {
+  return dbStoreOp(store, 'readonly', s => s.count());
+}
+
+async function dbReadStoreChunk(store, options = {}) {
+  const chunkSize = Math.max(1, parseInt(options.chunkSize, 10) || 25);
+  const afterKey = options.afterKey ?? null;
+  const direction = options.direction || 'next';
+  return withDbRetry(db => new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readonly');
+    const source = tx.objectStore(store);
+    const range = afterKey === null ? null : IDBKeyRange.lowerBound(afterKey, true);
+    const req = source.openCursor(range, direction);
+    const items = [];
+    let lastKey = afterKey;
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (!cursor) {
+        res({ items, lastKey, done: true });
+        return;
+      }
+      items.push(cursor.value);
+      lastKey = cursor.primaryKey ?? cursor.key;
+      if (items.length >= chunkSize) {
+        res({ items, lastKey, done: false });
+        return;
+      }
+      cursor.continue();
+    };
+    req.onerror = () => rej(req.error);
+    tx.onabort = () => rej(tx.error || req.error || new Error(`IndexedDB chunk read aborted (${store})`));
+    tx.onerror = () => rej(tx.error || req.error || new Error(`IndexedDB chunk read failed (${store})`));
+  }));
+}
+
+async function dbIterateStoreInChunks(store, onChunk, options = {}) {
+  const chunkSize = Math.max(1, parseInt(options.chunkSize, 10) || 25);
+  const direction = options.direction || 'next';
+  let afterKey = null;
+  while (true) {
+    const { items, lastKey, done } = await dbReadStoreChunk(store, { afterKey, chunkSize, direction });
+    if (items.length) await onChunk(items);
+    if (done || !items.length) break;
+    afterKey = lastKey;
+  }
+}
+
 async function dbSaveImage(arrayBuffer, metadata, tags, imageCategory) {
-  const db = await getDB();
-  return dbOp(db,'images','readwrite', s => s.add({
+  return dbStoreOp('images','readwrite', s => s.add({
     timestamp: Date.now(),
     data: arrayBuffer,
     metadata,
@@ -4404,14 +4538,12 @@ async function dbUpdateImage(id, fields) {
 }
 
 async function dbGetAll() {
-  const db = await getDB();
-  const all = await dbOp(db,'images','readonly', s => s.getAll());
+  const all = await dbReadAllStore('images');
   return all.reverse();
 }
 
 async function dbDelete(id) {
-  const db = await getDB();
-  return dbOp(db,'images','readwrite', s => s.delete(id));
+  return dbStoreOp('images','readwrite', s => s.delete(id));
 }
 
 function revokeRecordObjectUrl(record, prop = '_url') {
@@ -4523,24 +4655,20 @@ async function dbUpdateTagMeta(name, fields) {
 }
 
 async function dbDeleteTag(name) {
-  const db = await getDB();
-  return dbOp(db,'tags','readwrite', s => s.delete(name));
+  return dbStoreOp('tags','readwrite', s => s.delete(name));
 }
 
 async function dbGetTagTypes() {
-  const db = await getDB();
-  const rows = await dbOp(db, 'tag_types', 'readonly', s => s.getAll());
+  const rows = await dbReadAllStore('tag_types');
   return rows.sort((a, b) => (a.sortOrder || 999) - (b.sortOrder || 999) || String(a.label || '').localeCompare(String(b.label || ''), 'zh-Hant'));
 }
 
 async function dbPutTagType(type) {
-  const db = await getDB();
-  return dbOp(db, 'tag_types', 'readwrite', s => s.put(type));
+  return dbStoreOp('tag_types', 'readwrite', s => s.put(type));
 }
 
 async function dbDeleteTagType(id) {
-  const db = await getDB();
-  return dbOp(db, 'tag_types', 'readwrite', s => s.delete(id));
+  return dbStoreOp('tag_types', 'readwrite', s => s.delete(id));
 }
 
 // ── Vibe Library DB ──
@@ -4556,8 +4684,7 @@ function normalizeVibeRecord(v) {
   return { ...v, thumbMime, thumbUrl };
 }
 async function dbSaveVibe(name, base64, thumbMime, isPreEncoded, infoExtracted, strength, model) {
-  const db = await getDB();
-  return dbOp(db,'vibe_library','readwrite', s => s.add({
+  return dbStoreOp('vibe_library','readwrite', s => s.add({
     name, base64, thumbMime: thumbMime || 'image/webp', isPreEncoded: !!isPreEncoded,
     infoExtracted: infoExtracted ?? 1.0,
     strength: strength ?? 0.6,
@@ -4581,23 +4708,19 @@ async function dbUpdateVibe(id, fields) {
   });
 }
 async function dbGetVibes() {
-  const db = await getDB();
-  const all = await dbOp(db,'vibe_library','readonly', s => s.getAll());
+  const all = await dbReadAllStore('vibe_library');
   return all.map(normalizeVibeRecord).sort((a,b) => b.timestamp - a.timestamp);
 }
 async function dbDeleteVibe(id) {
-  const db = await getDB();
-  return dbOp(db,'vibe_library','readwrite', s => s.delete(id));
+  return dbStoreOp('vibe_library','readwrite', s => s.delete(id));
 }
 async function dbGetVibeById(id) {
-  const db = await getDB();
-  const rec = await dbOp(db,'vibe_library','readonly', s => s.get(id));
+  const rec = await dbStoreOp('vibe_library','readonly', s => s.get(id));
   return rec ? normalizeVibeRecord(rec) : null;
 }
 
 async function dbGetImageById(id) {
-  const db = await getDB();
-  return dbOp(db,'images','readonly', s => s.get(id));
+  return dbStoreOp('images','readonly', s => s.get(id));
 }
 
 function buildCharPromptVariantId() {
@@ -13926,34 +14049,30 @@ function initSyncSection() {
 async function buildBackupZip(progressCb) {
   const zip = new JSZip();
   const imgFolder = zip.folder('images');
-  const allImages = await dbGetAll();
-  const manifest  = { version: BACKUP_VERSION, exportedAt: new Date().toISOString(), imageCount: allImages.length, images: [] };
+  const totalImages = await dbCountStore('images');
+  const manifest  = { version: BACKUP_VERSION, exportedAt: new Date().toISOString(), imageCount: totalImages, images: [] };
+  let processedImages = 0;
 
-  for (let i = 0; i < allImages.length; i++) {
-    const img = allImages[i];
-    if (progressCb) progressCb(i, allImages.length, `計算圖片 ${i+1}/${allImages.length}…`);
-    const buf  = img.data instanceof ArrayBuffer ? img.data : img.data.buffer ?? img.data;
-    const hash = await sha256hex(buf);
-    imgFolder.file(hash + '.png', buf);
-    manifest.images.push({ hash, timestamp: img.timestamp, metadata: img.metadata, tags: img.tags || [], imageCategory: img.imageCategory || 'general' });
-  }
+  await dbIterateStoreInChunks('images', async chunk => {
+    for (const img of chunk) {
+      if (progressCb) progressCb(processedImages, totalImages, `計算圖片 ${processedImages + 1}/${totalImages}…`);
+      const buf  = img.data instanceof ArrayBuffer ? img.data : img.data.buffer ?? img.data;
+      const hash = await sha256hex(buf);
+      imgFolder.file(hash + '.png', buf);
+      manifest.images.push({ hash, timestamp: img.timestamp, metadata: img.metadata, tags: img.tags || [], imageCategory: img.imageCategory || 'general' });
+      processedImages++;
+    }
+  }, { chunkSize: 12 });
 
   // Library data (all non-image stores)
-  const db = await getDB();
-  const readStore = name => new Promise(res => {
-    const tx = db.transaction(name, 'readonly');
-    const r  = tx.objectStore(name).getAll();
-    r.onsuccess = () => res(r.result);
-    r.onerror   = () => res([]);
-  });
   const library = {
-    tags:         await readStore('tags'),
-    tagTypes:     await readStore('tag_types'),
-    vibes:        await readStore('vibe_library'),
-    characters:   await readStore('characters'),
-    artists:      await readStore('artists'),
-    blends:       await readStore('artist_blends'),
-    notes:        await readStore('prompt_notes'),
+    tags:         await dbReadAllStore('tags'),
+    tagTypes:     await dbReadAllStore('tag_types'),
+    vibes:        await dbReadAllStore('vibe_library'),
+    characters:   await dbReadAllStore('characters'),
+    artists:      await dbReadAllStore('artists'),
+    blends:       await dbReadAllStore('artist_blends'),
+    notes:        await dbReadAllStore('prompt_notes'),
     exportedAt:   new Date().toISOString()
   };
 
@@ -14026,11 +14145,13 @@ async function mergeBackupIntoLocal(zipBlob, conflictMode, progressCb) {
   // Build local hash map
   if (progressCb) progressCb(0, manifest.images.length, '建立本地雜湊索引…');
   const localHashMap = new Map(); // hash → {id, tags, timestamp}
-  for (const img of galleryData) {
-    const buf  = img.data instanceof ArrayBuffer ? img.data : img.data.buffer ?? img.data;
-    const h    = await sha256hex(buf);
-    localHashMap.set(h, { id: img.id, tags: img.tags || [], timestamp: img.timestamp });
-  }
+  await dbIterateStoreInChunks('images', async chunk => {
+    for (const img of chunk) {
+      const buf  = img.data instanceof ArrayBuffer ? img.data : img.data.buffer ?? img.data;
+      const h    = await sha256hex(buf);
+      localHashMap.set(h, { id: img.id, tags: img.tags || [], timestamp: img.timestamp });
+    }
+  }, { chunkSize: 12 });
 
   for (let i = 0; i < manifest.images.length; i++) {
     const entry = manifest.images[i];
@@ -14064,22 +14185,13 @@ async function mergeBackupIntoLocal(zipBlob, conflictMode, progressCb) {
   }
 
   // ── Library: helper to merge by id ──
-  const db = await getDB();
   async function mergeStore(storeName, items, keyField) {
     if (!items?.length) return;
-    const existing = await new Promise(res => {
-      const r = db.transaction(storeName,'readonly').objectStore(storeName).getAll();
-      r.onsuccess = () => res(r.result);
-      r.onerror   = () => res([]);
-    });
+    const existing = await dbReadAllStore(storeName);
     const existingIds = new Set(existing.map(e => e[keyField]));
     for (const item of items) {
       if (!existingIds.has(item[keyField])) {
-        await new Promise(res => {
-          const tx = db.transaction(storeName,'readwrite');
-          const r  = tx.objectStore(storeName).put(item);
-          r.onsuccess = res; r.onerror = res;
-        });
+        await dbStoreOp(storeName, 'readwrite', s => s.put(item));
       }
     }
   }
