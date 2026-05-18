@@ -3098,6 +3098,9 @@
           <button class="btn btn-s" style="font-size:.8rem;" onclick="doImportLocal()">📂 匯入本機備份</button>
           <input type="file" id="import-zip-input" accept=".zip" style="display:none;" onchange="handleLocalZipImport(this)">
         </div>
+        <div class="sync-btn-row">
+          <button class="btn btn-s" style="flex:1;font-size:.8rem;" onclick="openWorkspaceBackupModal()" id="sync-btn-workspace">🧩 工作集備份</button>
+        </div>
       </div>
 
         <!-- Theme -->
@@ -3108,6 +3111,38 @@
           </select>
         </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- ── WORKSPACE BACKUP MODAL ── -->
+<div class="drive-modal-overlay" id="workspace-backup-modal" onclick="closeWorkspaceBackupModal(event)">
+  <div class="drive-modal-box" style="width:min(1120px,92vw);max-width:1120px;" onclick="event.stopPropagation()">
+    <div class="drive-modal-hd">
+      <span class="drive-modal-title">🧩 工作集備份</span>
+      <button class="btn btn-s" style="padding:3px 10px;font-size:.78rem;" onclick="closeWorkspaceBackupModal()">✕</button>
+    </div>
+    <div class="drive-modal-body" style="display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);gap:16px;max-height:min(78vh,760px);">
+      <div style="display:flex;flex-direction:column;gap:12px;min-width:0;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;" id="workspace-backup-tabs"></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input id="workspace-backup-search" class="drive-search-in" style="flex:1;min-width:180px;" placeholder="搜尋名稱 / tag / 說明..." oninput="setWorkspaceBackupSearch(this.value)">
+          <button class="btn btn-s" style="font-size:.78rem;" onclick="clearWorkspaceBackupCurrentTab()">清空此類</button>
+          <button class="btn btn-s" style="font-size:.78rem;" onclick="clearWorkspaceBackupSelection()">全部清空</button>
+        </div>
+        <div id="workspace-backup-list" style="display:flex;flex-direction:column;gap:8px;overflow:auto;padding-right:4px;min-height:280px;"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px;border-left:1px solid var(--border);padding-left:16px;min-width:0;">
+        <div style="font-size:.8rem;color:var(--txt2);line-height:1.6;" id="workspace-backup-summary"></div>
+        <div style="font-size:.74rem;color:var(--txt2);line-height:1.5;">
+          會自動帶入明確引用的圖片：
+          角色縮圖 / Precise Ref、繪師預覽、混搭預覽、筆記預覽圖。
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;">
+          <button class="btn btn-p" style="flex:1;min-width:180px;font-size:.82rem;" id="workspace-backup-drive-btn" onclick="runWorkspaceBackup('drive')">☁ 備份到 Drive</button>
+          <button class="btn btn-s" style="flex:1;min-width:180px;font-size:.82rem;" id="workspace-backup-local-btn" onclick="runWorkspaceBackup('local')">⬇ 打包下載</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -4511,14 +4546,90 @@ async function dbIterateStoreInChunks(store, onChunk, options = {}) {
   }
 }
 
+function buildEntityUid(prefix = 'ent') {
+  if (window.crypto?.randomUUID) return `${prefix}_${window.crypto.randomUUID()}`;
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function toFiniteTimestamp(value, fallback = Date.now()) {
+  const num = Number(value);
+  return Number.isFinite(num) && num > 0 ? num : fallback;
+}
+
+function dedupeNumericIds(values) {
+  return [...new Set((Array.isArray(values) ? values : [])
+    .map(value => Number(value))
+    .filter(value => Number.isFinite(value) && value > 0))];
+}
+
+function sanitizeImageId(value) {
+  const num = Number(value);
+  return Number.isFinite(num) && num > 0 ? num : null;
+}
+
+function stripRuntimeFields(record) {
+  const out = {};
+  Object.entries(record || {}).forEach(([key, value]) => {
+    if (!key.startsWith('_')) out[key] = value;
+  });
+  return out;
+}
+
+function normalizeManagedRecord(record, prefix, fallbackTimestamp = Date.now()) {
+  const base = stripRuntimeFields(record || {});
+  const timestamp = toFiniteTimestamp(base.timestamp, fallbackTimestamp);
+  const fallbackUid = Number.isFinite(Number(base.id)) && Number(base.id) > 0
+    ? `${prefix}_legacy_${Number(base.id)}`
+    : buildEntityUid(prefix);
+  return {
+    ...base,
+    entityUid: String(base.entityUid || fallbackUid),
+    timestamp,
+    updatedAt: toFiniteTimestamp(base.updatedAt, timestamp)
+  };
+}
+
+function toArrayBuffer(data) {
+  if (data instanceof ArrayBuffer) return data;
+  if (ArrayBuffer.isView(data)) {
+    return data.byteOffset === 0 && data.byteLength === data.buffer.byteLength
+      ? data.buffer
+      : data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+  }
+  if (data?.buffer instanceof ArrayBuffer) {
+    const byteOffset = Number(data.byteOffset) || 0;
+    const byteLength = Number(data.byteLength) || data.buffer.byteLength;
+    return byteOffset === 0 && byteLength === data.buffer.byteLength
+      ? data.buffer
+      : data.buffer.slice(byteOffset, byteOffset + byteLength);
+  }
+  return new Uint8Array(0).buffer;
+}
+
+function normalizeImageRecord(record = {}) {
+  const base = stripRuntimeFields(record || {});
+  const timestamp = toFiniteTimestamp(base.timestamp, Date.now());
+  return {
+    ...base,
+    data: toArrayBuffer(base.data),
+    tags: Array.isArray(base.tags) ? dedupeTags(base.tags) : [],
+    timestamp,
+    updatedAt: toFiniteTimestamp(base.updatedAt, timestamp),
+    imageCategory: base.imageCategory || 'general',
+    contentHash: typeof base.contentHash === 'string' ? base.contentHash : ''
+  };
+}
+
 async function dbSaveImage(arrayBuffer, metadata, tags, imageCategory, timestampOverride) {
-  return dbStoreOp('images','readwrite', s => s.add({
-    timestamp: Number.isFinite(timestampOverride) ? timestampOverride : Date.now(),
+  const timestamp = Number.isFinite(timestampOverride) ? timestampOverride : Date.now();
+  return dbStoreOp('images','readwrite', s => s.add(normalizeImageRecord({
+    timestamp,
+    updatedAt: timestamp,
     data: arrayBuffer,
     metadata,
     tags: tags || [],
     imageCategory: imageCategory || 'general'
-  }));
+  })));
 }
 
 async function dbUpdateImage(id, fields) {
@@ -4528,7 +4639,12 @@ async function dbUpdateImage(id, fields) {
     const store = tx.objectStore('images');
     const r = store.get(id);
     r.onsuccess = () => {
-      const item = Object.assign({}, r.result, fields);
+      const item = normalizeImageRecord({
+        ...r.result,
+        ...fields,
+        id: r.result?.id ?? id,
+        updatedAt: Number.isFinite(fields?.updatedAt) ? fields.updatedAt : Date.now()
+      });
       const r2 = store.put(item);
       r2.onsuccess = () => res();
       r2.onerror = () => rej(r2.error);
@@ -4539,7 +4655,7 @@ async function dbUpdateImage(id, fields) {
 
 async function dbGetAll() {
   const all = await dbReadAllStore('images');
-  return all.reverse();
+  return all.map(normalizeImageRecord).reverse();
 }
 
 async function dbDelete(id) {
@@ -4720,7 +4836,8 @@ async function dbGetVibeById(id) {
 }
 
 async function dbGetImageById(id) {
-  return dbStoreOp('images','readonly', s => s.get(id));
+  const rec = await dbStoreOp('images','readonly', s => s.get(id));
+  return rec ? normalizeImageRecord(rec) : null;
 }
 
 function buildCharPromptVariantId() {
@@ -4739,6 +4856,7 @@ function normalizeCharPromptVariant(variant, index = 0) {
 }
 
 function normalizeCharacterRecord(char = {}) {
+  const base = normalizeManagedRecord(char, 'char');
   let promptVariants = Array.isArray(char.promptVariants) && char.promptVariants.length
     ? char.promptVariants.map((variant, index) => normalizeCharPromptVariant(variant, index))
     : [];
@@ -4762,9 +4880,12 @@ function normalizeCharacterRecord(char = {}) {
   promptVariants = promptVariants.map(variant => ({ ...variant, isDefault: variant.id === defaultPromptVariantId }));
   const defaultVariant = promptVariants.find(variant => variant.id === defaultPromptVariantId) || promptVariants[0] || null;
   return {
-    ...char,
+    ...base,
     promptVariants,
     defaultPromptVariantId,
+    tags: dedupeTags(char.tags || []),
+    thumbImageId: sanitizeImageId(char.thumbImageId),
+    preciseRefImageIds: dedupeNumericIds(char.preciseRefImageIds || []),
     prompt: defaultVariant?.positivePrompt || '',
     negPrompt: defaultVariant?.negativePrompt || ''
   };
@@ -4803,7 +4924,9 @@ async function dbSaveCharacter(char) {
     notes: normalized.notes || '',
     thumbImageId: normalized.thumbImageId ?? null,
     preciseRefImageIds: normalized.preciseRefImageIds || [],
-    timestamp: Date.now()
+    entityUid: normalized.entityUid,
+    timestamp: normalized.timestamp,
+    updatedAt: normalized.updatedAt
   }));
 }
 async function dbUpdateCharacter(id, fields) {
@@ -4813,7 +4936,12 @@ async function dbUpdateCharacter(id, fields) {
     const store = tx.objectStore('characters');
     const r = store.get(id);
     r.onsuccess = () => {
-      const rec = Object.assign({}, r.result, fields);
+      const rec = normalizeCharacterRecord({
+        ...r.result,
+        ...fields,
+        id: r.result?.id ?? id,
+        updatedAt: Number.isFinite(fields?.updatedAt) ? fields.updatedAt : Date.now()
+      });
       const r2 = store.put(rec);
       r2.onsuccess = () => res(r2.result);
       r2.onerror = () => rej(r2.error);
@@ -4832,14 +4960,34 @@ async function dbDeleteCharacter(id) {
 }
 
 // ── Artists DB ──
+function normalizeArtistRecord(record = {}) {
+  const base = normalizeManagedRecord(record, 'artist');
+  return {
+    ...base,
+    name: String(record?.name || ''),
+    artistTag: String(record?.artistTag || ''),
+    styleType: String(record?.styleType || ''),
+    tags: dedupeTags(record?.tags || []),
+    primaryTagName: String(record?.primaryTagName || ''),
+    notes: String(record?.notes || ''),
+    previewImageId: sanitizeImageId(record?.previewImageId)
+  };
+}
+
 async function dbSaveArtist(a) {
+  const normalized = normalizeArtistRecord(a);
   const db = await getDB();
   return dbOp(db,'artists','readwrite', s => s.add({
-    name: a.name||'', artistTag: a.artistTag||'',
-    styleType: a.styleType||'', tags: a.tags||[],
-    primaryTagName: a.primaryTagName || '',
-    notes: a.notes||'', previewImageId: a.previewImageId??null,
-    timestamp: Date.now()
+    name: normalized.name || '',
+    artistTag: normalized.artistTag || '',
+    styleType: normalized.styleType || '',
+    tags: normalized.tags || [],
+    primaryTagName: normalized.primaryTagName || '',
+    notes: normalized.notes || '',
+    previewImageId: normalized.previewImageId ?? null,
+    entityUid: normalized.entityUid,
+    timestamp: normalized.timestamp,
+    updatedAt: normalized.updatedAt
   }));
 }
 async function dbUpdateArtist(id, fields) {
@@ -4848,14 +4996,24 @@ async function dbUpdateArtist(id, fields) {
     const tx = db.transaction('artists','readwrite');
     const store = tx.objectStore('artists');
     const r = store.get(id);
-    r.onsuccess = () => { const rec = Object.assign({},r.result,fields); const r2=store.put(rec); r2.onsuccess=()=>res(r2.result); r2.onerror=()=>rej(r2.error); };
+    r.onsuccess = () => {
+      const rec = normalizeArtistRecord({
+        ...r.result,
+        ...fields,
+        id: r.result?.id ?? id,
+        updatedAt: Number.isFinite(fields?.updatedAt) ? fields.updatedAt : Date.now()
+      });
+      const r2 = store.put(rec);
+      r2.onsuccess = () => res(r2.result);
+      r2.onerror = () => rej(r2.error);
+    };
     r.onerror = () => rej(r.error);
   });
 }
 async function dbGetArtists() {
   const db = await getDB();
   const all = await dbOp(db,'artists','readonly', s => s.getAll());
-  return all.sort((a,b) => b.timestamp - a.timestamp);
+  return all.map(normalizeArtistRecord).sort((a,b) => b.timestamp - a.timestamp);
 }
 async function dbDeleteArtist(id) {
   const db = await getDB();
@@ -4864,14 +5022,20 @@ async function dbDeleteArtist(id) {
 
 // ── Artist Blends DB ──
 async function dbSaveBlend(b) {
+  const normalized = normalizeBlendRecord(b);
   const db = await getDB();
   return dbOp(db,'artist_blends','readwrite', s => s.add({
-    name: b.name || '',
-    artistEntries: b.artistEntries || [],
-    artistIds: b.artistIds||[], artistTags: b.artistTags||[],
-    artistNames: b.artistNames||[], notes: b.notes||'',
-    tags: b.tags || [],
-    previewImageId: b.previewImageId??null, timestamp: Date.now()
+    name: normalized.name || '',
+    artistEntries: normalized.artistEntries || [],
+    artistIds: normalized.artistIds || [],
+    artistTags: normalized.artistTags || [],
+    artistNames: normalized.artistNames || [],
+    notes: normalized.notes || '',
+    tags: normalized.tags || [],
+    previewImageId: normalized.previewImageId ?? null,
+    entityUid: normalized.entityUid,
+    timestamp: normalized.timestamp,
+    updatedAt: normalized.updatedAt
   }));
 }
 async function dbUpdateBlend(id, fields) {
@@ -4880,7 +5044,17 @@ async function dbUpdateBlend(id, fields) {
     const tx = db.transaction('artist_blends','readwrite');
     const store = tx.objectStore('artist_blends');
     const r = store.get(id);
-    r.onsuccess = () => { const rec = Object.assign({},r.result,fields); const r2=store.put(rec); r2.onsuccess=()=>res(r2.result); r2.onerror=()=>rej(r2.error); };
+    r.onsuccess = () => {
+      const rec = normalizeBlendRecord({
+        ...r.result,
+        ...fields,
+        id: r.result?.id ?? id,
+        updatedAt: Number.isFinite(fields?.updatedAt) ? fields.updatedAt : Date.now()
+      });
+      const r2 = store.put(rec);
+      r2.onsuccess = () => res(r2.result);
+      r2.onerror = () => rej(r2.error);
+    };
     r.onerror = () => rej(r.error);
   });
 }
@@ -4923,12 +5097,14 @@ function normalizeBlendEntry(entry, index = 0) {
 }
 
 function normalizeBlendRecord(record) {
+  const base = normalizeManagedRecord(record, 'blend');
   if (Array.isArray(record?.artistEntries)) {
     const artistEntries = record.artistEntries.map((entry, index) => normalizeBlendEntry(entry, index));
     return {
-      ...record,
+      ...base,
       name: record.name || '',
       tags: dedupeTags(record.tags || []),
+      previewImageId: sanitizeImageId(record.previewImageId),
       artistEntries
     };
   }
@@ -4945,9 +5121,10 @@ function normalizeBlendRecord(record) {
     order: index
   }, index));
   return {
-    ...record,
+    ...base,
     name: record.name || '',
     tags: dedupeTags(record.tags || []),
+    previewImageId: sanitizeImageId(record.previewImageId),
     artistEntries
   };
 }
@@ -11391,12 +11568,30 @@ const NOTE_CAT_CLASS = {
 };
 
 // ── DB helpers ──
+function normalizeNoteRecord(record = {}) {
+  const base = normalizeManagedRecord(record, 'note');
+  return {
+    ...base,
+    fragment: String(record?.fragment || ''),
+    description: String(record?.description || ''),
+    category: String(record?.category || 'other'),
+    tags: dedupeTags(record?.tags || []),
+    previewImageIds: dedupeNumericIds(record?.previewImageIds || [])
+  };
+}
+
 async function dbSaveNote(n) {
+  const normalized = normalizeNoteRecord(n);
   const db = await getDB();
   return dbOp(db,'prompt_notes','readwrite', s => s.add({
-    fragment: n.fragment||'', description: n.description||'',
-    category: n.category||'other', tags: n.tags||[],
-    timestamp: Date.now()
+    fragment: normalized.fragment || '',
+    description: normalized.description || '',
+    category: normalized.category || 'other',
+    tags: normalized.tags || [],
+    previewImageIds: normalized.previewImageIds || [],
+    entityUid: normalized.entityUid,
+    timestamp: normalized.timestamp,
+    updatedAt: normalized.updatedAt
   }));
 }
 async function dbUpdateNote(id, fields) {
@@ -11406,7 +11601,12 @@ async function dbUpdateNote(id, fields) {
     const store = tx.objectStore('prompt_notes');
     const r = store.get(id);
     r.onsuccess = () => {
-      const rec = Object.assign({}, r.result, fields);
+      const rec = normalizeNoteRecord({
+        ...r.result,
+        ...fields,
+        id: r.result?.id ?? id,
+        updatedAt: Number.isFinite(fields?.updatedAt) ? fields.updatedAt : Date.now()
+      });
       const r2 = store.put(rec);
       r2.onsuccess = () => res(); r2.onerror = () => rej(r2.error);
     };
@@ -11416,7 +11616,7 @@ async function dbUpdateNote(id, fields) {
 async function dbGetNotes() {
   const db = await getDB();
   const all = await dbOp(db,'prompt_notes','readonly', s => s.getAll());
-  return all.sort((a,b) => b.timestamp - a.timestamp);
+  return all.map(normalizeNoteRecord).sort((a,b) => b.timestamp - a.timestamp);
 }
 async function dbDeleteNote(id) {
   const db = await getDB();
@@ -13944,6 +14144,103 @@ async function sha256hex(arrayBuffer) {
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
+async function getOrComputeImageHash(imageRecord) {
+  if (!imageRecord) return '';
+  const normalized = normalizeImageRecord(imageRecord);
+  if (normalized.contentHash) return normalized.contentHash;
+  const hash = await sha256hex(normalized.data);
+  normalized.contentHash = hash;
+  imageRecord.contentHash = hash;
+  if (Number.isFinite(normalized.id)) {
+    try {
+      await dbUpdateImage(normalized.id, { contentHash: hash, updatedAt: normalized.updatedAt });
+    } catch (_) {}
+  }
+  return hash;
+}
+
+function collectReferencedImageIds(scope = {}) {
+  return dedupeNumericIds([
+    ...(scope.characters || []).flatMap(item => [item.thumbImageId, ...(item.preciseRefImageIds || [])]),
+    ...(scope.artists || []).map(item => item.previewImageId),
+    ...(scope.blends || []).map(item => item.previewImageId),
+    ...(scope.notes || []).flatMap(item => item.previewImageIds || [])
+  ]);
+}
+
+async function buildImageHashLookupForIds(imageIds) {
+  const imageHashById = new Map();
+  const images = [];
+  for (const imageId of dedupeNumericIds(imageIds)) {
+    const image = await dbGetImageById(imageId);
+    if (!image) continue;
+    const hash = await getOrComputeImageHash(image);
+    imageHashById.set(imageId, hash);
+    images.push(image);
+  }
+  return { imageHashById, images };
+}
+
+function serializeCharacterSnapshotRecord(record, imageHashById) {
+  const normalized = normalizeCharacterRecord(record);
+  return {
+    ...stripRuntimeFields(normalized),
+    imageRefsByHash: {
+      thumb: normalized.thumbImageId ? (imageHashById.get(normalized.thumbImageId) || '') : '',
+      preciseRefs: (normalized.preciseRefImageIds || []).map(id => imageHashById.get(id)).filter(Boolean)
+    }
+  };
+}
+
+function serializeArtistSnapshotRecord(record, imageHashById) {
+  const normalized = normalizeArtistRecord(record);
+  return {
+    ...stripRuntimeFields(normalized),
+    imageRefsByHash: {
+      preview: normalized.previewImageId ? (imageHashById.get(normalized.previewImageId) || '') : ''
+    }
+  };
+}
+
+function serializeBlendSnapshotRecord(record, imageHashById) {
+  const normalized = normalizeBlendRecord(record);
+  return {
+    ...stripRuntimeFields(normalized),
+    imageRefsByHash: {
+      preview: normalized.previewImageId ? (imageHashById.get(normalized.previewImageId) || '') : ''
+    }
+  };
+}
+
+function serializeNoteSnapshotRecord(record, imageHashById) {
+  const normalized = normalizeNoteRecord(record);
+  return {
+    ...stripRuntimeFields(normalized),
+    imageRefsByHash: {
+      previews: (normalized.previewImageIds || []).map(id => imageHashById.get(id)).filter(Boolean)
+    }
+  };
+}
+
+function collectScopeTagNames(scope = {}) {
+  return [...new Set([
+    ...(scope.characters || []).flatMap(item => item.tags || []),
+    ...(scope.artists || []).flatMap(item => item.tags || []),
+    ...(scope.blends || []).flatMap(item => item.tags || []),
+    ...(scope.notes || []).flatMap(item => item.tags || []),
+    ...(scope.images || []).flatMap(item => item.tags || [])
+  ].filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'zh-Hant'));
+}
+
+async function collectScopedTagData(tagNames) {
+  if (!tagNames?.length) return { tags: [], tagTypes: [] };
+  const tagSet = new Set(tagNames);
+  const tags = (await dbReadAllStore('tags')).filter(tag => tagSet.has(tag.name));
+  const typeIds = new Set(tags.map(tag => tag.typeId).filter(Boolean));
+  const tagTypes = (await dbReadAllStore('tag_types')).filter(type => typeIds.has(type.id));
+  return { tags, tagTypes };
+}
+
 function buildBackupTimestampSlug(date = new Date()) {
   const pad = n => String(n).padStart(2, '0');
   return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
@@ -13999,15 +14296,25 @@ function applyWorkspaceSnapshot(snapshot) {
 }
 
 async function collectLibrarySnapshot() {
+  const [characters, artists, blends, notes, tags, tagTypes, vibes] = await Promise.all([
+    dbGetCharacters(),
+    dbGetArtists(),
+    dbGetBlends(),
+    dbGetNotes(),
+    dbReadAllStore('tags'),
+    dbReadAllStore('tag_types'),
+    dbReadAllStore('vibe_library')
+  ]);
+  const { imageHashById } = await buildImageHashLookupForIds(collectReferencedImageIds({ characters, artists, blends, notes }));
   return {
-    tags:         await dbReadAllStore('tags'),
-    tagTypes:     await dbReadAllStore('tag_types'),
-    vibes:        await dbReadAllStore('vibe_library'),
-    characters:   await dbReadAllStore('characters'),
-    artists:      await dbReadAllStore('artists'),
-    blends:       await dbReadAllStore('artist_blends'),
-    notes:        await dbReadAllStore('prompt_notes'),
-    exportedAt:   new Date().toISOString()
+    tags,
+    tagTypes,
+    vibes,
+    characters: characters.map(item => serializeCharacterSnapshotRecord(item, imageHashById)),
+    artists: artists.map(item => serializeArtistSnapshotRecord(item, imageHashById)),
+    blends: blends.map(item => serializeBlendSnapshotRecord(item, imageHashById)),
+    notes: notes.map(item => serializeNoteSnapshotRecord(item, imageHashById)),
+    exportedAt: new Date().toISOString()
   };
 }
 
@@ -14015,15 +14322,65 @@ async function buildLocalImageHashMap() {
   const map = new Map();
   await dbIterateStoreInChunks('images', async chunk => {
     for (const img of chunk) {
-      const buf = img.data instanceof ArrayBuffer ? img.data : img.data.buffer ?? img.data;
-      const hash = await sha256hex(buf);
+      const hash = await getOrComputeImageHash(img);
       map.set(hash, { id: img.id, tags: img.tags || [], timestamp: img.timestamp });
     }
   }, { chunkSize: 12 });
   return map;
 }
 
-async function mergeLibrarySnapshot(library) {
+function remapSnapshotImageRefs(recordType, record, imageHashToLocalIdMap) {
+  const base = stripRuntimeFields(record || {});
+  const refs = base.imageRefsByHash || {};
+  delete base.imageRefsByHash;
+  if (recordType === 'characters') {
+    const hasThumb = Object.prototype.hasOwnProperty.call(refs, 'thumb');
+    const hasPreciseRefs = Object.prototype.hasOwnProperty.call(refs, 'preciseRefs');
+    return {
+      ...base,
+      ...(hasThumb ? { thumbImageId: refs.thumb ? (imageHashToLocalIdMap.get(refs.thumb) ?? null) : null } : {}),
+      ...(hasPreciseRefs ? { preciseRefImageIds: (refs.preciseRefs || []).map(hash => imageHashToLocalIdMap.get(hash)).filter(Number.isFinite) } : {})
+    };
+  }
+  if (recordType === 'artists' || recordType === 'artist_blends') {
+    const hasPreview = Object.prototype.hasOwnProperty.call(refs, 'preview');
+    return {
+      ...base,
+      ...(hasPreview ? { previewImageId: refs.preview ? (imageHashToLocalIdMap.get(refs.preview) ?? null) : null } : {})
+    };
+  }
+  if (recordType === 'prompt_notes') {
+    const hasPreviews = Object.prototype.hasOwnProperty.call(refs, 'previews');
+    return {
+      ...base,
+      ...(hasPreviews ? { previewImageIds: (refs.previews || []).map(hash => imageHashToLocalIdMap.get(hash)).filter(Number.isFinite) } : {})
+    };
+  }
+  return base;
+}
+
+function mergeEntityRecords(existing, incoming, normalizer, conflictMode = 'recent') {
+  const existingUpdated = toFiniteTimestamp(existing?.updatedAt, existing?.timestamp);
+  const incomingUpdated = toFiniteTimestamp(incoming?.updatedAt, incoming?.timestamp);
+  const incomingWins = incomingUpdated >= existingUpdated;
+  const merged = normalizer({
+    ...(incomingWins ? existing : incoming),
+    ...(incomingWins ? incoming : existing),
+    id: existing.id,
+    entityUid: existing.entityUid || incoming.entityUid,
+    timestamp: Math.min(toFiniteTimestamp(existing.timestamp, Date.now()), toFiniteTimestamp(incoming.timestamp, Date.now())),
+    updatedAt: Math.max(existingUpdated, incomingUpdated)
+  });
+  if (conflictMode === 'merge' && Array.isArray(existing.tags) && Array.isArray(incoming.tags)) {
+    merged.tags = dedupeTags([...(existing.tags || []), ...(incoming.tags || [])]);
+  }
+  return merged;
+}
+
+async function mergeLibrarySnapshot(library, options = {}) {
+  const conflictMode = options.conflictMode || 'recent';
+  const imageHashToLocalIdMap = options.imageHashToLocalIdMap || new Map();
+
   async function mergeStore(storeName, items, keyField) {
     if (!items?.length) return;
     const existing = await dbReadAllStore(storeName);
@@ -14035,13 +14392,238 @@ async function mergeLibrarySnapshot(library) {
     }
   }
 
+  async function mergeEntityStore(storeName, items, normalizer) {
+    if (!items?.length) return;
+    const existing = (await dbReadAllStore(storeName)).map(normalizer);
+    const byUid = new Map(existing.map(item => [item.entityUid || `legacy:${item.id}`, item]));
+    for (const rawItem of items) {
+      const remapped = normalizer(remapSnapshotImageRefs(storeName, rawItem, imageHashToLocalIdMap));
+      const key = remapped.entityUid || `legacy:${remapped.id}`;
+      const current = byUid.get(key);
+      if (current) {
+        const merged = mergeEntityRecords(current, remapped, normalizer, conflictMode);
+        await dbStoreOp(storeName, 'readwrite', s => s.put(merged));
+        byUid.set(key, merged);
+        continue;
+      }
+      const fresh = normalizer({ ...remapped });
+      delete fresh.id;
+      const newId = await dbStoreOp(storeName, 'readwrite', s => s.add(fresh));
+      byUid.set(key, { ...fresh, id: newId });
+    }
+  }
+
   await mergeStore('tags',          library.tags,       'name');
   await mergeStore('tag_types',     library.tagTypes,   'id');
   await mergeStore('vibe_library',  library.vibes,      'id');
-  await mergeStore('characters',    library.characters, 'id');
-  await mergeStore('artists',       library.artists,    'id');
-  await mergeStore('artist_blends', library.blends,     'id');
-  await mergeStore('prompt_notes',  library.notes,      'id');
+  await mergeEntityStore('characters',    library.characters, normalizeCharacterRecord);
+  await mergeEntityStore('artists',       library.artists,    normalizeArtistRecord);
+  await mergeEntityStore('artist_blends', library.blends,     normalizeBlendRecord);
+  await mergeEntityStore('prompt_notes',  library.notes,      normalizeNoteRecord);
+}
+
+function normalizeWorkspaceSelection(selection = {}) {
+  return {
+    characters: dedupeNumericIds(selection.characters || []),
+    artists: dedupeNumericIds(selection.artists || []),
+    blends: dedupeNumericIds(selection.blends || []),
+    notes: dedupeNumericIds(selection.notes || [])
+  };
+}
+
+async function collectWorkspaceScope(selection = {}) {
+  const normalizedSelection = normalizeWorkspaceSelection(selection);
+  const [allCharacters, allArtists, allBlends, allNotes] = await Promise.all([
+    dbGetCharacters(),
+    dbGetArtists(),
+    dbGetBlends(),
+    dbGetNotes()
+  ]);
+
+  const characterIds = new Set(normalizedSelection.characters);
+  const artistIds = new Set(normalizedSelection.artists);
+  const blendIds = new Set(normalizedSelection.blends);
+  const noteIds = new Set(normalizedSelection.notes);
+
+  const characters = allCharacters.filter(item => characterIds.has(item.id));
+  const artists = allArtists.filter(item => artistIds.has(item.id));
+  const blends = allBlends.filter(item => blendIds.has(item.id));
+  const notes = allNotes.filter(item => noteIds.has(item.id));
+
+  const { imageHashById, images } = await buildImageHashLookupForIds(collectReferencedImageIds({ characters, artists, blends, notes }));
+  const scopedTagNames = collectScopeTagNames({ characters, artists, blends, notes, images });
+  const { tags, tagTypes } = await collectScopedTagData(scopedTagNames);
+
+  const library = {
+    tags,
+    tagTypes,
+    vibes: [],
+    characters: characters.map(item => serializeCharacterSnapshotRecord(item, imageHashById)),
+    artists: artists.map(item => serializeArtistSnapshotRecord(item, imageHashById)),
+    blends: blends.map(item => serializeBlendSnapshotRecord(item, imageHashById)),
+    notes: notes.map(item => serializeNoteSnapshotRecord(item, imageHashById)),
+    exportedAt: new Date().toISOString()
+  };
+
+  return {
+    selection: normalizedSelection,
+    counts: {
+      characters: characters.length,
+      artists: artists.length,
+      blends: blends.length,
+      notes: notes.length,
+      images: images.length
+    },
+    images,
+    library,
+    workspaceScope: {
+      characterIds: normalizedSelection.characters,
+      artistIds: normalizedSelection.artists,
+      blendIds: normalizedSelection.blends,
+      noteIds: normalizedSelection.notes,
+      imageHashes: [...new Set(images.map(item => item.contentHash).filter(Boolean))],
+      tags: scopedTagNames,
+      tagTypeIds: [...new Set(tagTypes.map(item => item.id).filter(Boolean))]
+    }
+  };
+}
+
+async function buildScopedSnapshotArtifacts(options = {}) {
+  const mode = options.mode || 'workspace';
+  const createdAt = new Date();
+  const library = options.library || {
+    tags: [],
+    tagTypes: [],
+    vibes: [],
+    characters: [],
+    artists: [],
+    blends: [],
+    notes: [],
+    exportedAt: createdAt.toISOString()
+  };
+  const workspaceScope = options.workspaceScope || null;
+  const workspaceState = options.workspaceState || null;
+  const images = Array.isArray(options.images) ? options.images : [];
+  const snapshot = {
+    version: BACKUP_VERSION,
+    format: 'drive-folder-chunks',
+    mode,
+    createdAt: createdAt.toISOString(),
+    imageCount: images.length,
+    chunkTargetBytes: DRIVE_BACKUP_CHUNK_TARGET_BYTES,
+    files: {
+      library: DRIVE_BACKUP_LIBRARY_NAME,
+      ...(workspaceState ? { workspace: DRIVE_BACKUP_WORKSPACE_NAME } : {})
+    },
+    ...(workspaceScope ? { workspaceScope } : {}),
+    chunks: []
+  };
+  const files = [{
+    name: DRIVE_BACKUP_LIBRARY_NAME,
+    blob: new Blob([JSON.stringify(library)], { type: 'application/json' }),
+    mimeType: 'application/json'
+  }];
+  if (workspaceState) {
+    files.push({
+      name: DRIVE_BACKUP_WORKSPACE_NAME,
+      blob: new Blob([JSON.stringify(workspaceState)], { type: 'application/json' }),
+      mimeType: 'application/json'
+    });
+  }
+
+  let processedImages = 0;
+  let chunkIndex = 0;
+  let chunkBytes = 0;
+  let chunkItems = [];
+
+  async function flushChunk() {
+    if (!chunkItems.length) return;
+    chunkIndex++;
+    const chunkName = `${DRIVE_BACKUP_CHUNK_PREFIX}${String(chunkIndex).padStart(4, '0')}.zip`;
+    const zip = new JSZip();
+    const chunkManifest = [];
+    for (const item of chunkItems) {
+      const ext = getImageExtension(item.mimeType || 'image/png');
+      const filename = `${item.hash}.${ext}`;
+      zip.file(filename, item.buffer);
+      chunkManifest.push({
+        hash: item.hash,
+        filename,
+        mimeType: item.mimeType || 'image/png',
+        timestamp: item.timestamp,
+        updatedAt: item.updatedAt,
+        metadata: item.metadata,
+        tags: item.tags,
+        imageCategory: item.imageCategory || 'general'
+      });
+    }
+    zip.file('chunk-manifest.json', JSON.stringify({ version: BACKUP_VERSION, mode, index: chunkIndex, imageCount: chunkManifest.length, images: chunkManifest }));
+    if (options.progressCb) options.progressCb(processedImages, images.length || 1, `打包第 ${chunkIndex} 段（${chunkManifest.length} 張）…`);
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+    files.push({ name: chunkName, blob, mimeType: 'application/zip' });
+    snapshot.chunks.push({ index: chunkIndex, name: chunkName, imageCount: chunkManifest.length, totalBytes: chunkBytes });
+    chunkItems = [];
+    chunkBytes = 0;
+  }
+
+  for (const image of images) {
+    const normalized = normalizeImageRecord(image);
+    const hash = await getOrComputeImageHash(normalized);
+    chunkItems.push({
+      hash,
+      buffer: normalized.data,
+      mimeType: normalized.metadata?._mimeType || 'image/png',
+      timestamp: normalized.timestamp,
+      updatedAt: normalized.updatedAt,
+      metadata: normalized.metadata,
+      tags: normalized.tags || [],
+      imageCategory: normalized.imageCategory || 'general'
+    });
+    processedImages++;
+    chunkBytes += normalized.data.byteLength || 0;
+    if (chunkBytes >= DRIVE_BACKUP_CHUNK_TARGET_BYTES || chunkItems.length >= DRIVE_BACKUP_CHUNK_MAX_IMAGES) {
+      await flushChunk();
+    } else if (options.progressCb) {
+      options.progressCb(processedImages, images.length || 1, `整理圖片 ${processedImages}/${images.length}…`);
+    }
+  }
+  await flushChunk();
+
+  snapshot.chunkCount = snapshot.chunks.length;
+  snapshot.completedAt = new Date().toISOString();
+  files.unshift({
+    name: DRIVE_BACKUP_SNAPSHOT_NAME,
+    blob: new Blob([JSON.stringify(snapshot)], { type: 'application/json' }),
+    mimeType: 'application/json'
+  });
+  return { snapshot, files };
+}
+
+function summarizeWorkspaceSelection(selection = {}) {
+  const normalized = normalizeWorkspaceSelection(selection);
+  const selectedCharacters = characterData.filter(item => normalized.characters.includes(item.id));
+  const selectedArtists = artistData.filter(item => normalized.artists.includes(item.id));
+  const selectedBlends = blendData.filter(item => normalized.blends.includes(item.id));
+  const selectedNotes = notesData.filter(item => normalized.notes.includes(item.id));
+  const resolvedImageIds = collectReferencedImageIds({
+    characters: selectedCharacters,
+    artists: selectedArtists,
+    blends: selectedBlends,
+    notes: selectedNotes
+  });
+  const galleryMap = new Map(galleryData.map(item => [item.id, item]));
+  const estimatedBytes = resolvedImageIds.reduce((sum, imageId) => sum + (galleryMap.get(imageId)?.data?.byteLength || 0), 0);
+  return {
+    counts: {
+      characters: selectedCharacters.length,
+      artists: selectedArtists.length,
+      blends: selectedBlends.length,
+      notes: selectedNotes.length,
+      images: resolvedImageIds.length
+    },
+    resolvedImageIds,
+    estimatedBytes
+  };
 }
 
 async function refreshAppDataAfterImport() {
@@ -14096,10 +14678,216 @@ function setSyncStatus(msg, dotClass) {
 }
 
 function setSyncBtnsDisabled(on) {
-  ['sync-btn-backup','sync-btn-import'].forEach(id => {
+  ['sync-btn-backup','sync-btn-import','sync-btn-workspace'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = on;
   });
+}
+
+const WORKSPACE_BACKUP_TABS = [
+  { id: 'characters', label: '角色' },
+  { id: 'artists', label: '繪師' },
+  { id: 'blends', label: '混搭' },
+  { id: 'notes', label: '筆記' }
+];
+let workspaceBackupActiveTab = 'characters';
+let workspaceBackupSearch = '';
+let workspaceBackupBusy = false;
+const workspaceBackupSelection = {
+  characters: new Set(),
+  artists: new Set(),
+  blends: new Set(),
+  notes: new Set()
+};
+
+function openWorkspaceBackupModal(tab = 'characters') {
+  workspaceBackupActiveTab = WORKSPACE_BACKUP_TABS.some(item => item.id === tab) ? tab : 'characters';
+  workspaceBackupSearch = '';
+  const search = document.getElementById('workspace-backup-search');
+  if (search) search.value = '';
+  renderWorkspaceBackupModal();
+  document.getElementById('workspace-backup-modal')?.classList.add('open');
+}
+
+function closeWorkspaceBackupModal(event, force = false) {
+  if (workspaceBackupBusy && !force) return;
+  if (event && event.target && event.target !== event.currentTarget) return;
+  document.getElementById('workspace-backup-modal')?.classList.remove('open');
+}
+
+function getWorkspaceBackupSelectionSnapshot() {
+  return {
+    characters: [...workspaceBackupSelection.characters],
+    artists: [...workspaceBackupSelection.artists],
+    blends: [...workspaceBackupSelection.blends],
+    notes: [...workspaceBackupSelection.notes]
+  };
+}
+
+function setWorkspaceBackupTab(tab) {
+  workspaceBackupActiveTab = tab;
+  renderWorkspaceBackupModal();
+}
+
+function setWorkspaceBackupSearch(value) {
+  workspaceBackupSearch = String(value || '');
+  renderWorkspaceBackupModal();
+}
+
+function toggleWorkspaceBackupSelection(kind, id) {
+  const bucket = workspaceBackupSelection[kind];
+  if (!bucket) return;
+  bucket.has(id) ? bucket.delete(id) : bucket.add(id);
+  renderWorkspaceBackupModal();
+}
+
+function clearWorkspaceBackupCurrentTab() {
+  workspaceBackupSelection[workspaceBackupActiveTab]?.clear();
+  renderWorkspaceBackupModal();
+}
+
+function clearWorkspaceBackupSelection() {
+  Object.values(workspaceBackupSelection).forEach(set => set.clear());
+  renderWorkspaceBackupModal();
+}
+
+function getWorkspaceBackupItemsByTab(tab) {
+  if (tab === 'characters') return characterData;
+  if (tab === 'artists') return artistData;
+  if (tab === 'blends') return blendData;
+  if (tab === 'notes') return notesData;
+  return [];
+}
+
+function getWorkspaceBackupItemTitle(tab, item) {
+  if (tab === 'characters') return item.name || '未命名角色';
+  if (tab === 'artists') return item.name || item.artistTag || '未命名繪師';
+  if (tab === 'blends') return deriveBlendName(item);
+  if (tab === 'notes') return item.description || item.fragment || '未命名筆記';
+  return '未命名項目';
+}
+
+function getWorkspaceBackupItemMeta(tab, item) {
+  if (tab === 'characters') return [item.seriesName, item.notes].filter(Boolean).join(' · ') || '角色 Prompt 與參考圖';
+  if (tab === 'artists') return [item.artistTag, item.styleType].filter(Boolean).join(' · ') || '風格條目';
+  if (tab === 'blends') return getBlendEntriesSorted(item).map(entry => entry.artistName || entry.artistTag).filter(Boolean).slice(0, 3).join(' × ') || '混搭設定';
+  if (tab === 'notes') return [NOTE_CATEGORIES[item.category] || item.category, item.fragment].filter(Boolean).join(' · ') || 'Prompt 筆記';
+  return '';
+}
+
+function getWorkspaceBackupItemRefCount(tab, item) {
+  if (tab === 'characters') return (item.thumbImageId ? 1 : 0) + (item.preciseRefImageIds || []).length;
+  if (tab === 'artists' || tab === 'blends') return item.previewImageId ? 1 : 0;
+  if (tab === 'notes') return (item.previewImageIds || []).length;
+  return 0;
+}
+
+function renderWorkspaceBackupModal() {
+  const tabBar = document.getElementById('workspace-backup-tabs');
+  const list = document.getElementById('workspace-backup-list');
+  const summary = document.getElementById('workspace-backup-summary');
+  const driveBtn = document.getElementById('workspace-backup-drive-btn');
+  const localBtn = document.getElementById('workspace-backup-local-btn');
+  if (!tabBar || !list || !summary) return;
+
+  const snapshot = getWorkspaceBackupSelectionSnapshot();
+  const selectionSummary = summarizeWorkspaceSelection(snapshot);
+  const search = workspaceBackupSearch.trim().toLowerCase();
+  const items = getWorkspaceBackupItemsByTab(workspaceBackupActiveTab)
+    .filter(item => {
+      if (!search) return true;
+      const haystack = [
+        getWorkspaceBackupItemTitle(workspaceBackupActiveTab, item),
+        getWorkspaceBackupItemMeta(workspaceBackupActiveTab, item),
+        ...(item.tags || [])
+      ].join(' ').toLowerCase();
+      return haystack.includes(search);
+    });
+
+  tabBar.innerHTML = WORKSPACE_BACKUP_TABS.map(tab => {
+    const count = workspaceBackupSelection[tab.id]?.size || 0;
+    return `<button class="btn ${workspaceBackupActiveTab === tab.id ? 'btn-p' : 'btn-s'}" style="font-size:.78rem;padding:6px 12px;" onclick="setWorkspaceBackupTab('${tab.id}')">${tab.label}${count ? ` (${count})` : ''}</button>`;
+  }).join('');
+
+  if (!items.length) {
+    list.innerHTML = `<div class="gallery-empty" style="min-height:220px;">${workspaceBackupSearch ? '沒有符合搜尋的項目' : '這一類目前沒有可選項目'}</div>`;
+  } else {
+    list.innerHTML = items.map(item => {
+      const selected = workspaceBackupSelection[workspaceBackupActiveTab]?.has(item.id);
+      const tags = (item.tags || []).slice(0, 4).map(tag => `<span class="char-card-tag" style="${getTagChipStyle(tag, 0.1)}">${esc(tag)}</span>`).join('');
+      const refCount = getWorkspaceBackupItemRefCount(workspaceBackupActiveTab, item);
+      return `<button type="button" class="drive-file-row" style="text-align:left;display:flex;align-items:flex-start;gap:10px;${selected ? 'border-color:var(--accent);box-shadow:0 0 0 1px rgba(255,255,255,.08) inset;' : ''}" onclick="toggleWorkspaceBackupSelection('${workspaceBackupActiveTab}', ${item.id})">
+        <input type="checkbox" ${selected ? 'checked' : ''} style="margin-top:3px;" tabindex="-1" onclick="event.preventDefault()">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
+            <div style="font-weight:700;color:var(--txt);">${esc(getWorkspaceBackupItemTitle(workspaceBackupActiveTab, item))}</div>
+            <div style="font-size:.72rem;color:var(--accent);white-space:nowrap;">關聯圖 ${refCount}</div>
+          </div>
+          <div style="font-size:.74rem;color:var(--txt2);margin-top:4px;line-height:1.5;">${esc(getWorkspaceBackupItemMeta(workspaceBackupActiveTab, item))}</div>
+          ${tags ? `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${tags}</div>` : ''}
+        </div>
+      </button>`;
+    }).join('');
+  }
+
+  summary.innerHTML = `
+    <div style="font-size:.92rem;font-weight:700;color:var(--txt);margin-bottom:6px;">工作集摘要</div>
+    <div>角色：<b>${selectionSummary.counts.characters}</b></div>
+    <div>繪師：<b>${selectionSummary.counts.artists}</b></div>
+    <div>混搭：<b>${selectionSummary.counts.blends}</b></div>
+    <div>筆記：<b>${selectionSummary.counts.notes}</b></div>
+    <div>自動帶入圖片：<b>${selectionSummary.counts.images}</b></div>
+    <div>預估大小：<b>${fmtBytes(selectionSummary.estimatedBytes)}</b></div>
+  `;
+
+  if (driveBtn) driveBtn.disabled = workspaceBackupBusy;
+  if (localBtn) localBtn.disabled = workspaceBackupBusy;
+}
+
+async function runWorkspaceBackup(target) {
+  const selection = getWorkspaceBackupSelectionSnapshot();
+  const selectedCount = selection.characters.length + selection.artists.length + selection.blends.length + selection.notes.length;
+  if (!selectedCount) {
+    toast('請先選擇至少一筆角色、繪師串、混搭或筆記', 'warn');
+    return;
+  }
+  workspaceBackupBusy = true;
+  renderWorkspaceBackupModal();
+  setSyncBtnsDisabled(true);
+  setSyncProgress(0, 1, target === 'drive' ? '建立工作集快照中…' : '打包工作集中…');
+  try {
+    if (target === 'drive') {
+      if (!gdriveToken) throw new Error('請先連線 Google Drive');
+      const result = await uploadWorkspaceSnapshotToDrive(selection, (done, total, msg) => setSyncProgress(done, total, msg));
+      localStorage.setItem(SYNC_LAST_AT_KEY, Date.now().toString());
+      setSyncStatus(`✓ 工作集完成（${result.scope.counts.images} 張 / ${result.chunkCount} 段）`, 'ok');
+      const row = document.getElementById('sync-last-row');
+      const lbl = document.getElementById('sync-last-at');
+      if (row) row.style.display = 'block';
+      if (lbl) lbl.textContent = new Date().toLocaleString('zh-TW');
+      toast(`☁ 工作集已備份到 Drive（${result.scope.counts.images} 張圖）`, 'ok');
+    } else {
+      const result = await buildWorkspaceBackupZip(selection, (done, total, msg) => setSyncProgress(done, total, msg));
+      const blob = await result.zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const date = new Date().toISOString().slice(0,10);
+      a.href = url;
+      a.download = `nai_workspace_${date}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast(`⬇ 工作集備份已下載（${result.scope.counts.images} 張圖）`, 'ok');
+    }
+    closeWorkspaceBackupModal(null, true);
+  } catch (e) {
+    setSyncStatus('工作集備份失敗：' + e.message, 'warn');
+    toast('工作集備份失敗：' + e.message, 'err');
+  } finally {
+    workspaceBackupBusy = false;
+    setSyncProgress(0, null, '');
+    setSyncBtnsDisabled(false);
+    renderWorkspaceBackupModal();
+  }
 }
 
 // ── Storage info ──────────────────────────
@@ -14177,10 +14965,17 @@ async function buildBackupZip(progressCb) {
   await dbIterateStoreInChunks('images', async chunk => {
     for (const img of chunk) {
       if (progressCb) progressCb(processedImages, totalImages, `計算圖片 ${processedImages + 1}/${totalImages}…`);
-      const buf  = img.data instanceof ArrayBuffer ? img.data : img.data.buffer ?? img.data;
-      const hash = await sha256hex(buf);
+      const buf  = toArrayBuffer(img.data);
+      const hash = await getOrComputeImageHash(img);
       imgFolder.file(hash + '.png', buf);
-      manifest.images.push({ hash, timestamp: img.timestamp, metadata: img.metadata, tags: img.tags || [], imageCategory: img.imageCategory || 'general' });
+      manifest.images.push({
+        hash,
+        timestamp: img.timestamp,
+        updatedAt: img.updatedAt,
+        metadata: img.metadata,
+        tags: img.tags || [],
+        imageCategory: img.imageCategory || 'general'
+      });
       processedImages++;
     }
   }, { chunkSize: 12 });
@@ -14339,6 +15134,7 @@ async function getDriveBackupDescriptor() {
           latestFileId: latestFile.id,
           snapshotFolderId: latest.snapshotFolderId,
           snapshotName: latest.snapshotName || '',
+          mode: latest.mode || 'full',
           imageCount: latest.imageCount || 0,
           chunkCount: latest.chunkCount || 0,
           modifiedTime: latest.createdAt || latest.modifiedTime || latestFile.modifiedTime || '',
@@ -14367,6 +15163,7 @@ async function uploadDriveSnapshotV2(progressCb) {
   const snapshot = {
     version: BACKUP_VERSION,
     format: 'drive-folder-chunks',
+    mode: 'full',
     createdAt: createdAt.toISOString(),
     imageCount: totalImages,
     chunkTargetBytes: DRIVE_BACKUP_CHUNK_TARGET_BYTES,
@@ -14401,6 +15198,7 @@ async function uploadDriveSnapshotV2(progressCb) {
         filename,
         mimeType: item.mimeType || 'image/png',
         timestamp: item.timestamp,
+        updatedAt: item.updatedAt,
         metadata: item.metadata,
         tags: item.tags,
         imageCategory: item.imageCategory || 'general'
@@ -14420,14 +15218,15 @@ async function uploadDriveSnapshotV2(progressCb) {
     const { items, lastKey, done } = await dbReadStoreChunk('images', { afterKey, chunkSize: 8 });
     if (!items.length) break;
     for (const img of items) {
-      const buffer = img.data instanceof ArrayBuffer ? img.data : img.data.buffer ?? img.data;
+      const buffer = toArrayBuffer(img.data);
       const mimeType = img.metadata?._mimeType || 'image/png';
-      const hash = await sha256hex(buffer);
+      const hash = await getOrComputeImageHash(img);
       chunkItems.push({
         hash,
         buffer,
         mimeType,
         timestamp: img.timestamp,
+        updatedAt: img.updatedAt,
         metadata: img.metadata,
         tags: img.tags || [],
         imageCategory: img.imageCategory || 'general'
@@ -14452,6 +15251,7 @@ async function uploadDriveSnapshotV2(progressCb) {
   const latestPayload = {
     version: BACKUP_VERSION,
     kind: 'snapshot-v2',
+    mode: 'full',
     snapshotFolderId: snapshotFolder.id,
     snapshotName: snapshotFolder.name,
     imageCount: snapshot.imageCount,
@@ -14501,7 +15301,12 @@ async function importDriveSnapshotV2(descriptor, conflictMode, progressCb) {
         const imageFile = zip.file(entry.filename);
         if (!imageFile) { skipped++; continue; }
         const buffer = await imageFile.async('arraybuffer');
-        await dbSaveImage(buffer, entry.metadata, entry.tags, entry.imageCategory, entry.timestamp);
+        const newId = await dbSaveImage(buffer, entry.metadata, entry.tags, entry.imageCategory, entry.timestamp);
+        localHashMap.set(entry.hash, {
+          id: newId,
+          tags: entry.tags || [],
+          timestamp: entry.timestamp
+        });
         added++;
         continue;
       }
@@ -14511,6 +15316,7 @@ async function importDriveSnapshotV2(descriptor, conflictMode, progressCb) {
       const tagsChanged = JSON.stringify([...newTags].sort()) !== JSON.stringify([...(local.tags || [])].sort());
       if (tagsChanged) {
         await dbUpdateTags(local.id, newTags);
+        localHashMap.set(entry.hash, { id: local.id, tags: newTags, timestamp: Math.max(local.timestamp || 0, entry.timestamp || 0) });
         merged++;
       } else {
         skipped++;
@@ -14519,8 +15325,11 @@ async function importDriveSnapshotV2(descriptor, conflictMode, progressCb) {
   }
 
   if (progressCb) progressCb(totalImages || 1, totalImages || 1, '合併資料庫…');
-  await mergeLibrarySnapshot(library);
-  return { added, skipped, merged, workspace };
+  await mergeLibrarySnapshot(library, {
+    conflictMode,
+    imageHashToLocalIdMap: new Map([...localHashMap.entries()].map(([hash, value]) => [hash, value.id]))
+  });
+  return { added, skipped, merged, workspace, mode: snapshot.mode || descriptor.mode || 'full' };
 }
 
 // ── Merge backup into local DB ─────────────
@@ -14548,7 +15357,8 @@ async function mergeBackupIntoLocal(zipBlob, conflictMode, progressCb) {
       const pngFile = zip.file('images/' + entry.hash + '.png');
       if (!pngFile) { skipped++; continue; }
       const buf = (await pngFile.async('arraybuffer'));
-      await dbSaveImage(buf, entry.metadata, entry.tags, entry.imageCategory, entry.timestamp);
+      const newId = await dbSaveImage(buf, entry.metadata, entry.tags, entry.imageCategory, entry.timestamp);
+      localHashMap.set(entry.hash, { id: newId, tags: entry.tags || [], timestamp: entry.timestamp });
       added++;
     } else {
       // Exists — handle tag conflict
@@ -14562,6 +15372,7 @@ async function mergeBackupIntoLocal(zipBlob, conflictMode, progressCb) {
       const tagsChanged = JSON.stringify(newTags.sort()) !== JSON.stringify([...local.tags].sort());
       if (tagsChanged) {
         await dbUpdateTags(local.id, newTags);
+        localHashMap.set(entry.hash, { id: local.id, tags: newTags, timestamp: Math.max(local.timestamp || 0, entry.timestamp || 0) });
         merged++;
       } else {
         skipped++;
@@ -14570,9 +15381,131 @@ async function mergeBackupIntoLocal(zipBlob, conflictMode, progressCb) {
   }
 
   if (progressCb) progressCb(manifest.images.length, manifest.images.length, '合併資料庫…');
-  await mergeLibrarySnapshot(library);
+  await mergeLibrarySnapshot(library, {
+    conflictMode,
+    imageHashToLocalIdMap: new Map([...localHashMap.entries()].map(([hash, value]) => [hash, value.id]))
+  });
 
   return { added, skipped, merged, workspace };
+}
+
+async function importSnapshotArchiveV2(zipBlob, conflictMode, progressCb) {
+  const zip = await JSZip.loadAsync(await zipBlob.arrayBuffer());
+  const snapshotFile = zip.file(DRIVE_BACKUP_SNAPSHOT_NAME);
+  const libraryFile = zip.file(DRIVE_BACKUP_LIBRARY_NAME);
+  if (!snapshotFile || !libraryFile) throw new Error('備份快照不完整');
+
+  const snapshot = JSON.parse(await snapshotFile.async('string'));
+  const library = JSON.parse(await libraryFile.async('string'));
+  const workspaceFile = zip.file(DRIVE_BACKUP_WORKSPACE_NAME);
+  const workspace = workspaceFile ? JSON.parse(await workspaceFile.async('string')) : null;
+
+  let added = 0, skipped = 0, merged = 0;
+  const totalImages = snapshot.imageCount || snapshot.chunks?.reduce((sum, chunk) => sum + (chunk.imageCount || 0), 0) || 0;
+  if (progressCb) progressCb(0, totalImages || 1, '建立本地雜湊索引…');
+  const localHashMap = await buildLocalImageHashMap();
+
+  let processed = 0;
+  for (const chunk of snapshot.chunks || []) {
+    const chunkFile = zip.file(chunk.name);
+    if (!chunkFile) continue;
+    if (progressCb) progressCb(processed, totalImages || 1, `解壓第 ${chunk.index} 段…`);
+    const chunkZip = await JSZip.loadAsync(await chunkFile.async('arraybuffer'));
+    const chunkManifest = JSON.parse(await chunkZip.file('chunk-manifest.json').async('string'));
+    for (const entry of chunkManifest.images || []) {
+      processed++;
+      if (progressCb) progressCb(processed, totalImages || 1, `還原圖片 ${processed}/${totalImages}…`);
+      const local = localHashMap.get(entry.hash);
+      if (!local) {
+        const imageFile = chunkZip.file(entry.filename);
+        if (!imageFile) { skipped++; continue; }
+        const buffer = await imageFile.async('arraybuffer');
+        const newId = await dbSaveImage(buffer, entry.metadata, entry.tags, entry.imageCategory, entry.timestamp);
+        localHashMap.set(entry.hash, { id: newId, tags: entry.tags || [], timestamp: entry.timestamp });
+        added++;
+        continue;
+      }
+      let newTags;
+      if (conflictMode === 'merge') newTags = [...new Set([...(local.tags || []), ...(entry.tags || [])])];
+      else newTags = (entry.timestamp > local.timestamp) ? (entry.tags || []) : (local.tags || []);
+      const tagsChanged = JSON.stringify([...newTags].sort()) !== JSON.stringify([...(local.tags || [])].sort());
+      if (tagsChanged) {
+        await dbUpdateTags(local.id, newTags);
+        localHashMap.set(entry.hash, { id: local.id, tags: newTags, timestamp: Math.max(local.timestamp || 0, entry.timestamp || 0) });
+        merged++;
+      } else {
+        skipped++;
+      }
+    }
+  }
+
+  if (progressCb) progressCb(totalImages || 1, totalImages || 1, '合併資料庫…');
+  await mergeLibrarySnapshot(library, {
+    conflictMode,
+    imageHashToLocalIdMap: new Map([...localHashMap.entries()].map(([hash, value]) => [hash, value.id]))
+  });
+  return { added, skipped, merged, workspace, mode: snapshot.mode || 'full' };
+}
+
+async function buildWorkspaceBackupZip(selection, progressCb) {
+  const scope = await collectWorkspaceScope(selection);
+  const selectedCount = scope.counts.characters + scope.counts.artists + scope.counts.blends + scope.counts.notes;
+  if (!selectedCount) throw new Error('請先選擇至少一筆角色、繪師串、混搭或筆記');
+  const { snapshot, files } = await buildScopedSnapshotArtifacts({
+    mode: 'workspace',
+    library: scope.library,
+    images: scope.images,
+    workspaceScope: scope.workspaceScope,
+    progressCb
+  });
+  const zip = new JSZip();
+  for (const file of files) {
+    zip.file(file.name, file.blob);
+  }
+  return { zip, snapshot, scope };
+}
+
+async function uploadWorkspaceSnapshotToDrive(selection, progressCb) {
+  const scope = await collectWorkspaceScope(selection);
+  const selectedCount = scope.counts.characters + scope.counts.artists + scope.counts.blends + scope.counts.notes;
+  if (!selectedCount) throw new Error('請先選擇至少一筆角色、繪師串、混搭或筆記');
+  const root = await gdriveEnsureBackupRootFolder();
+  const createdAt = new Date();
+  const slug = buildBackupTimestampSlug(createdAt);
+  const snapshotFolder = await gdriveCreateFolderInternal(`workspace_${slug}`, root.id);
+  const { snapshot, files } = await buildScopedSnapshotArtifacts({
+    mode: 'workspace',
+    library: scope.library,
+    images: scope.images,
+    workspaceScope: scope.workspaceScope,
+    progressCb
+  });
+  const orderedFiles = files.slice().sort((a, b) => (a.name === DRIVE_BACKUP_SNAPSHOT_NAME ? 1 : 0) - (b.name === DRIVE_BACKUP_SNAPSHOT_NAME ? 1 : 0));
+  for (const file of orderedFiles) {
+    await gdriveUploadBlob(file.blob, file.name, file.mimeType, {
+      parentId: snapshotFolder.id,
+      timeoutMs: file.name.endsWith('.zip') ? 300000 : 120000
+    });
+  }
+
+  const latestPayload = {
+    version: BACKUP_VERSION,
+    kind: 'snapshot-v2',
+    mode: 'workspace',
+    snapshotFolderId: snapshotFolder.id,
+    snapshotName: snapshotFolder.name,
+    imageCount: snapshot.imageCount,
+    chunkCount: snapshot.chunkCount,
+    createdAt: snapshot.createdAt,
+    completedAt: snapshot.completedAt
+  };
+  const latestExisting = await gdriveFindFileByName(DRIVE_BACKUP_LATEST_NAME, { parentId: root.id });
+  await gdriveUploadBlob(new Blob([JSON.stringify(latestPayload)], { type: 'application/json' }), DRIVE_BACKUP_LATEST_NAME, 'application/json', {
+    parentId: root.id,
+    fileId: latestExisting?.id || ''
+  });
+
+  return { snapshotFolderId: snapshotFolder.id, imageCount: snapshot.imageCount, chunkCount: snapshot.chunkCount, scope };
 }
 
 // ── Orchestration ─────────────────────────
@@ -14618,7 +15551,8 @@ async function doImportFromDrive() {
     document.getElementById('sync-last-at').textContent = new Date().toLocaleString('zh-TW');
     await refreshAppDataAfterImport();
     if (result.workspace) applyWorkspaceSnapshot(result.workspace);
-    toast(`匯入完成：新增 ${result.added} 張，合併標籤 ${result.merged} 張，略過 ${result.skipped} 張`, 'ok');
+    const modeLabel = result.mode === 'workspace' ? '工作集' : '備份';
+    toast(`${modeLabel}匯入完成：新增 ${result.added} 張，合併標籤 ${result.merged} 張，略過 ${result.skipped} 張`, 'ok');
   } catch (e) {
     setSyncProgress(0, null, '');
     setSyncStatus('匯入失敗：' + e.message, 'warn');
@@ -14661,12 +15595,16 @@ async function handleLocalZipImport(input) {
   setSyncProgress(0, 1, '解壓縮中…');
   try {
     const conflict = getSyncConflict();
-    const result   = await mergeBackupIntoLocal(file, conflict,
-      (done, total, msg) => setSyncProgress(done, total, msg));
+    const probe = await JSZip.loadAsync(await file.arrayBuffer());
+    const isSnapshotV2 = !!probe.file(DRIVE_BACKUP_SNAPSHOT_NAME);
+    const result = isSnapshotV2
+      ? await importSnapshotArchiveV2(file, conflict, (done, total, msg) => setSyncProgress(done, total, msg))
+      : await mergeBackupIntoLocal(file, conflict, (done, total, msg) => setSyncProgress(done, total, msg));
     setSyncProgress(0, null, '');
     await refreshAppDataAfterImport();
     if (result.workspace) applyWorkspaceSnapshot(result.workspace);
-    toast(`匯入完成：新增 ${result.added} 張，合併標籤 ${result.merged} 張，略過 ${result.skipped} 張`, 'ok');
+    const modeLabel = isSnapshotV2 && result.mode === 'workspace' ? '工作集' : '備份';
+    toast(`${modeLabel}匯入完成：新增 ${result.added} 張，合併標籤 ${result.merged} 張，略過 ${result.skipped} 張`, 'ok');
   } catch (e) {
     setSyncProgress(0, null, '');
     toast('匯入失敗：' + e.message, 'err');
