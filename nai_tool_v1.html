@@ -4438,6 +4438,7 @@ function revokeGalleryObjectUrls(items = galleryData) {
 
 window.addEventListener('beforeunload', () => {
   revokeGalleryObjectUrls(galleryData);
+  revokePreciseRefUrl();
   if (window.__naiResultUrl) {
     try { URL.revokeObjectURL(window.__naiResultUrl); } catch (_) {}
     window.__naiResultUrl = '';
@@ -7729,8 +7730,45 @@ function setGalleryImgAsImg2Img(id) {
 }
 
 // ── Precise Reference ──
-let preciseRef = null; // {base64, url, name, mimeType, mode, strength, fidelity, cacheKey}
+let preciseRef = null; // {base64, url, urlOwned, name, mimeType, mode, strength, fidelity, cacheKey}
 let prefOpen = false;
+
+function revokeBlobUrl(url) {
+  if (!url || typeof url !== 'string' || !url.startsWith('blob:')) return;
+  try { URL.revokeObjectURL(url); } catch (_) {}
+}
+
+function revokePreciseRefUrl(ref = preciseRef) {
+  if (!ref?.urlOwned || !ref?.url) return;
+  revokeBlobUrl(ref.url);
+}
+
+function snapshotPreciseRef(ref) {
+  if (!ref) return null;
+  const { url, urlOwned, ...rest } = ref;
+  return { ...rest };
+}
+
+function hydratePreciseRef(ref) {
+  if (!ref) return null;
+  const next = { ...ref, url: '', urlOwned: false };
+  if (!next.base64) return next;
+  try {
+    next.url = URL.createObjectURL(base64ToBlob(next.base64, next.mimeType || 'image/png'));
+    next.urlOwned = true;
+  } catch (_) {
+    next.url = '';
+    next.urlOwned = false;
+  }
+  return next;
+}
+
+function setPreciseRef(nextRef, { render = true } = {}) {
+  const prevRef = preciseRef;
+  preciseRef = nextRef;
+  if (render) renderPreciseRef();
+  if (prevRef && prevRef.url !== nextRef?.url) revokePreciseRefUrl(prevRef);
+}
 
 function setPreciseRefOpen(open) {
   const body = document.getElementById('pref-body');
@@ -7758,9 +7796,10 @@ function preciseRefDrop(e) {
 async function loadPreciseRefFile(file) {
   const normalized = await normalizePreciseReferenceFile(file);
   const cacheKey = await sha256HexFromBase64(normalized.base64);
-  preciseRef = {
+  setPreciseRef({
     base64: normalized.base64,
     url: normalized.url,
+    urlOwned: true,
     name: normalized.name,
     mimeType: normalized.mimeType,
     width: normalized.width,
@@ -7769,8 +7808,7 @@ async function loadPreciseRefFile(file) {
     strength: 1.0,
     fidelity: 1.0,
     cacheKey
-  };
-  renderPreciseRef();
+  });
   toast(`已載入精確參考圖（${normalized.width}×${normalized.height}）`, 'ok');
 }
 
@@ -7779,6 +7817,8 @@ function renderPreciseRef() {
   const pv = document.getElementById('pref-preview');
   const cnt = document.getElementById('pref-count');
   if (!preciseRef) {
+    document.getElementById('pref-thumb').src = '';
+    document.getElementById('pref-name').textContent = '';
     dz.style.display = ''; pv.style.display = 'none'; cnt.textContent = '';
     return;
   }
@@ -7793,8 +7833,7 @@ function renderPreciseRef() {
 }
 
 function clearPreciseRef() {
-  if (preciseRef?.url) URL.revokeObjectURL(preciseRef.url);
-  preciseRef = null; renderPreciseRef();
+  setPreciseRef(null);
 }
 
 // Convert base64 (pure, no data: prefix) to Blob
@@ -9892,9 +9931,15 @@ async function onGalPickerSelect(imgId) {
   } else if (galPickerPurpose === 'preciseRef') {
     // Load directly into Precise Reference
     const b64 = arrayBufferToBase64(img.data);
-    preciseRef = { base64: b64, url, name: `圖庫 #${imgId}`,
-      galleryId: imgId, mode: 'character&style', strength: 1.0, fidelity: 1.0 };
-    renderPreciseRef();
+    setPreciseRef(hydratePreciseRef({
+      base64: b64,
+      name: `圖庫 #${imgId}`,
+      mimeType: img.metadata?._mimeType || 'image/png',
+      galleryId: imgId,
+      mode: 'character&style',
+      strength: 1.0,
+      fidelity: 1.0
+    }));
     if (!document.getElementById('pref-body').classList.contains('open')) {
       // open the section if closed
       const body = document.getElementById('pref-body');
@@ -9991,11 +10036,16 @@ function closeCharRefPicker() {
 async function loadPreciseRefFromImageId(imgId, label) {
   const img = galleryData.find(i => i.id === imgId) || await dbGetImageById(imgId);
   if (!img) { toast('找不到圖片','err'); return; }
-  const url = getRecordObjectUrl(img);
   const b64 = arrayBufferToBase64(img.data);
-  preciseRef = { base64: b64, url, name: label || `圖庫 #${imgId}`,
-    galleryId: imgId, mode: 'character&style', strength: 1.0, fidelity: 1.0 };
-  renderPreciseRef();
+  setPreciseRef(hydratePreciseRef({
+    base64: b64,
+    name: label || `圖庫 #${imgId}`,
+    mimeType: img.metadata?._mimeType || 'image/png',
+    galleryId: imgId,
+    mode: 'character&style',
+    strength: 1.0,
+    fidelity: 1.0
+  }));
   const body = document.getElementById('pref-body');
   if (body.classList.contains('closed')) {
     body.classList.remove('closed');
@@ -12920,7 +12970,7 @@ function capturePageState() {
     srcImgBase64:    srcImgBase64,
     srcImgGalleryId: srcImgGalleryId,
     vibeImages:  JSON.parse(JSON.stringify(vibeImages)),
-    preciseRef:  preciseRef ? { ...preciseRef } : null,
+    preciseRef:  snapshotPreciseRef(preciseRef),
     currentTags: [...currentTags],
     adv2Open:    !document.getElementById('adv2-body')?.classList.contains('closed'),
     vibeOpen:    !!vibeOpen,
@@ -12970,7 +13020,7 @@ function applyPageState(s) {
   renderVibeList?.(); updateVibeCount?.();
 
   // Precise ref
-  preciseRef = s.preciseRef ? { ...s.preciseRef } : null;
+  setPreciseRef(hydratePreciseRef(s.preciseRef), { render: false });
   renderPreciseRef?.();
 
   // Tags
