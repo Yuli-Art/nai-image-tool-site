@@ -2376,13 +2376,13 @@
               <label>強度</label>
               <span class="range-val" id="pref-strength-val">1.00</span>
             </div>
-            <input type="range" min="0.1" max="1" step="0.01" value="1" id="pref-strength"
+            <input type="range" min="0" max="1" step="0.01" value="1" id="pref-strength"
               oninput="preciseRef&&(preciseRef.strength=parseFloat(this.value));document.getElementById('pref-strength-val').textContent=parseFloat(this.value).toFixed(2)">
             <div class="range-row" style="margin-top:4px;">
-              <label>保真度 <span style="font-size:.66rem;color:var(--txt2);">（暫定）</span></label>
+              <label>保真度</label>
               <span class="range-val" id="pref-fidelity-val">1.00</span>
             </div>
-            <input type="range" min="0.01" max="1" step="0.01" value="1" id="pref-fidelity"
+            <input type="range" min="0" max="1" step="0.01" value="1" id="pref-fidelity"
               oninput="preciseRef&&(preciseRef.fidelity=parseFloat(this.value));document.getElementById('pref-fidelity-val').textContent=parseFloat(this.value).toFixed(2)">
           </div>
         </div>
@@ -8048,7 +8048,7 @@ function setGalleryImgAsImg2Img(id) {
 }
 
 // ── Precise Reference ──
-let preciseRef = null; // {base64, url, urlOwned, name, mimeType, mode, strength, fidelity, cacheKey}
+let preciseRef = null; // {base64, url, urlOwned, name, mimeType, width, height, mode, strength, fidelity}
 let prefOpen = false;
 
 function revokeBlobUrl(url) {
@@ -8113,7 +8113,6 @@ function preciseRefDrop(e) {
 
 async function loadPreciseRefFile(file) {
   const normalized = await normalizePreciseReferenceFile(file);
-  const cacheKey = await sha256HexFromBase64(normalized.base64);
   setPreciseRef({
     base64: normalized.base64,
     url: normalized.url,
@@ -8124,8 +8123,7 @@ async function loadPreciseRefFile(file) {
     height: normalized.height,
     mode: 'character&style',
     strength: 1.0,
-    fidelity: 1.0,
-    cacheKey
+    fidelity: 1.0
   });
   toast(`已載入精確參考圖（${normalized.width}×${normalized.height}）`, 'ok');
 }
@@ -8171,14 +8169,20 @@ function blobToBase64(blob) {
   });
 }
 
-function loadImageElementFromFile(file) {
+function loadImageElementFromBlob(blob) {
   return new Promise((res, rej) => {
-    const url = URL.createObjectURL(file);
+    const url = URL.createObjectURL(blob);
     const img = new Image();
     img.onload = () => { URL.revokeObjectURL(url); res(img); };
     img.onerror = e => { URL.revokeObjectURL(url); rej(e); };
     img.src = url;
   });
+}
+
+function isOfficialPreciseReferenceSize(width, height) {
+  return (width === 1024 && height === 1536)
+    || (width === 1472 && height === 1472)
+    || (width === 1536 && height === 1024);
 }
 
 function choosePreciseReferenceCanvasSize(width, height) {
@@ -8198,39 +8202,55 @@ function choosePreciseReferenceCanvasSize(width, height) {
   return best;
 }
 
-async function normalizePreciseReferenceFile(file) {
-  const img = await loadImageElementFromFile(file);
+async function normalizePreciseReferenceBlob(blob, name = 'precise-reference', { createUrl = true } = {}) {
+  const img = await loadImageElementFromBlob(blob);
   const target = choosePreciseReferenceCanvasSize(img.naturalWidth || img.width, img.naturalHeight || img.height);
   const canvas = document.createElement('canvas');
   canvas.width = target.width;
   canvas.height = target.height;
   const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // NovelAI's public API contract requires black padding at one of the three official CR sizes.
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
   const drawW = Math.round(img.width * scale);
   const drawH = Math.round(img.height * scale);
   const dx = Math.floor((canvas.width - drawW) / 2);
   const dy = Math.floor((canvas.height - drawH) / 2);
   ctx.drawImage(img, dx, dy, drawW, drawH);
-  const blob = await new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('無法處理精確參考圖')), 'image/png'));
-  const base64 = await blobToBase64(blob);
+  const outputBlob = await new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('無法處理精確參考圖')), 'image/png'));
+  const base64 = await blobToBase64(outputBlob);
   return {
     base64,
-    url: URL.createObjectURL(blob),
-    name: (file.name || 'precise-reference').replace(/\.[^.]+$/, '') + '.png',
+    url: createUrl ? URL.createObjectURL(outputBlob) : '',
+    urlOwned: createUrl,
+    name: (name || 'precise-reference').replace(/\.[^.]+$/, '') + '.png',
     mimeType: 'image/png',
     width: target.width,
     height: target.height
   };
 }
 
-async function sha256HexFromBase64(b64) {
-  if (!globalThis.crypto?.subtle) return '';
-  const binary = atob(b64.replace(/^data:[^;]+;base64,/, ''));
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
-  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+async function normalizePreciseReferenceFile(file) {
+  return normalizePreciseReferenceBlob(file, file.name || 'precise-reference');
+}
+
+async function normalizePreciseReferenceData(ref, options = {}) {
+  if (!ref?.base64) throw new Error('精確參考圖缺少圖片資料');
+  const normalized = await normalizePreciseReferenceBlob(
+    base64ToBlob(ref.base64, ref.mimeType || 'image/png'),
+    ref.name || 'precise-reference',
+    options
+  );
+  return { ...ref, ...normalized };
+}
+
+async function ensurePreciseReferenceNormalized(ref) {
+  if (!ref?.base64) return null;
+  if (isOfficialPreciseReferenceSize(Number(ref.width), Number(ref.height)) && ref.mimeType === 'image/png') {
+    return ref;
+  }
+  return normalizePreciseReferenceData(ref, { createUrl: false });
 }
 
 function readUint32BE(bytes, offset) {
@@ -10247,17 +10267,16 @@ async function onGalPickerSelect(imgId) {
       toast('已指定預覽圖，儲存後會保留','ok');
     }
   } else if (galPickerPurpose === 'preciseRef') {
-    // Load directly into Precise Reference
-    const b64 = arrayBufferToBase64(img.data);
-    setPreciseRef(hydratePreciseRef({
-      base64: b64,
+    const normalized = await normalizePreciseReferenceData({
+      base64: arrayBufferToBase64(img.data),
       name: `圖庫 #${imgId}`,
       mimeType: img.metadata?._mimeType || 'image/png',
       galleryId: imgId,
       mode: 'character&style',
       strength: 1.0,
       fidelity: 1.0
-    }));
+    });
+    setPreciseRef(normalized);
     if (!document.getElementById('pref-body').classList.contains('open')) {
       // open the section if closed
       const body = document.getElementById('pref-body');
@@ -10354,16 +10373,16 @@ function closeCharRefPicker() {
 async function loadPreciseRefFromImageId(imgId, label) {
   const img = galleryData.find(i => i.id === imgId) || await dbGetImageById(imgId);
   if (!img) { toast('找不到圖片','err'); return; }
-  const b64 = arrayBufferToBase64(img.data);
-  setPreciseRef(hydratePreciseRef({
-    base64: b64,
+  const normalized = await normalizePreciseReferenceData({
+    base64: arrayBufferToBase64(img.data),
     name: label || `圖庫 #${imgId}`,
     mimeType: img.metadata?._mimeType || 'image/png',
     galleryId: imgId,
     mode: 'character&style',
     strength: 1.0,
     fidelity: 1.0
-  }));
+  });
+  setPreciseRef(normalized);
   const body = document.getElementById('pref-body');
   if (body.classList.contains('closed')) {
     body.classList.remove('closed');
@@ -10753,6 +10772,77 @@ function insertPromptTag(tagName) {
 // ═══════════════════════════════════════════
 // GENERATE
 // ═══════════════════════════════════════════
+function isPreciseReferenceModel(model) {
+  return model === 'nai-diffusion-4-5-full' || model === 'nai-diffusion-4-5';
+}
+
+function validatePreciseReferenceCompatibility(model, vibes, ref) {
+  if (!ref?.base64) return;
+  if (!isPreciseReferenceModel(model)) {
+    throw new Error('精確參考只支援 NAI Diffusion V4.5 Full／V4.5');
+  }
+  if (vibes?.length) {
+    throw new Error('NovelAI 目前不支援同時使用精確參考與 Vibe Transfer，請先移除其中一項');
+  }
+}
+
+function clampPreciseReferenceValue(value, fallback = 1) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : fallback;
+}
+
+function applyPreciseReferenceParameters(params, ref) {
+  const mode = ['character&style', 'character', 'style'].includes(ref.mode) ? ref.mode : 'character&style';
+  params.director_reference_descriptions = [{
+    caption: { base_caption: mode, char_captions: [] },
+    legacy_uc: false
+  }];
+  params.director_reference_images = [ref.base64.replace(/^data:[^;]+;base64,/, '')];
+  params.director_reference_information_extracted = [1];
+  params.director_reference_strength_values = [clampPreciseReferenceValue(ref.strength)];
+  params.director_reference_secondary_strength_values = [clampPreciseReferenceValue(ref.fidelity)];
+  params.add_original_image = true;
+  params.v4_prompt = Object.assign({}, params.v4_prompt, { use_coords: true, use_order: true });
+}
+
+function createCorrelationId() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const bytes = new Uint8Array(6);
+  if (globalThis.crypto?.getRandomValues) crypto.getRandomValues(bytes);
+  else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  return Array.from(bytes, b => chars[b % chars.length]).join('');
+}
+
+function postNaiGeneration(body, signal, correlationId) {
+  return fetch('https://image.novelai.net/ai/generate-image', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiToken}`,
+      'Accept': 'application/zip',
+      'X-Correlation-ID': correlationId
+    },
+    body: JSON.stringify(body),
+    signal
+  });
+}
+
+function getRateLimitWaitMs(resp, attempt) {
+  const retryAfter = resp?.headers?.get('retry-after');
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    if (Number.isFinite(seconds)) return Math.max(1000, seconds * 1000);
+    const dateMs = Date.parse(retryAfter);
+    if (Number.isFinite(dateMs)) return Math.max(1000, dateMs - Date.now());
+  }
+  return 3000 * (attempt + 1);
+}
+
+function formatNaiRequestError(status, detail, correlationId) {
+  const base = detail || `HTTP ${status || '?'}`;
+  return `${base}（追蹤碼：${correlationId}）`;
+}
+
 async function generate() {
   if (isGenerating) return;
   const prompt = document.getElementById('prompt').value.trim();
@@ -10770,6 +10860,16 @@ async function generate() {
   const sampler = document.getElementById('sampler').value;
   const noiseSch= document.getElementById('noise-sch').value;
   let seed = seedRandom ? nextRandomSeed() : resolveSeedForRequest(document.getElementById('seed').value);
+
+  let preparedPreciseRef = null;
+  try {
+    validatePreciseReferenceCompatibility(model, vibeImages, preciseRef);
+    preparedPreciseRef = await ensurePreciseReferenceNormalized(preciseRef);
+  } catch (e) {
+    toast(e.message || '無法處理精確參考圖', 'err');
+    setGenerating(false);
+    return;
+  }
 
   const isV4 = model.startsWith('nai-diffusion-4');
   const params = {
@@ -10826,73 +10926,41 @@ async function generate() {
   }
 
   // Precise Reference (director)
-  if (preciseRef) {
-    params.director_reference_descriptions = [{
-      caption: { base_caption: preciseRef.mode, char_captions: [] },
-      legacy_uc: false
-    }];
-    params.director_reference_information_extracted  = [preciseRef.fidelity];
-    params.director_reference_strength_values        = [preciseRef.strength];
-    params.director_reference_secondary_strength_values = [0]; // provisional until fidelity mapping confirmed
-    params.director_reference_images_cached = [{
-      ...(preciseRef.cacheKey ? { cache_secret_key: preciseRef.cacheKey } : {}),
-      data: 'director_ref_0'
-    }];
-    params.controlnet_strength = 1;
-    params.add_original_image  = true;
-    params.use_coords          = true;
-    params.normalize_reference_strength_multiple = true;
-    params.stream = 'msgpack';
-    params.v4_prompt = Object.assign({}, params.v4_prompt, { use_coords: true, use_order: true });
-  }
+  if (preparedPreciseRef) applyPreciseReferenceParameters(params, preparedPreciseRef);
 
   const body = { input:prompt, model, action, parameters:params };
   const beforeAnlas = anlasBalance;
 
-  const TIMEOUT = 120000, MAX_RETRY = 2;
+  const TIMEOUT = 120000, MAX_RATE_LIMIT_RETRY = 2;
+  const correlationId = createCorrelationId();
   let resp = null;
 
-  for (let attempt = 0; attempt <= MAX_RETRY; attempt++) {
+  for (let attempt = 0; attempt <= MAX_RATE_LIMIT_RETRY; attempt++) {
     const ctrl = new AbortController();
     const tid = setTimeout(()=>ctrl.abort(), TIMEOUT);
     try {
       showStatus(attempt>0 ? `重試中（第 ${attempt} 次）...` : '生成中，請稍候...');
-      if (preciseRef) {
-        // Precise Reference: multipart/form-data → generate-image-stream
-        const fd = new FormData();
-        fd.append('director_ref_0', base64ToBlob(preciseRef.base64, preciseRef.mimeType), preciseRef.name || 'blob');
-        fd.append('request', new Blob([JSON.stringify(body)], {type:'application/json'}), 'blob');
-        resp = await fetch('https://image.novelai.net/ai/generate-image-stream',{
-          method:'POST',
-          headers:{'Authorization':`Bearer ${apiToken}`},
-          body:fd, signal:ctrl.signal
-        });
-      } else {
-        resp = await fetch('https://image.novelai.net/ai/generate-image',{
-          method:'POST',
-          headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiToken}`,'Accept':'application/x-msgpack'},
-          body:JSON.stringify(body), signal:ctrl.signal
-        });
-      }
+      resp = await postNaiGeneration(body, ctrl.signal, correlationId);
       clearTimeout(tid);
-      if ((resp.status===429||(resp.status>=500&&resp.status<=599)) && attempt<MAX_RETRY) {
-        const wait = resp.status===429 ? 3000*(attempt+1) : 1500*(attempt+1);
-        toast(`${resp.status===429?'請求過於頻繁':'伺服器錯誤'}，${Math.ceil(wait/1000)}秒後重試`,'warn');
+      if (resp.status === 429 && attempt < MAX_RATE_LIMIT_RETRY) {
+        const wait = getRateLimitWaitMs(resp, attempt);
+        toast(`請求過於頻繁，${Math.ceil(wait/1000)}秒後重試`,'warn');
         await sleep(wait); continue;
       }
       break;
     } catch(e) {
       clearTimeout(tid);
-      if (attempt<MAX_RETRY) { toast('網路錯誤，重試中...','warn'); await sleep(1500*(attempt+1)); continue; }
-      toast(e.name==='AbortError'?'請求逾時（120秒）':'網路錯誤：'+e.message,'err');
+      const message = e.name === 'AbortError' ? '請求逾時（120秒，未自動重送）' : `網路錯誤：${e.message}`;
+      toast(`${message}（追蹤碼：${correlationId}）`, 'err');
       setGenerating(false); hideStatus(); return;
     }
   }
 
   if (!resp||!resp.ok) {
     const detail = await getHttpErrorDetail(resp);
-    console.error('NAI generate failed', { status: resp?.status, detail });
-    toast(detail ? `生圖失敗：${detail}` : `生圖失敗：HTTP ${resp?.status||'?'}`,'err');
+    const errorText = formatNaiRequestError(resp?.status, detail, correlationId);
+    console.error('NAI generate failed', { status: resp?.status, detail, correlationId });
+    toast(`生圖失敗：${errorText}`,'err');
     setGenerating(false); hideStatus(); return;
   }
 
@@ -12507,7 +12575,7 @@ async function resolveBatchImageAsset(imageId, fallbackName = '圖庫圖片') {
   };
 }
 
-// ── Core API (no Vibe / PreciseRef / img2img — batch only) ──
+// ── Shared generation API for batch and A/B ──
 async function callGenerateSimple({ prompt, negPrompt, model, width, height, steps, scale, cfgR, sampler, noiseSch, seed, vibeData, preciseRefTask, srcImageTask, genMode = 'txt2img', i2iStrength = 0.7, i2iNoise = 0, enhStrength = 0.5, _stopFn, _abortHolder }) {
   if (!apiToken) throw new Error('未登入');
   const isV4 = model.startsWith('nai-diffusion-4');
@@ -12545,8 +12613,8 @@ async function callGenerateSimple({ prompt, negPrompt, model, width, height, ste
     }
 
     // ── Vibe transfer (load from DB if vibeLibId present) ──
+    const resolvedVibes = [];
     if (vibeData && vibeData.length > 0) {
-      const resolvedVibes = [];
       for (const v of vibeData) {
         let b64 = v.base64 || null;
         if (!b64 && v.vibeLibId) {
@@ -12571,70 +12639,37 @@ async function callGenerateSimple({ prompt, negPrompt, model, width, height, ste
       }
     }
 
-    if (preciseRefTask?.base64) {
-      params.director_reference_descriptions = [{
-        caption: { base_caption: preciseRefTask.mode || 'character&style', char_captions: [] },
-        legacy_uc: false
-      }];
-      params.director_reference_information_extracted = [preciseRefTask.fidelity ?? 1.0];
-      params.director_reference_strength_values = [preciseRefTask.strength ?? 1.0];
-      params.director_reference_secondary_strength_values = [0];
-      params.director_reference_images_cached = [{
-        ...(preciseRefTask.cacheKey ? { cache_secret_key: preciseRefTask.cacheKey } : {}),
-        data: 'director_ref_0'
-      }];
-      params.controlnet_strength = 1;
-      params.add_original_image = true;
-      params.use_coords = true;
-      params.normalize_reference_strength_multiple = true;
-      params.stream = 'msgpack';
-      params.v4_prompt = Object.assign({}, params.v4_prompt, { use_coords: true, use_order: true });
-      params.v4_negative_prompt = Object.assign({}, params.v4_negative_prompt, { legacy_uc: false });
-    }
+    validatePreciseReferenceCompatibility(model, resolvedVibes, preciseRefTask);
+    const preparedPreciseRefTask = await ensurePreciseReferenceNormalized(preciseRefTask);
+    if (preparedPreciseRefTask) applyPreciseReferenceParameters(params, preparedPreciseRefTask);
 
     const body = { input: prompt, model, action, parameters: params };
-    const TIMEOUT = 120000, MAX_RETRY = 2;
+    const TIMEOUT = 120000, MAX_RATE_LIMIT_RETRY = 2;
+    const correlationId = createCorrelationId();
     let resp = null;
-    for (let attempt = 0; attempt <= MAX_RETRY; attempt++) {
+    for (let attempt = 0; attempt <= MAX_RATE_LIMIT_RETRY; attempt++) {
       if (batchShouldStop || (_stopFn && _stopFn())) throw new Error('stopped');
       const ctrl = new AbortController();
     batchCurrentAbort = ctrl;
     if (_abortHolder) _abortHolder.ctrl = ctrl;
       const tid = setTimeout(() => ctrl.abort(), TIMEOUT);
       try {
-        if (preciseRefTask?.base64) {
-          const fd = new FormData();
-          fd.append('director_ref_0', base64ToBlob(preciseRefTask.base64, preciseRefTask.mimeType || 'image/png'), preciseRefTask.name || 'blob');
-          fd.append('request', new Blob([JSON.stringify(body)], { type: 'application/json' }), 'blob');
-          resp = await fetch('https://image.novelai.net/ai/generate-image-stream', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${apiToken}` },
-            body: fd,
-            signal: ctrl.signal
-          });
-        } else {
-          resp = await fetch('https://image.novelai.net/ai/generate-image', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiToken}`, 'Accept': 'application/x-msgpack' },
-            body: JSON.stringify(body), signal: ctrl.signal
-          });
-        }
+        resp = await postNaiGeneration(body, ctrl.signal, correlationId);
         clearTimeout(tid);
-      if ((resp.status === 429 || (resp.status >= 500 && resp.status <= 599)) && attempt < MAX_RETRY) {
-        const wait = resp.status === 429 ? 3000 * (attempt + 1) : 1500 * (attempt + 1);
+      if (resp.status === 429 && attempt < MAX_RATE_LIMIT_RETRY) {
+        const wait = getRateLimitWaitMs(resp, attempt);
         await sleep(wait); continue;
       }
       break;
     } catch (e) {
       clearTimeout(tid);
       if (e.name === 'AbortError' || e.message === 'stopped') throw e;
-      if (attempt < MAX_RETRY) { await sleep(1500 * (attempt + 1)); continue; }
-      throw e;
+      throw new Error(`${e.message}（追蹤碼：${correlationId}；未自動重送）`);
     }
   }
   if (!resp || !resp.ok) {
     const detail = await getHttpErrorDetail(resp);
-    throw new Error(detail || `HTTP ${resp?.status || '?'}`);
+    throw new Error(formatNaiRequestError(resp?.status, detail, correlationId));
   }
   return await parseNaiResponse(resp);
 }
@@ -13641,6 +13676,9 @@ async function startAB() {
             : null;
         const preciseRefTask = cfgA.preciseRef?.base64 ? {
           base64:    cfgA.preciseRef.base64,
+          mimeType:  cfgA.preciseRef.mimeType || 'image/png',
+          width:     cfgA.preciseRef.width,
+          height:    cfgA.preciseRef.height,
           mode:      cfgA.preciseRef.mode      || 'character&style',
           strength:  cfgA.preciseRef.strength  ?? 1.0,
           fidelity:  cfgA.preciseRef.fidelity  ?? 1.0
@@ -13685,6 +13723,9 @@ async function startAB() {
             : null;
         const preciseRefTask = cfgB.preciseRef?.base64 ? {
           base64:    cfgB.preciseRef.base64,
+          mimeType:  cfgB.preciseRef.mimeType || 'image/png',
+          width:     cfgB.preciseRef.width,
+          height:    cfgB.preciseRef.height,
           mode:      cfgB.preciseRef.mode      || 'character&style',
           strength:  cfgB.preciseRef.strength  ?? 1.0,
           fidelity:  cfgB.preciseRef.fidelity  ?? 1.0
